@@ -1,0 +1,237 @@
+name: Release PicoChat
+
+# Two ways to trigger a real release:
+#  1) Push a tag like v2.7.0 (or v2.7.0-beta for a pre-release)
+#  2) Run this workflow manually from the Actions tab (workflow_dispatch)
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        description: 'Mark as pre-release? (beta, rc...)'
+        type: boolean
+        required: false
+        default: false
+      version:
+        description: 'Version to release (e.g. 2.0.1)'
+        required: true
+
+jobs:
+  # Resolves tag/version/prerelease BEFORE the builds so it can be passed
+  # down to them as an input (each build job does its own checkout, so it
+  # can never see a commit made by a later step in this same run).
+  resolve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tag:        ${{ steps.meta.outputs.tag }}
+      version:    ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      notes:      ${{ steps.changelog.outputs.notes }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Resolve tag, version and prerelease flag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+
+            # If the "prerelease" checkbox is ticked and the version doesn't
+            # already have a suffix (e.g. "-beta", "-rc1"), append "-beta"
+            # automatically so the tag/app version reflects it too.
+            if [ "${{ inputs.prerelease }}" = "true" ] && [[ "$VERSION" != *"-"* ]]; then
+              VERSION="${VERSION}-beta"
+            fi
+
+            echo "tag=v$VERSION"    >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            if [[ "$VERSION" == *"-"* ]]; then
+              echo "prerelease=true"  >> $GITHUB_OUTPUT
+            else
+              echo "prerelease=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VER="${TAG#v}"
+            echo "tag=$TAG"     >> $GITHUB_OUTPUT
+            echo "version=$VER" >> $GITHUB_OUTPUT
+            if [[ "$TAG" == *"-"* ]]; then
+              echo "prerelease=true"  >> $GITHUB_OUTPUT
+            else
+              echo "prerelease=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      # Reads CHANGELOG.md and grabs only the section for this version
+      # (the lines between "## vX.Y.Z" and the next "## " heading).
+      # This is what lets you write the human-readable release notes
+      # yourself, instead of relying only on the auto-generated ones.
+      - name: Extract changelog entry for this version
+        id: changelog
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          NOTES=$(awk -v heading="## $TAG" '
+            $0 == heading { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md 2>/dev/null)
+
+          # Trim leading/trailing blank lines so we don't get extra gaps in the body
+          NOTES=$(printf '%s' "$NOTES" | sed -e '/./,$!d' -e :a -e '/^\n*$/{$d;N;ba' -e '}')
+
+          if [ -z "$NOTES" ]; then
+            NOTES="_(No changelog entry for $TAG)_"
+          fi
+
+          {
+            echo "notes<<CHANGELOG_EOF"
+            echo "$NOTES"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create tag (manual dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.meta.outputs.tag }} || true
+          git push origin ${{ steps.meta.outputs.tag }} || true
+
+      # Keeps pubspec.yaml's `version:` line in sync with every release, so
+      # PackageInfo (used by UpdateService.currentVersion) reports the right
+      # version even in local/dev builds, not just CI-built releases where
+      # --build-name already overrides it at build time.
+      - name: Sync pubspec.yaml version and commit to main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Work from main's actual tip, not the tag's commit, so this always
+          # pushes a clean fast-forward regardless of what the tag points to.
+          git fetch origin master
+          git checkout master
+
+          sed -i "s/^version: .*/version: $VERSION+${{ github.run_number }}/" pubspec.yaml
+
+          if git diff --quiet -- pubspec.yaml; then
+            echo "pubspec.yaml already up to date, nothing to commit."
+          else
+            git add pubspec.yaml
+            git commit -m "chore: bump version to $VERSION [skip ci]"
+            git push origin HEAD:master
+          fi
+
+  # Each platform builds in its own separate workflow file, receiving the
+  # resolved version so the compiled app shows/compares against it.
+  windows:
+    needs: resolve
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
+  macos:
+    needs: resolve
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
+  linux:
+    needs: resolve
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
+  android:
+    needs: resolve
+    uses: ./.github/workflows/build-android.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
+  ios:
+    needs: resolve
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
+  # Once all 5 builds are done, gather everything and publish the release.
+  publish-release:
+    needs: [ resolve, windows, macos, linux, android, ios ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets/
+
+      # download-artifact creates one subfolder per artifact name.
+      # We flatten everything into one folder so the release page shows
+      # a clean flat file list.
+      - name: Flatten asset folder
+        run: |
+          mkdir -p flat-assets
+          find release-assets -type f -exec cp {} flat-assets/ \;
+          ls -la flat-assets
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag:                  ${{ needs.resolve.outputs.tag }}
+          name:                 "PicoChat v${{ needs.resolve.outputs.version }}"
+          artifacts:            "flat-assets/*"
+          generateReleaseNotes: true
+          prerelease:           ${{ needs.resolve.outputs.prerelease }}
+          makeLatest:           ${{ needs.resolve.outputs.prerelease == 'false' }}
+          token:                ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ## PicoChat v${{ needs.resolve.outputs.version }}
+
+            ${{ needs.resolve.outputs.notes }}
+
+            ### Android
+            | File | Use case |
+            |------|----------|
+            | `app-universal-release.apk` | Works on any phone (biggest file) |
+            | `app-arm64-v8a-release.apk` | Most modern phones (2018+) |
+            | `app-armeabi-v7a-release.apk` | Older 32-bit phones |
+            | `app-x86_64-release.apk` | Emulators / x86 tablets |
+
+            ### iOS
+            | File | Use case |
+            |------|----------|
+            | `PicoChat-ios.ipa` | Unsigned: install with AltStore / Sideloadly / TrollStore (or re-sign it yourself) |
+
+            ### Desktop
+            | File | Platform |
+            |------|----------|
+            | `PicoChat-Setup-x64.exe` | **Windows (x64) — recommended installer** |
+            | `PicoChat-Setup-arm64.exe` | **Windows on ARM (Snapdragon) — recommended installer** |
+            | `picochat-windows.zip` | Windows (x64), portable / no install |
+            | `picochat-windows-arm64.zip` | Windows on ARM, portable / no install |
+            | `PicoChat-linux-x64.deb` | **Linux x64 (Debian/Ubuntu/Mint) — recommended installer** |
+            | `PicoChat-linux-arm64.deb` | **Linux ARM64 (Debian/Ubuntu, Raspberry Pi...) — recommended installer** |
+            | `PicoChat-linux-x64.rpm` | **Linux x64 (Fedora/openSUSE/RHEL) — recommended installer** |
+            | `PicoChat-linux-arm64.rpm` | **Linux ARM64 (Fedora/openSUSE) — recommended installer** |
+            | `install-linux.sh` | Linux, any CPU: picks the right package for your distro |
+            | `PicoChat-linux-x64.AppImage` | Linux x64, any distro (portable) |
+            | `PicoChat-linux-arm64.AppImage` | Linux ARM64, any distro (portable) |
+            | `picochat-linux.zip`   | Linux x64, manual install |
+            | `picochat-linux-arm64.zip` | Linux ARM64, manual install |
+            | `PicoChat-macos-arm64.dmg` | **macOS Apple Silicon (M1 and later) — recommended installer** (drag to Applications) |
+            | `PicoChat-macos-x64.dmg` | **macOS Intel — recommended installer** (drag to Applications) |
+            | `PicoChat-macos.dmg`   | macOS universal (Intel + Apple Silicon) installer |
+            | `picochat-macos-arm64.zip` | macOS Apple Silicon, manual install |
+            | `picochat-macos-x64.zip` | macOS Intel, manual install |
+            | `picochat-macos.zip`   | macOS universal, manual install |

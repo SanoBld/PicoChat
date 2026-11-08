@@ -1,0 +1,87 @@
+name: Build Android
+
+# Reusable: called by build-all.yml / release.yml, also runnable manually.
+# Language: Gradle (Kotlin DSL) -> android/ci.gradle.kts renames the APKs.
+# One job per target: a universal APK + one smaller APK per CPU architecture.
+# File names are what the in-app updater looks for, so don't rename them.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: universal
+            flags: ''
+            src: app-release.apk
+            apk: app-universal-release.apk
+          - abi: arm64-v8a                      # most modern phones (2018+)
+            flags: '--split-per-abi --target-platform android-arm64'
+            src: app-arm64-v8a-release.apk
+            apk: app-arm64-v8a-release.apk
+          - abi: armeabi-v7a                    # older 32-bit phones
+            flags: '--split-per-abi --target-platform android-arm'
+            src: app-armeabi-v7a-release.apk
+            apk: app-armeabi-v7a-release.apk
+          - abi: x86_64                         # emulators / x86 tablets
+            flags: '--split-per-abi --target-platform android-x64'
+            src: app-x86_64-release.apk
+            apk: app-x86_64-release.apk
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      # No version given = dev build: never claim to be a real release.
+      - name: Build Android (${{ matrix.abi }})
+        shell: bash
+        env:
+          IN_VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${IN_VERSION:-0.0.0-dev.${{ github.run_number }}}"
+          flutter build apk --release ${{ matrix.flags }} --build-name="$VERSION" --build-number=${{ github.run_number }}
+
+      # Gradle (Kotlin DSL) task: copy + rename the APK into dist/
+      - name: Collect APK with Gradle
+        shell: bash
+        run: |
+          cd android
+          chmod +x gradlew 2>/dev/null || true
+          ./gradlew collectApk -PapkSrc=${{ matrix.src }} -PapkName=${{ matrix.apk }} --no-daemon -q
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.apk }}
+          path: dist/${{ matrix.apk }}

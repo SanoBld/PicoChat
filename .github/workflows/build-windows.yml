@@ -1,0 +1,78 @@
+name: Build Windows
+
+# Reusable: called by build-all.yml / release.yml, also runnable manually.
+# Language: PowerShell -> windows/ci/build.ps1 (zip + Inno Setup installer).
+# Builds x64 and ARM64 natively (Flutter can't cross-compile Windows).
+#
+# NOTE: the ARM64 job uses GitHub's hosted "windows-11-arm" runner. If it fails
+# with "no runner matching 'windows-11-arm'", that label isn't enabled for this
+# repo/plan yet: remove the arm64 entry from the matrix until it is.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            zip: picochat-windows.zip          # name kept: used by UpdateService
+          - arch: arm64
+            runner: windows-11-arm              # GitHub-hosted native ARM64 runner
+            zip: picochat-windows-arm64.zip
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Flutter
+        if: matrix.arch == 'x64'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # subosito/flutter-action can't always resolve an arm64 SDK, so on ARM
+      # we clone Flutter directly (same approach as the Linux ARM64 job).
+      - name: Install Flutter (arm64)
+        if: matrix.arch == 'arm64'
+        shell: pwsh
+        run: |
+          git clone https://github.com/flutter/flutter.git -b stable --depth 1 "$env:USERPROFILE\flutter"
+          echo "$env:USERPROFILE\flutter\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Build + package (PowerShell)
+        shell: pwsh
+        env:
+          APP_VERSION: ${{ inputs.version }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: ./windows/ci/build.ps1 -Arch ${{ matrix.arch }} -Zip ${{ matrix.zip }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip }}
+          path: ${{ matrix.zip }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picochat-windows-${{ matrix.arch }}-installer
+          path: windows/installer_output/PicoChat-Setup-${{ matrix.arch }}.exe

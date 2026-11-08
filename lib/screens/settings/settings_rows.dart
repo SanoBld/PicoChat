@@ -1,0 +1,734 @@
+// lib/screens/settings/settings_rows.dart
+// Material 3 Expressive settings kit. Every row (and every row the old
+// pages still build with ListTile / SwitchListTile — see SettingsSection)
+// looks and moves the same:
+//   • cookie-shaped tonal icon badge, 8dp spacing scale (16 / 12 / 8)
+//   • spring press feedback, shape-morphing option cards in sheets
+//   • the current value is always visible (pill on the right)
+//
+//   SettingSwitchRow  → on/off          SettingChoiceRow → pick ONE (sheet)
+//   SettingActionRow  → opens something SettingSliderRow → a number
+//   SettingTextRow    → text / URL      SettingTimeRow   → a time
+
+import '../../theme/m3_interaction.dart';
+import 'package:flutter/material.dart';
+import '../../l10n/l10n.dart';
+import '../../theme/m3_shapes.dart';
+import '../../theme/m3_motion.dart';
+import '../../widgets/m3_components.dart';
+import '../../widgets/brand_icon.dart';
+
+// ── Base tile ───────────────────────────────────────────────────────────────
+
+class SettingTile extends StatefulWidget {
+  final Widget? leading;
+  final Widget title;
+  final Widget? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool enabled;
+  final bool danger; // destructive action: red container badge + red title
+  const SettingTile({
+    super.key,
+    this.leading,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.onLongPress,
+    this.enabled = true,
+    this.danger = false,
+  });
+
+  @override
+  State<SettingTile> createState() => _SettingTileState();
+}
+
+class _SettingTileState extends State<SettingTile> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final reduce = M3Motion.reduced(context);
+
+    Widget? badge;
+    var danger = widget.danger;
+    if (widget.leading != null) {
+      var inner = widget.leading!;
+      // Old pages wrap their icon in a Container / colored Icon: unwrap it so
+      // every row gets the same badge, and keep "red icon" = destructive.
+      if (inner is Container && inner.child is Icon) inner = inner.child!;
+      if (inner is Icon && inner.icon != null) {
+        if (inner.color != null && inner.color == scheme.error) danger = true;
+        inner = Icon(inner.icon);
+      }
+      final bg = danger ? scheme.errorContainer : scheme.primaryContainer;
+      final fg = danger ? scheme.onErrorContainer : scheme.onPrimaryContainer;
+      badge = M3CookieBadge(
+        size: 40,
+        color: bg,
+        child: IconTheme(
+          data: IconThemeData(color: fg, size: 20),
+          child: DefaultTextStyle(
+            style: TextStyle(fontSize: 18, color: fg),
+            child: inner,
+          ),
+        ),
+      );
+    }
+
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(children: [
+        if (badge != null) ...[badge, const SizedBox(width: 16)],
+        Expanded(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            DefaultTextStyle(
+              style: text.titleMedium!.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: danger ? scheme.error : scheme.onSurface),
+              child: widget.title,
+            ),
+            if (widget.subtitle != null) ...[
+              const SizedBox(height: 2),
+              DefaultTextStyle(
+                style: text.bodySmall!.copyWith(color: scheme.onSurfaceVariant),
+                child: widget.subtitle!,
+              ),
+            ],
+          ]),
+        ),
+        if (widget.trailing != null) ...[const SizedBox(width: 8), widget.trailing!],
+      ]),
+    );
+
+    return AnimatedOpacity(
+      opacity: widget.enabled ? 1 : 0.45,
+      duration: M3Motion.effectsFastDuration,
+      child: AnimatedScale(
+        scale: _down && !reduce ? 0.985 : 1.0,
+        duration: M3Motion.spatialFastDuration,
+        curve: M3Motion.spatialFast,
+        child: M3InkWell(
+          onTap: widget.enabled && widget.onTap != null
+              ? () { m3Haptic(); widget.onTap!(); }
+              : null,
+          onLongPress: widget.enabled && widget.onLongPress != null
+              ? () { m3Haptic(M3Haptic.medium); widget.onLongPress!(); }
+              : null,
+          onHighlightChanged: (v) => setState(() => _down = v),
+          child: ConstrainedBox(constraints: const BoxConstraints(minHeight: 64), child: content),
+        ),
+      ),
+    );
+  }
+}
+
+/// Small tonal pill showing the current value of a row.
+class _ValuePill extends StatelessWidget {
+  final String label;
+  const _ValuePill(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 148),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: ShapeDecoration(
+          color: scheme.secondaryContainer,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Flexible(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.labelLarge?.copyWith(
+                    color: scheme.onSecondaryContainer, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.unfold_more_rounded, size: 16, color: scheme.onSecondaryContainer),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Rows ────────────────────────────────────────────────────────────────────
+
+class SettingSwitchRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  const SettingSwitchRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    required this.value,
+    this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) => SettingTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: subtitle == null ? null : Text(subtitle!),
+        enabled: onChanged != null,
+        trailing: Switch(
+          value: value,
+          onChanged: onChanged == null
+              ? null
+              : (v) { m3Haptic(); onChanged!(v); },
+        ),
+        onTap: onChanged == null ? null : () => onChanged!(!value),
+      );
+}
+
+class SettingActionRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onTap;
+  final Widget? trailing;
+  final bool danger;
+  const SettingActionRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.trailing,
+    this.danger = false,
+  });
+
+  @override
+  Widget build(BuildContext context) => SettingTile(
+        leading: Icon(icon),
+        danger: danger,
+        title: Text(title),
+        subtitle: subtitle == null || subtitle!.isEmpty ? null : Text(subtitle!),
+        trailing: trailing ??
+            Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        onTap: onTap,
+      );
+}
+
+/// One option of a [SettingChoiceRow]: id, label, optional icon.
+typedef ChoiceOption = (String, String, IconData?);
+
+class SettingChoiceRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final List<ChoiceOption> options;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final String? description; // small explanation under the title
+  final bool previewFonts; // show each option in its own font (value = family)
+  const SettingChoiceRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+    this.description,
+    this.previewFonts = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final current = options.where((o) => o.$1 == value).map((o) => o.$2);
+    return SettingTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: description == null || description!.isEmpty ? null : Text(description!),
+      trailing: current.isEmpty ? null : _ValuePill(current.first),
+      onTap: () async {
+        final r = await showModalBottomSheet<String>(
+          sheetAnimationStyle: kM3SheetAnimation,
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          useSafeArea: true,
+          builder: (_) => _ChoiceSheet(title: title, options: options, value: value, previewFonts: previewFonts),
+        );
+        if (r != null && r != value) onChanged(r);
+      },
+    );
+  }
+}
+
+class SettingSliderRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String valueLabel;
+  final double value, min, max;
+  final int divisions;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
+  final bool enabled;
+  const SettingSliderRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.valueLabel,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+    required this.onChangeEnd,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return AnimatedOpacity(
+      opacity: enabled ? 1 : 0.45,
+      duration: M3Motion.effectsFastDuration,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            M3CookieBadge(
+              size: 40,
+              color: scheme.primaryContainer,
+              child: Icon(icon, size: 20, color: scheme.onPrimaryContainer),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text(title,
+                style: text.titleMedium?.copyWith(fontWeight: FontWeight.w600))),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: ShapeDecoration(
+                color: scheme.secondaryContainer,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: Text(valueLabel,
+                  style: text.labelLarge?.copyWith(
+                      color: scheme.onSecondaryContainer, fontWeight: FontWeight.w700)),
+            ),
+          ]),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              trackHeight: 12,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 22),
+            ),
+            child: Slider(
+              value: value, min: min, max: max, divisions: divisions,
+              label: valueLabel,
+              onChanged: enabled
+                  ? (v) {
+                      if (v != value) m3Haptic();
+                      onChanged(v);
+                    }
+                  : null,
+              onChangeEnd: onChangeEnd,
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class SettingTextRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String hint;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final TextInputType keyboardType;
+  const SettingTextRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.hint,
+    required this.value,
+    required this.onChanged,
+    this.keyboardType = TextInputType.url,
+  });
+
+  @override
+  Widget build(BuildContext context) => SettingActionRow(
+        icon: icon,
+        title: title,
+        subtitle: value.isEmpty ? hint : value,
+        trailing: Icon(Icons.edit_rounded, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+        onTap: () async {
+          final ctrl = TextEditingController(text: value);
+          final r = await showDialog<String>(
+            animationStyle: kM3DialogAnimation,
+            context: context,
+            builder: (ctx) => AlertDialog(
+              icon: Icon(icon),
+              title: Text(title),
+              content: TextField(
+                controller: ctrl,
+                autofocus: true,
+                autocorrect: false,
+                keyboardType: keyboardType,
+                decoration: InputDecoration(
+                  hintText: hint,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(L.commonCancel)),
+                FilledButton(
+                    onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+                    child: Text(L.commonSave)),
+              ],
+            ),
+          );
+          ctrl.dispose();
+          if (r != null && r != value) onChanged(r);
+        },
+      );
+}
+
+/// A "pick a time" row: shows hh:mm as a pill, tap opens [onTap].
+class SettingTimeRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final int hour, minute;
+  final VoidCallback onTap;
+  const SettingTimeRow({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.hour,
+    required this.minute,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => SettingTile(
+        leading: Icon(icon),
+        title: Text(title),
+        trailing: _ValuePill(
+            '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}'),
+        onTap: onTap,
+      );
+}
+
+// ── Sheet chrome ────────────────────────────────────────────────────────────
+// Sized to its content: every option is visible at once, and the list only
+// scrolls when it would not fit on screen.
+
+Widget _sheetShell(BuildContext context, {required Widget header, required Widget body}) {
+  final scheme = Theme.of(context).colorScheme;
+  final maxH = MediaQuery.of(context).size.height * 0.9;
+  return ClipRRect(
+    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+    child: Container(
+      color: scheme.surfaceContainerLow,
+      constraints: BoxConstraints(maxHeight: maxH),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Center(
+          child: Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 8),
+            width: 32, height: 4,
+            decoration: BoxDecoration(
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2)),
+          ),
+        ),
+        header,
+        Flexible(child: body),
+      ]),
+    ),
+  );
+}
+
+/// A tonal option card that morphs (corners + color) when selected.
+class _OptionCard extends StatelessWidget {
+  final bool selected;
+  final Widget leading;
+  final Widget title;
+  final Widget? trailing;
+  final VoidCallback onTap;
+  const _OptionCard({
+    required this.selected,
+    required this.leading,
+    required this.title,
+    required this.onTap,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final r = BorderRadius.circular(selected ? 28 : 16);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: M3ShapeMorph(
+        radius: r,
+        color: selected ? scheme.primaryContainer : scheme.surfaceContainerHigh,
+        child: Material(
+          type: MaterialType.transparency,
+          child: M3InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 40),
+                child: Row(children: [
+                  leading,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DefaultTextStyle(
+                      style: Theme.of(context).textTheme.bodyLarge!.copyWith(
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? scheme.onPrimaryContainer : scheme.onSurface,
+                          ),
+                      child: title,
+                    ),
+                  ),
+                  ?trailing,
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _badge(BuildContext context, IconData? icon, {bool selected = false, String? asset}) {
+  final scheme = Theme.of(context).colorScheme;
+  return M3CookieBadge(
+    size: 40,
+    color: selected ? scheme.primary : scheme.secondaryContainer,
+    child: asset != null
+        ? BrandIcon(asset, icon ?? Icons.music_note_rounded, size: 20,
+            color: selected ? scheme.onPrimary : scheme.onSecondaryContainer)
+        : icon == null
+            ? const SizedBox.shrink()
+            : Icon(icon, size: 20, color: selected ? scheme.onPrimary : scheme.onSecondaryContainer),
+  );
+}
+
+// ── Single choice sheet ─────────────────────────────────────────────────────
+
+class _ChoiceSheet extends StatelessWidget {
+  final String title, value;
+  final List<ChoiceOption> options;
+  final bool previewFonts;
+  const _ChoiceSheet({required this.title, required this.options, required this.value, this.previewFonts = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return _sheetShell(
+      context,
+      header: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Text(title, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        ),
+      ),
+      body: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 24), children: [
+        for (final o in options)
+          _OptionCard(
+            selected: o.$1 == value,
+            leading: _badge(context, o.$3, selected: o.$1 == value),
+            title: Text(o.$2,
+                style: previewFonts && o.$1.isNotEmpty
+                    ? TextStyle(fontFamily: o.$1)
+                    : null),
+            trailing: o.$1 == value
+                ? Icon(Icons.check_circle_rounded, color: scheme.primary)
+                : null,
+            onTap: () { m3Haptic(); Navigator.pop(context, o.$1); },
+          ),
+      ]),
+    );
+  }
+}
+
+// ── Connected action buttons ────────────────────────────────────────────────
+// Buttons that sit side by side share one shape: rounded squares that touch
+// (big outer corners, small inner corners) and melt into a pill when pressed.
+
+class ActionGroupItem {
+  final IconData? icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool primary; // filled with the accent color, otherwise tonal
+  final bool danger;  // red container (delete…)
+  const ActionGroupItem({
+    required this.label,
+    this.icon,
+    this.onPressed,
+    this.primary = false,
+    this.danger = false,
+  });
+}
+
+class SettingActionGroup extends StatelessWidget {
+  final List<ActionGroupItem> items;
+  const SettingActionGroup({super.key, required this.items});
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        for (var i = 0; i < items.length; i++) ...[
+          if (i > 0) const SizedBox(width: 2),
+          Expanded(child: _GroupButton(item: items[i], index: i, count: items.length)),
+        ],
+      ]);
+}
+
+class _GroupButton extends StatefulWidget {
+  final ActionGroupItem item;
+  final int index, count;
+  const _GroupButton({required this.item, required this.index, required this.count});
+
+  @override
+  State<_GroupButton> createState() => _GroupButtonState();
+}
+
+class _GroupButtonState extends State<_GroupButton> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final it = widget.item;
+    final enabled = it.onPressed != null;
+    const outer = Radius.circular(20), inner = Radius.circular(6), pill = Radius.circular(28);
+    final first = widget.index == 0, last = widget.index == widget.count - 1;
+    final radius = _down && !M3Motion.reduced(context)
+        ? const BorderRadius.all(pill)
+        : BorderRadius.horizontal(
+            left: first ? outer : inner,
+            right: last ? outer : inner,
+          );
+    final bg = it.danger
+        ? scheme.errorContainer
+        : it.primary ? scheme.primary : scheme.secondaryContainer;
+    final fg = it.danger
+        ? scheme.onErrorContainer
+        : it.primary ? scheme.onPrimary : scheme.onSecondaryContainer;
+
+    return AnimatedOpacity(
+      opacity: enabled ? 1 : 0.45,
+      duration: M3Motion.effectsFastDuration,
+      child: M3ShapeMorph(
+        radius: radius,
+        color: bg,
+        child: Material(
+          type: MaterialType.transparency,
+          child: M3InkWell(
+            onTap: it.onPressed == null
+                ? null
+                : () { m3Haptic(); it.onPressed!(); },
+            onHighlightChanged: (v) => setState(() => _down = v),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  if (it.icon != null) ...[
+                    Icon(it.icon, size: 18, color: fg),
+                    const SizedBox(width: 8),
+                  ],
+                  Flexible(
+                    child: Text(it.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: fg, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Expandable (accordion) ──────────────────────────────────────────────────
+// Header row + body that grows with a spring-free emphasized curve. With
+// [boxed] the card morphs (corners + tone) while it opens.
+
+class SettingExpandable extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final Widget body;
+  final bool boxed;
+  final bool initiallyExpanded;
+  final Widget? leadingWidget; // replaces the icon (brand logos)
+  const SettingExpandable({
+    super.key,
+    this.leadingWidget,
+    required this.icon,
+    required this.title,
+    required this.body,
+    this.boxed = false,
+    this.initiallyExpanded = false,
+  });
+
+  @override
+  State<SettingExpandable> createState() => _SettingExpandableState();
+}
+
+class _SettingExpandableState extends State<SettingExpandable> {
+  late bool _open = widget.initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final reduce = M3Motion.reduced(context);
+
+    final content = Column(mainAxisSize: MainAxisSize.min, children: [
+      SettingTile(
+        leading: widget.leadingWidget ?? Icon(widget.icon),
+        title: Text(widget.title),
+        trailing: AnimatedRotation(
+          turns: _open ? 0.5 : 0,
+          duration: reduce ? Duration.zero : M3Motion.spatialFastDuration,
+          curve: M3Motion.spatialFast,
+          child: Icon(Icons.keyboard_arrow_down_rounded, color: scheme.onSurfaceVariant),
+        ),
+        onTap: () => setState(() => _open = !_open),
+      ),
+      AnimatedSize(
+        duration: reduce ? Duration.zero : const Duration(milliseconds: 320),
+        curve: M3Motion.emphasized,
+        alignment: Alignment.topCenter,
+        child: _open
+            ? Padding(
+                padding: const EdgeInsets.fromLTRB(72, 0, 16, 16),
+                child: SizedBox(width: double.infinity, child: widget.body),
+              )
+            : const SizedBox(width: double.infinity),
+      ),
+    ]);
+
+    if (!widget.boxed) return content;
+    return M3ShapeMorph(
+      radius: BorderRadius.circular(_open ? 28 : 20),
+      color: _open ? scheme.surfaceContainerHigh : scheme.surfaceContainerLow,
+      child: Material(type: MaterialType.transparency, child: content),
+    );
+  }
+}

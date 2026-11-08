@@ -1,0 +1,58 @@
+name: Build iOS
+
+# Reusable: called by build-all.yml / release.yml, also runnable manually.
+# Language: Fastlane (Ruby) -> ios/fastlane/Fastfile, lane "unsigned_ipa".
+# No code signing (no Apple certificate needed on CI): the .ipa is unsigned,
+# sideload it with AltStore / Sideloadly / TrollStore, or re-sign it yourself.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Set up Ruby + Fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Build unsigned .ipa (Fastlane)
+        working-directory: ios
+        env:
+          APP_VERSION: ${{ inputs.version }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: bundle exec fastlane unsigned_ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picochat-ios-ipa
+          path: PicoChat-ios.ipa

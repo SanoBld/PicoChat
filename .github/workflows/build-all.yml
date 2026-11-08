@@ -1,0 +1,69 @@
+name: Build PicoChat (All Platforms)
+
+# Runs automatically on every push touching app code — builds all 5
+# platforms for verification, without creating a GitHub Release.
+# (Releases are still handled separately by release.yml on tag push.)
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'linux/**'
+      - 'macos/**'
+      - 'ios/**'
+      - 'windows/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/build-*.yml'
+  workflow_dispatch: {}
+
+# Cancel an in-progress run if a newer push arrives, saves CI minutes.
+concurrency:
+  group: build-all-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Skips the rest of the workflow for automated commits that contain
+  # "[skip ci]" in their message (e.g. release.yml's version-bump commit),
+  # so a release doesn't trigger a redundant full 5-platform build.
+  check-skip:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 2
+      - id: check
+        run: |
+          MSG=$(git log -1 --pretty=%B)
+          if [[ "$MSG" == *"[skip ci]"* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  windows:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-windows.yml
+
+  macos:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-macos.yml
+
+  linux:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-linux.yml
+
+  android:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-android.yml
+
+  ios:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-ios.yml

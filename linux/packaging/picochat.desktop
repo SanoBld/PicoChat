@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=PicoChat
+Comment=Private AI chat that runs 100% on your device
+Exec=picochat
+Icon=picochat
+Terminal=false
+Categories=Utility;Network;Chat;
+StartupWMClass=com.picochat.app

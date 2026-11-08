@@ -1,0 +1,200 @@
+name: picochat
+description: "PicoChat — Private AI chat that runs 100% on your device, powered by Hugging Face models."
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  http: ^1.6.0
+  dynamic_color: ^1.8.1
+  flutter_svg: ^2.0.10
+  window_manager: ^0.4.3
+  shared_preferences: ^2.2.3
+  path_provider: ^2.1.5
+  file_picker: ^8.1.2
+  url_launcher: ^6.3.0
+  package_info_plus: ^8.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+
+# ── App icon ───────────────────────────────────────────
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon-512.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#0F766E"
+  adaptive_icon_foreground: "assets/images/icon-foreground.png"
+  remove_alpha_ios: true
+  web:
+    generate: false
+  windows:
+    generate: true
+    image_path: "assets/images/icon-512.png"
+    icon_size: 48
+  macos:
+    generate: false
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/fonts/
+    - assets/icons/
+
+  fonts:
+    # ── Nothing OS fonts ───────────────────────────────────────────────────
+    - family: Ndot57
+      fonts:
+        - asset: assets/fonts/Ndot57-Regular.otf
+
+    - family: Ndot57Caps
+      fonts:
+        - asset: assets/fonts/Ndot57Caps-Regular.otf
+
+    - family: Ndot55
+      fonts:
+        - asset: assets/fonts/Ndot55-Regular.otf
+
+    - family: Ndot55Caps
+      fonts:
+        - asset: assets/fonts/Ndot55Caps-Regular.otf
+
+    - family: Ndot77
+      fonts:
+        - asset: assets/fonts/Ndot77JPExtended.ttf
+
+    - family: NType82
+      fonts:
+        - asset: assets/fonts/NType82-Regular.otf
+        - asset: assets/fonts/NType82-Headline.otf
+          weight: 700
+
+    - family: NType82Mono
+      fonts:
+        - asset: assets/fonts/NType82Mono-Regular.otf
+
+    - family: LetteraMonoLL
+      fonts:
+        - asset: assets/fonts/LetteraMonoLL-Regular.otf
+        - asset: assets/fonts/LetteraMonoLL-Light.otf
+          weight: 300
+        - asset: assets/fonts/LetteraMonoLL-Medium.otf
+          weight: 500
+        - asset: assets/fonts/LetteraMonoLL-Italic.otf
+          style: italic
+        - asset: assets/fonts/LetteraMonoLL-LightItalic.otf
+          weight: 300
+          style: italic
+        - asset: assets/fonts/LetteraMonoLL-MediumItalic.otf
+          weight: 500
+          style: italic
+
+    # ── Utility fonts ──────────────────────────────────────────────────────
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Light.otf
+          weight: 300
+        - asset: assets/fonts/Inter-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Inter_24pt-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter_24pt-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/InterVariable-Italic.ttf
+          style: italic
+
+    - family: GoogleSansFlex
+      fonts:
+        - asset: assets/fonts/GoogleSansFlex_24pt-Light.ttf
+          weight: 300
+        - asset: assets/fonts/GoogleSansFlex_24pt-Regular.ttf
+        - asset: assets/fonts/GoogleSansFlex_24pt-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/GoogleSansFlex_24pt-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/GoogleSansFlex_24pt-Bold.ttf
+          weight: 700
+
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans-Light.ttf
+          weight: 300
+        - asset: assets/fonts/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/OpenSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/OpenSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/OpenSans-Italic.ttf
+          style: italic
+
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Roboto-Italic.ttf
+          style: italic
+
+    - family: RobotoSlab
+      fonts:
+        - asset: assets/fonts/RobotoSlab-Light.ttf
+          weight: 300
+        - asset: assets/fonts/RobotoSlab-Regular.ttf
+        - asset: assets/fonts/RobotoSlab-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/RobotoSlab-Bold.ttf
+          weight: 700
+
+    - family: DancingScript
+      fonts:
+        - asset: assets/fonts/DancingScript-Regular.ttf
+        - asset: assets/fonts/DancingScript-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/DancingScript-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/DancingScript-Bold.ttf
+          weight: 700
+
+    - family: Spirax
+      fonts:
+        - asset: assets/fonts/Spirax-Regular.ttf
+
+    - family: Mynerve
+      fonts:
+        - asset: assets/fonts/Mynerve-Regular.ttf
+
+    - family: SingleDay
+      fonts:
+        - asset: assets/fonts/SingleDay-Regular.ttf
+
+    - family: BetaniaPatmosGDL
+      fonts:
+        - asset: assets/fonts/BetaniaPatmosGDL-Regular.ttf
+
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Regular.otf
+
+    - family: SpaceMono
+      fonts:
+        - asset: assets/fonts/SpaceMono-Regular.otf

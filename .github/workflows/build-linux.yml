@@ -1,0 +1,88 @@
+name: Build Linux
+
+# Reusable: called by build-all.yml / release.yml, also runnable manually.
+# Language: Bash -> linux/packaging/ci-build.sh
+# Builds x64 and ARM64 natively (Flutter can't cross-compile Linux). Per arch:
+# a .zip (used by the in-app updater), a .deb, an .rpm and an .AppImage.
+# The x64 job also publishes install-linux.sh (picks the right package).
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-latest
+            zip: picochat-linux.zip            # name kept: used by UpdateService
+          - arch: arm64
+            runner: ubuntu-24.04-arm            # GitHub-hosted native ARM64 runner
+            zip: picochat-linux-arm64.zip
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install Flutter
+        if: matrix.arch == 'x64'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # subosito/flutter-action can't always resolve an arm64 SDK, so on ARM
+      # we clone Flutter directly (same approach as the Windows ARM64 job).
+      - name: Install Flutter (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          git clone https://github.com/flutter/flutter.git -b stable --depth 1 "$HOME/flutter"
+          echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Get dependencies
+        run: flutter pub get
+      - name: Generate launcher icons
+        run: dart run flutter_launcher_icons
+
+      - name: Build + package (Bash)
+        env:
+          APP_VERSION: ${{ inputs.version }}
+          RUN_NUMBER: ${{ github.run_number }}
+          REPO: ${{ github.repository }}
+        run: bash linux/packaging/ci-build.sh ${{ matrix.arch }} ${{ matrix.zip }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.zip }}
+          path: ${{ matrix.zip }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picochat-linux-${{ matrix.arch }}-deb
+          path: PicoChat-linux-${{ matrix.arch }}.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picochat-linux-${{ matrix.arch }}-appimage
+          path: PicoChat-linux-${{ matrix.arch }}.AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picochat-linux-${{ matrix.arch }}-rpm
+          path: PicoChat-linux-${{ matrix.arch }}.rpm
+      - uses: actions/upload-artifact@v4
+        if: matrix.arch == 'x64'
+        with:
+          name: picochat-linux-install-script
+          path: install-linux.sh
