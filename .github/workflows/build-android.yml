@@ -59,6 +59,20 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # GitHub's release CDN sometimes answers 504 when Gradle downloads itself.
+      # Download it here with retries and point the wrapper at the local file.
+      - name: Pre-download Gradle (with retries)
+        shell: bash
+        run: |
+          curl -fL --retry 8 --retry-all-errors --retry-delay 15 \
+            -o "$RUNNER_TEMP/gradle.zip" \
+            https://services.gradle.org/distributions/gradle-8.14-bin.zip
+          props=android/gradle/wrapper/gradle-wrapper.properties
+          grep -v '^distributionUrl=' "$props" > "$props.tmp"
+          printf 'distributionUrl=file\\:%s\n' "$RUNNER_TEMP/gradle.zip" >> "$props.tmp"
+          mv "$props.tmp" "$props"
+          cat "$props"
+
       - name: Get dependencies
         run: flutter pub get
       - name: Generate launcher icons
