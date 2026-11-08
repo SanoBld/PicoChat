@@ -98,7 +98,7 @@ Future<SharedPreferences> _loadState() async {
   searchEngineNotifier.value = p.getString('pc_search_engine') ?? 'duckduckgo';
   sidebarCollapsedNotifier.value = p.getBool('pc_sidebar_collapsed') ?? false;
   voiceEngineNotifier.value = p.getString('pc_voice_engine') ?? 'whisper';
-  voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'tiny';
+  voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'base';
   reasoningModeNotifier.value = p.getString('pc_reasoning') ?? 'auto';
   showStepsNotifier.value = p.getBool('pc_show_steps') ?? true;
   stepsOpenNotifier.value = p.getBool('pc_steps_open') ?? true;

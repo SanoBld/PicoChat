@@ -104,7 +104,7 @@ class ResetService {
     searchEngineNotifier.value = 'duckduckgo';
     sidebarCollapsedNotifier.value = false;
     voiceEngineNotifier.value = 'whisper';
-    voiceModelNotifier.value = 'tiny';
+    voiceModelNotifier.value = 'base';
     devModeNotifier.value = false;
     webAskNotifier.value = true;
     assistModelNotifier.value = '';

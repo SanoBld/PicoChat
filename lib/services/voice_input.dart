@@ -50,8 +50,7 @@ class VoiceInput {
     _live = '';
     transcript.value = '';
     levels.value = List.filled(28, 0.0);
-    // The bundled Whisper model is English only: other languages use the system recognizer.
-    if (voiceEngineNotifier.value == 'whisper' && localeNotifier.value == 'en') {
+    if (voiceEngineNotifier.value == 'whisper') {
       try {
         if (await _startWhisper()) return true;
       } catch (e) {
@@ -62,8 +61,8 @@ class VoiceInput {
     return _startSystem();
   }
 
-  // Only ggml-tiny (English, bundled in assets/whisper/) ships with the app.
-  WhisperModel _model() => WhisperModel.tiny;
+  // tiny and base (multilingual) are bundled in assets/whisper/; "small" uses base.
+  WhisperModel _model() => voiceModelNotifier.value == 'tiny' ? WhisperModel.tiny : WhisperModel.base;
 
   void _level(Uint8List b) {
     final n = b.lengthInBytes ~/ 2;
