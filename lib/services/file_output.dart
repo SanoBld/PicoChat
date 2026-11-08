@@ -19,6 +19,8 @@ class FileOutput {
       r'fichier|file|télécharg|telecharg|download|export|datei|archivo|descarg|\.(txt|csv|json|md|xlsx?|docx?|pdf|py|js|html|xml)\b|excel|tableur|spreadsheet|tabelle|hoja de c',
       caseSensitive: false);
 
+  static String hide(String text) => text.replaceAll(_re, '').trim();
+
   static bool requested(String userText) => _ask.hasMatch(userText);
 
   /// Turns file blocks into normal code blocks (used when no file was asked for).

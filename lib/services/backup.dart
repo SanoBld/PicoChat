@@ -32,7 +32,7 @@ class Backup {
   static Future<bool> exportMemory() => _save('picochat_memory.json', {
         'type': 'picochat-memory',
         'name': displayNameNotifier.value,
-        'aiStyle': aiStyleNotifier.value,
+        'instructions': systemPromptNotifier.value,
         'facts': MemoryStore.instance.items,
       });
 
@@ -51,10 +51,10 @@ class Backup {
       }
       if (j['type'] == 'picochat-memory') {
         await MemoryStore.instance.replaceAll(((j['facts'] as List?) ?? []).whereType<String>().toList());
-        final style = j['aiStyle'];
+        final style = j['instructions'];
         if (style is String && style.isNotEmpty) {
-          aiStyleNotifier.value = style;
-          await savePref('pc_ai_style', style);
+          systemPromptNotifier.value = style;
+          await savePref('pc_system_prompt', style);
         }
         final name = j['name'];
         if (name is String && name.isNotEmpty && displayNameNotifier.value.isEmpty) {

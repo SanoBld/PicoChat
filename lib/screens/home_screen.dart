@@ -30,6 +30,8 @@ import '../services/backup.dart';
 import '../services/chat_service.dart';
 import '../services/file_output.dart';
 import '../services/prefs.dart';
+import '../services/reset.dart';
+import 'intro_screen.dart';
 import '../services/voice.dart';
 import '../services/voice_input.dart';
 import 'settings/memory_page.dart';

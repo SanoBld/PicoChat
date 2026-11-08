@@ -519,15 +519,14 @@ class _MessageView extends StatelessWidget {
                 ]),
               )
             else if (message.text.isNotEmpty)
-              MarkdownLite(text: message.text, style: text.bodyLarge, linkColor: scheme.primary),
+              MarkdownLite(text: generating ? message.text : FileOutput.hide(message.text), style: text.bodyLarge, linkColor: scheme.primary),
             if (!generating)
               for (final f in FileOutput.extract(message.text))
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: ActionChip(
-                    avatar: const Icon(Icons.download_rounded, size: 18),
-                    label: Text(f.name),
-                    onPressed: () async {
+                  child: _FileCard(
+                    file: f,
+                    onTap: () async {
                       final ok = await FileOutput.save(f);
                       if (ok && context.mounted) _toast(context, tr('file_saved'));
                     },
@@ -635,4 +634,58 @@ void _showSources(BuildContext context, List<Map<String, String>> src) {
       ),
     ),
   );
+}
+
+
+// ── File written by the AI ───────────────────────────────────────────────────
+
+class _FileCard extends StatelessWidget {
+  final GeneratedFile file;
+  final VoidCallback onTap;
+  const _FileCard({required this.file, required this.onTap});
+
+  IconData _icon() {
+    final e = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : '';
+    if (const ['csv', 'tsv', 'xlsx'].contains(e)) return Icons.table_chart_rounded;
+    if (const ['json', 'xml', 'html', 'py', 'js', 'ts', 'dart', 'css', 'sql', 'java', 'kt', 'c', 'cpp'].contains(e)) {
+      return Icons.code_rounded;
+    }
+    return Icons.description_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    if (!materialShapesNotifier.value) {
+      return ActionChip(avatar: const Icon(Icons.download_rounded, size: 18), label: Text(file.name), onPressed: onTap);
+    }
+    return Material(
+      color: scheme.secondaryContainer,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 18, 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            M3CookieBadge(size: 44, color: scheme.secondary, child: Icon(_icon(), size: 22, color: scheme.onSecondary)),
+            const SizedBox(width: 12),
+            Flexible(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Text(file.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: scheme.onSecondaryContainer)),
+                Text(formatBytes(file.content.length),
+                    style: text.bodySmall?.copyWith(color: scheme.onSecondaryContainer.withValues(alpha: 0.7))),
+              ]),
+            ),
+            const SizedBox(width: 12),
+            Icon(Icons.download_rounded, color: scheme.onSecondaryContainer),
+          ]),
+        ),
+      ),
+    );
+  }
 }

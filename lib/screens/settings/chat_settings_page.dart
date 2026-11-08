@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../app_state.dart';
 import '../../l10n/l10n.dart';
 import '../../services/prefs.dart';
+import '../../services/reset.dart';
 import '../../widgets/m3_components.dart';
 import 'settings_helpers.dart';
 import 'settings_rows.dart';
@@ -150,7 +151,9 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
           ]),
           const SizedBox(height: 20),
           SettingsSection(label: tr('cs_reset'), children: [
-            SettingActionRow(icon: Icons.restart_alt_rounded, title: tr('cs_reset'), subtitle: tr('cs_reset_sub'), onTap: _reset),
+            SettingActionRow(icon: Icons.restart_alt_rounded, title: tr('cs_reset'), subtitle: tr('cs_reset_sub'), onTap: () async {
+              if (await ResetService.confirm(context, tr('reset_settings_body'))) _reset();
+            }),
           ]),
         ]),
       ),

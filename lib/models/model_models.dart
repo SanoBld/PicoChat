@@ -124,10 +124,11 @@ class RecommendedModel {
 }
 
 const List<RecommendedModel> kRecommendedModels = [
-  RecommendedModel(repo: 'Qwen/Qwen2.5-0.5B-Instruct-GGUF', title: 'Qwen2.5 0.5B', params: '0.5B', approxMb: 400, blurbKey: 'rec_tiny'),
-  RecommendedModel(repo: 'bartowski/Llama-3.2-1B-Instruct-GGUF', title: 'Llama 3.2 1B', params: '1B', approxMb: 800, blurbKey: 'rec_fast'),
-  RecommendedModel(repo: 'Qwen/Qwen2.5-1.5B-Instruct-GGUF', title: 'Qwen2.5 1.5B', params: '1.5B', approxMb: 1100, blurbKey: 'rec_balanced'),
-  RecommendedModel(repo: 'HuggingFaceTB/SmolLM2-1.7B-Instruct-GGUF', title: 'SmolLM2 1.7B', params: '1.7B', approxMb: 1100, blurbKey: 'rec_balanced'),
-  RecommendedModel(repo: 'bartowski/gemma-2-2b-it-GGUF', title: 'Gemma 2 2B', params: '2B', approxMb: 1700, blurbKey: 'rec_smart'),
-  RecommendedModel(repo: 'bartowski/Llama-3.2-3B-Instruct-GGUF', title: 'Llama 3.2 3B', params: '3B', approxMb: 2000, blurbKey: 'rec_smart'),
+  RecommendedModel(repo: 'unsloth/Qwen3-0.6B-GGUF', title: 'Qwen3 0.6B', params: '0.6B', approxMb: 400, blurbKey: 'rec_tiny'),
+  RecommendedModel(repo: 'unsloth/gemma-3-1b-it-GGUF', title: 'Gemma 3 1B', params: '1B', approxMb: 810, blurbKey: 'rec_fast'),
+  RecommendedModel(repo: 'unsloth/Qwen3-1.7B-GGUF', title: 'Qwen3 1.7B', params: '1.7B', approxMb: 1110, blurbKey: 'rec_balanced'),
+  RecommendedModel(repo: 'bartowski/Llama-3.2-3B-Instruct-GGUF', title: 'Llama 3.2 3B', params: '3B', approxMb: 2020, blurbKey: 'rec_reliable'),
+  RecommendedModel(repo: 'unsloth/Qwen3-4B-Instruct-2507-GGUF', title: 'Qwen3 4B 2507', params: '4B', approxMb: 2500, blurbKey: 'rec_smart'),
+  RecommendedModel(repo: 'ggml-org/gemma-4-E2B-it-GGUF', title: 'Gemma 4 E2B', params: '2B', approxMb: 3430, blurbKey: 'rec_best'),
+  RecommendedModel(repo: 'unsloth/Qwen3-8B-GGUF', title: 'Qwen3 8B', params: '8B', approxMb: 5030, blurbKey: 'rec_pc'),
 ];

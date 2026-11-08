@@ -1,7 +1,7 @@
 // lib/services/voice_input.dart
 // Live dictation: words appear in the message field while you speak.
 // Recognition restarts by itself after pauses until you press stop.
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show debugPrint, ValueNotifier;
 import 'package:flutter/widgets.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../app_state.dart';
@@ -60,10 +60,14 @@ class VoiceInput {
         final text = '$_base${r.recognizedWords}';
         c.value = TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
       },
-      localeId: _langs[localeNotifier.value],
-      listenFor: const Duration(minutes: 5),
-      pauseFor: const Duration(seconds: 6),
-      listenOptions: SpeechListenOptions(partialResults: true, cancelOnError: false, listenMode: ListenMode.dictation),
+      listenOptions: SpeechListenOptions(
+        partialResults: true,
+        cancelOnError: false,
+        listenMode: ListenMode.dictation,
+        localeId: _langs[localeNotifier.value],
+        listenFor: const Duration(minutes: 5),
+        pauseFor: const Duration(seconds: 6),
+      ),
     );
   }
 

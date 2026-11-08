@@ -5,6 +5,10 @@
 // "# " / "## " headers, and auto-linked URLs. No external package needed.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import '../app_state.dart';
+import '../l10n/l10n.dart';
+import 'm3_components.dart' show M3CookieBadge;
 import 'package:url_launcher/url_launcher.dart';
 
 class MarkdownLite extends StatelessWidget {
@@ -153,9 +157,56 @@ class MarkdownLite extends StatelessWidget {
     // ── Standalone image: "![alt](url)" on its own line ─────────────────
     final imgMatch = RegExp(r'^!\[[^\]]*\]\((\S+)\)$');
 
+    final lastIdx = lines.lastIndexWhere((l) => l.trim().isNotEmpty);
+    final scheme = Theme.of(context).colorScheme;
+
     while (i < lines.length) {
       final raw = lines[i];
       final line = raw.trimRight();
+
+      // ── Fenced code block ```lang ... ``` ───────────────────────────────
+      if (line.trimLeft().startsWith('```')) {
+        final lang = line.trimLeft().substring(3).trim();
+        final buf = <String>[];
+        var j = i + 1;
+        while (j < lines.length && !lines[j].trimLeft().startsWith('```')) {
+          buf.add(lines[j]);
+          j++;
+        }
+        widgets.add(_CodeBlock(lang: lang, code: buf.join('\n')));
+        i = j + 1;
+        continue;
+      }
+
+      // ── Final answer alone on the last line in **bold** → boxed ─────────
+      final ans = RegExp(r'^\*\*([^*]+)\*\*[.!]?$').firstMatch(line.trim());
+      if (ans != null && i == lastIdx && i > 0 && materialShapesNotifier.value) {
+        widgets.add(Container(
+          margin: const EdgeInsets.only(top: 8, bottom: 4),
+          padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
+          decoration: ShapeDecoration(
+            color: scheme.primaryContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: BorderSide(color: scheme.primary.withValues(alpha: 0.5), width: 1.5),
+            ),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            M3CookieBadge(
+              size: 32,
+              color: scheme.primary,
+              child: Icon(Icons.check_rounded, size: 18, color: scheme.onPrimary),
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(ans.group(1)!,
+                  style: style?.copyWith(fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer)),
+            ),
+          ]),
+        ));
+        i++;
+        continue;
+      }
 
       final im = imgMatch.firstMatch(line.trim());
       if (im != null) {
@@ -287,4 +338,45 @@ class _FullscreenImage extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _CodeBlock extends StatelessWidget {
+  final String lang;
+  final String code;
+  const _CodeBlock({required this.lang, required this.code});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final shaped = materialShapesNotifier.value;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(shaped ? 24 : 8),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 4, 0),
+          child: Row(children: [
+            Text(lang.isEmpty ? 'code' : lang,
+                style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w700)),
+            const Spacer(),
+            IconButton(
+              tooltip: tr('copy'),
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.copy_rounded, size: 16, color: scheme.onSurfaceVariant),
+              onPressed: () => Clipboard.setData(ClipboardData(text: code)),
+            ),
+          ]),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+          child: Text(code, style: TextStyle(fontFamily: 'SpaceMono', fontSize: 13, color: scheme.onSurface, height: 1.4)),
+        ),
+      ]),
+    );
+  }
 }

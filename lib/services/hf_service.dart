@@ -109,6 +109,7 @@ class HfService {
 
   /// Best default file: Q4_K_M first, then close relatives, else the smallest.
   static HfFileInfo? pickDefault(List<HfFileInfo> files) {
+    files = files.where((f) => !f.path.toLowerCase().contains('mmproj')).toList();
     if (files.isEmpty) return null;
     for (final q in const ['Q4_K_M', 'Q4_K_S', 'Q4_0', 'Q5_K_M', 'Q4_K_L', 'Q8_0']) {
       for (final f in files) {

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../app_state.dart';
 import '../../l10n/l10n.dart';
 import '../../services/prefs.dart';
+import '../../services/reset.dart';
 import '../../widgets/m3_components.dart';
 import 'settings_helpers.dart';
 import 'settings_rows.dart';
@@ -89,6 +90,17 @@ class _AppearancePageState extends State<AppearancePage> {
               onChanged: (v) {
                 themeModeNotifier.value = themeFromString(v);
                 savePref('pc_theme', v);
+                setState(() {});
+              },
+            ),
+            SettingSwitchRow(
+              icon: Icons.interests_rounded,
+              title: tr('ap_shapes'),
+              subtitle: tr('ap_shapes_sub'),
+              value: materialShapesNotifier.value,
+              onChanged: (v) {
+                materialShapesNotifier.value = v;
+                savePref('pc_shapes', v);
                 setState(() {});
               },
             ),
@@ -254,6 +266,20 @@ class _AppearancePageState extends State<AppearancePage> {
                 displayNameNotifier.value = v.trim();
                 savePref('pc_display_name', v.trim());
                 setState(() {});
+              },
+            ),
+          ]),
+          const SizedBox(height: 20),
+          SettingsSection(label: tr('reset_appearance'), children: [
+            SettingActionRow(
+              icon: Icons.restart_alt_rounded,
+              title: tr('reset_appearance'),
+              subtitle: tr('reset_appearance_sub'),
+              onTap: () async {
+                if (await ResetService.confirm(context, tr('reset_settings_body'))) {
+                  await ResetService.appearance();
+                  if (mounted) setState(() {});
+                }
               },
             ),
           ]),

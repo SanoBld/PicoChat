@@ -47,7 +47,7 @@ class _MemoryPageState extends State<MemoryPage> {
   }
 
   Future<void> _style() async {
-    final c = TextEditingController(text: aiStyleNotifier.value);
+    final c = TextEditingController(text: systemPromptNotifier.value);
     final v = await showDialog<String>(
       context: context,
       builder: (_) => AlertDialog(
@@ -60,8 +60,9 @@ class _MemoryPageState extends State<MemoryPage> {
       ),
     );
     if (v == null) return;
-    setState(() => aiStyleNotifier.value = v.trim());
-    await savePref('pc_ai_style', v.trim());
+    final clean = v.trim().isEmpty ? kDefaultSystemPrompt : v.trim();
+    setState(() => systemPromptNotifier.value = clean);
+    await savePref('pc_system_prompt', clean);
   }
 
   Future<void> _import() async {
@@ -98,7 +99,7 @@ class _MemoryPageState extends State<MemoryPage> {
         ListTile(
           leading: const Icon(Icons.tune_rounded),
           title: Text(tr('ai_style')),
-          subtitle: Text(aiStyleNotifier.value.isEmpty ? '—' : aiStyleNotifier.value, maxLines: 2, overflow: TextOverflow.ellipsis),
+          subtitle: Text(systemPromptNotifier.value, maxLines: 2, overflow: TextOverflow.ellipsis),
           onTap: _style,
         ),
         if (_store.items.isEmpty)

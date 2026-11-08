@@ -68,8 +68,8 @@ class _IntroScreenState extends State<IntroScreen> {
     if (_work.text.trim().isNotEmpty) await MemoryStore.instance.add('Work/studies: ${_work.text.trim()}');
     if (_likes.text.trim().isNotEmpty) await MemoryStore.instance.add('Interests: ${_likes.text.trim()}');
     if (_aiStyle.text.trim().isNotEmpty) {
-      aiStyleNotifier.value = _aiStyle.text.trim();
-      await savePref('pc_ai_style', _aiStyle.text.trim());
+      systemPromptNotifier.value = _aiStyle.text.trim();
+      await savePref('pc_system_prompt', _aiStyle.text.trim());
     }
     await savePref('pc_onboarded', true);
     if (!mounted) return;

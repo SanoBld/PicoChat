@@ -102,6 +102,23 @@ class _SettingsPageState extends State<_SettingsPage> {
             ),
           ]),
           const SizedBox(height: 20),
+          SettingsSection(label: tr('set_danger'), children: [
+            SettingActionRow(
+              icon: Icons.delete_forever_rounded,
+              title: tr('reset_all'),
+              subtitle: tr('reset_all_sub'),
+              danger: true,
+              onTap: () async {
+                if (await ResetService.fullFlow(context) && context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute<void>(builder: (_) => const IntroScreen()),
+                    (_) => false,
+                  );
+                }
+              },
+            ),
+          ]),
+          const SizedBox(height: 20),
           SettingsSection(label: tr('set_about'), children: [
             SettingActionRow(
               icon: Icons.info_outline_rounded,
