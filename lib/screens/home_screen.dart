@@ -36,6 +36,7 @@ import '../services/voice.dart';
 import '../services/voice_input.dart';
 import 'settings/memory_page.dart';
 import 'settings/context_page.dart';
+import '../widgets/info_cards.dart';
 import '../services/location_service.dart';
 import '../services/web_intent.dart';
 import '../widgets/chat_tools_sheet.dart';

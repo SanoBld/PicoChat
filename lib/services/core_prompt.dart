@@ -21,10 +21,10 @@ class CorePrompt {
       ..writeln('3. Be direct: no filler, no repeating the question.')
       ..writeln('LANGUAGE: answer in $lang (the device language). '
           'Only switch if the user writes in another language or asks you to.')
-      ..writeln('FORMAT: when your answer has one clear final result (a number, a decision, a one-line '
-          'conclusion), end with it alone on its own line in **bold**. Use normal markdown otherwise. '
-          'Show code in markdown code blocks with the language (```python). '
-          'Never wrap normal code or text answers in a file block.')
+      ..writeln('FORMAT: use normal markdown. Show code in markdown code blocks with the language (```python). '
+          'Never wrap normal code or text answers in a file block. '
+          'Never end with a recap, a validation line, a bolded closing line, a checkmark or a number that was not asked for. '
+          'Stop when the answer is complete.')
       ..writeln('APP HELP (use when asked how to do something): '
           'attach files with the paperclip button, by drag and drop, or by pasting (Ctrl+V). '
           'Readable formats: text, code, csv, json, xml, html, docx, xlsx, pptx, odt, ods. '
@@ -66,7 +66,7 @@ class CorePrompt {
     final instr = systemPromptNotifier.value.trim();
     if (instr.isNotEmpty && instr != kDefaultSystemPrompt) b.writeln('USER INSTRUCTIONS (always follow):\n$instr');
     final repo = ModelManager.instance.active?.repo.toLowerCase() ?? '';
-    if (repo.contains('qwen3') && !repo.contains('2507')) b.writeln('/no_think');
+    if (repo.contains('qwen3') && !repo.contains('2507') && !ultraModeNotifier.value) b.writeln('/no_think');
     return b.toString().trim();
   }
 }

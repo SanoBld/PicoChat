@@ -25,21 +25,25 @@ class _ToolsSheetState extends State<_ToolsSheet> {
   static const _presets = {
     'eco': (0.5, 512, 2048),
     'balanced': (0.7, 1024, 4096),
-    'max': (0.8, 2048, 8192),
+    'max': (0.8, 3072, 8192),
+    'ultra': (0.6, 4096, 16384),
   };
 
-  void _apply(double t, int m, int c) {
+  void _apply(double t, int m, int c, {bool ultra = false}) {
     setState(() {
+      ultraModeNotifier.value = ultra;
       temperatureNotifier.value = t;
       maxTokensNotifier.value = m;
       contextSizeNotifier.value = c;
     });
+    savePref('pc_ultra', ultra);
     savePref('pc_temperature', t);
     savePref('pc_max_tokens', m);
     savePref('pc_context_size', c);
   }
 
   String? get _current {
+    if (ultraModeNotifier.value) return 'ultra';
     for (final e in _presets.entries) {
       final v = e.value;
       if (temperatureNotifier.value == v.$1 && maxTokensNotifier.value == v.$2 && contextSizeNotifier.value == v.$3) {
@@ -69,15 +73,21 @@ class _ToolsSheetState extends State<_ToolsSheet> {
                 ButtonSegment(value: 'eco', label: Text(tr('power_eco'))),
                 ButtonSegment(value: 'balanced', label: Text(tr('power_balanced'))),
                 ButtonSegment(value: 'max', label: Text(tr('power_max'))),
+                ButtonSegment(value: 'ultra', icon: const Icon(Icons.auto_awesome_rounded, size: 16), label: Text(tr('power_ultra'))),
               ],
-              selected: {if (_current != null) _current!},
+              selected: {?_current},
               onSelectionChanged: (s) {
                 if (s.isEmpty) return;
                 final v = _presets[s.first]!;
-                _apply(v.$1, v.$2, v.$3);
+                _apply(v.$1, v.$2, v.$3, ultra: s.first == 'ultra');
               },
             ),
           ),
+          if (ultraModeNotifier.value)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(tr('ultra_hint'), style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            ),
           const SizedBox(height: 8),
           _row(text, scheme, tr('cs_temperature'), temperatureNotifier.value.toStringAsFixed(1)),
           Slider(

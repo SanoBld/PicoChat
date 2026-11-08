@@ -74,6 +74,60 @@ class _ChatViewState extends State<_ChatView> {
     });
   }
 
+  Future<void> _sendMic() async {
+    await VoiceInput.instance.stop();
+    if (mounted) await _send();
+  }
+
+  Widget _dictationPanel(ColorScheme scheme, TextTheme text) {
+    final v = VoiceInput.instance;
+    return FadeSlideIn(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 10, 4, 4),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ValueListenableBuilder<String>(
+            valueListenable: v.transcript,
+            builder: (_, t, _) => AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              child: Text(
+                t.isEmpty ? tr('voice_listening') : t,
+                key: ValueKey(t.isEmpty),
+                maxLines: 5,
+                overflow: TextOverflow.ellipsis,
+                style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant, fontStyle: t.isEmpty ? FontStyle.italic : FontStyle.normal),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ValueListenableBuilder<List<double>>(
+            valueListenable: v.levels,
+            builder: (_, l, _) => SizedBox(
+              height: 36,
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.center, children: [
+                for (final x in l)
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 90),
+                    width: 4,
+                    height: 4 + x * 30,
+                    margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                    decoration: ShapeDecoration(color: scheme.primary.withValues(alpha: 0.4 + x * 0.6), shape: const StadiumBorder()),
+                  ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(children: [
+            IconButton.filledTonal(tooltip: tr('cancel'), icon: const Icon(Icons.close_rounded), onPressed: v.cancel),
+            const Spacer(),
+            IconButton.filledTonal(tooltip: tr('voice_validate'), icon: const Icon(Icons.check_rounded), onPressed: v.stop),
+            const SizedBox(width: 8),
+            IconButton.filled(tooltip: tr('send'), icon: const Icon(Icons.arrow_upward_rounded), onPressed: _sendMic),
+          ]),
+        ]),
+      ),
+    );
+  }
+
   Future<void> _toggleMic() async {
     final v = VoiceInput.instance;
     if (v.listening.value) return v.stop();
@@ -240,16 +294,34 @@ class _ChatViewState extends State<_ChatView> {
               color: scheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(28),
             ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
+            child: ValueListenableBuilder<bool>(
+              valueListenable: VoiceInput.instance.listening,
+              builder: (_, dictating, _) => Column(mainAxisSize: MainAxisSize.min, children: [
+                if (dictating) _dictationPanel(scheme, text),
+                Offstage(
+                  offstage: dictating,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
               if (locationEnabledNotifier.value && LocationService.instance.label != null)
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Chip(
-                      visualDensity: VisualDensity.compact,
-                      avatar: const Icon(Icons.location_on_rounded, size: 16),
-                      label: Text(LocationService.instance.label!),
+                    child: Material(
+                      color: scheme.secondaryContainer,
+                      shape: const StadiumBorder(),
+                      child: InkWell(
+                        customBorder: const StadiumBorder(),
+                        onTap: LocationService.instance.refresh,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(6, 5, 12, 5),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            M3CookieBadge(size: 22, color: scheme.secondary, child: Icon(Icons.location_on_rounded, size: 13, color: scheme.onSecondary)),
+                            const SizedBox(width: 8),
+                            Text(LocationService.instance.label!,
+                                style: text.labelMedium?.copyWith(fontWeight: FontWeight.w700, color: scheme.onSecondaryContainer)),
+                          ]),
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -360,7 +432,7 @@ class _ChatViewState extends State<_ChatView> {
                 ),
                 ValueListenableBuilder<bool>(
                   valueListenable: VoiceInput.instance.listening,
-                  builder: (_, on, __) => IconButton(
+                  builder: (_, on, _) => IconButton(
                     tooltip: tr('voice_input'),
                     isSelected: on,
                     icon: Icon(on ? Icons.mic_rounded : Icons.mic_none_rounded),
@@ -376,7 +448,8 @@ class _ChatViewState extends State<_ChatView> {
                   onPressed: () => showChatToolsSheet(context),
                 ),
               ]),
-            ]),
+            ])),
+          ])),
           ),
         ),
       ),
@@ -517,6 +590,8 @@ class _MessageView extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (message.steps.isNotEmpty) StepsTimeline(steps: message.steps, running: generating),
+            for (final cd in message.cards) InfoCard(data: cd),
             if (waiting)
               // Loading model / searching web / first words not here yet: full-width wavy line.
               Padding(
@@ -592,7 +667,7 @@ class _MessageView extends StatelessWidget {
                 ),
                 ValueListenableBuilder<String?>(
                   valueListenable: VoiceService.instance.speakingId,
-                  builder: (_, id, __) => IconButton(
+                  builder: (_, id, _) => IconButton(
                     tooltip: tr(id == message.id ? 'voice_stop' : 'voice_read'),
                     visualDensity: VisualDensity.compact,
                     icon: Icon(id == message.id ? Icons.stop_circle_outlined : Icons.volume_up_rounded, size: 18),
@@ -630,25 +705,61 @@ void _showSources(BuildContext context, List<Map<String, String>> src) {
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
-        child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(8, 0, 8, 16), children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text('${tr('sources_title')} (${src.length})',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-          ),
-          for (final s in src)
-            ListTile(
-              leading: const Icon(Icons.public_rounded),
-              title: Text(s['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
-              subtitle: Text(s['domain'] ?? ''),
-              onTap: () => launchUrl(Uri.parse(s['url'] ?? ''), mode: LaunchMode.externalApplication),
+    builder: (ctx) {
+      final scheme = Theme.of(ctx).colorScheme;
+      final text = Theme.of(ctx).textTheme;
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.75),
+          child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(16, 0, 16, 16), children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+              child: Row(children: [
+                M3CookieBadge(size: 40, color: scheme.primary, child: Icon(Icons.public_rounded, color: scheme.onPrimary)),
+                const SizedBox(width: 12),
+                Text('${tr('sources_title')} · ${src.length}', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+              ]),
             ),
-        ]),
-      ),
-    ),
+            for (final (i, s) in src.indexed)
+              FadeSlideIn(
+                delay: Duration(milliseconds: 40 * i.clamp(0, 10)),
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Material(
+                    color: scheme.surfaceContainerHigh,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => launchUrl(Uri.parse(s['url'] ?? ''), mode: LaunchMode.externalApplication),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                        child: Row(children: [
+                          M3CookieBadge(
+                            size: 40,
+                            color: scheme.secondaryContainer,
+                            child: Text(((s['domain'] ?? '?').isEmpty ? '?' : s['domain']!.substring(0, 1)).toUpperCase(),
+                                style: TextStyle(fontWeight: FontWeight.w800, color: scheme.onSecondaryContainer)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(s['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 2),
+                              Text(s['domain'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodySmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w600)),
+                            ]),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.north_east_rounded, size: 18, color: scheme.onSurfaceVariant),
+                        ]),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ]),
+        ),
+      );
+    },
   );
 }
 

@@ -86,6 +86,9 @@ Future<void> _mainImpl() async {
   streamResponsesNotifier.value = p.getBool('pc_stream') ?? true;
   autoTitleNotifier.value = p.getBool('pc_auto_title') ?? true;
   sendOnEnterNotifier.value = p.getBool('pc_send_on_enter') ?? true;
+  autoCommandsNotifier.value = p.getBool('pc_auto_cmd') ?? true;
+  ultraModeNotifier.value = p.getBool('pc_ultra') ?? false;
+  cityManualNotifier.value = p.getString('pc_city') ?? '';
   webAutoNotifier.value = p.getBool('pc_web_auto') ?? true;
   locationEnabledNotifier.value = p.getBool('pc_location') ?? false;
   contextTimeNotifier.value = p.getBool('pc_ctx_time') ?? true;

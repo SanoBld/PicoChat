@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData;
 import '../app_state.dart';
 import '../l10n/l10n.dart';
-import 'm3_components.dart' show M3CookieBadge;
 import 'package:url_launcher/url_launcher.dart';
 
 class MarkdownLite extends StatelessWidget {
@@ -29,6 +28,7 @@ class MarkdownLite extends StatelessWidget {
   static final RegExp _boldRegex   = RegExp(r'\*\*(.+?)\*\*');
   static final RegExp _italicRegex = RegExp(r'(?<!\*)\*(?!\*)(.+?)\*(?!\*)|_(.+?)_');
   static final RegExp _codeRegex   = RegExp(r'`([^`]+)`');
+  static final RegExp _linkRegex   = RegExp(r'\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)');
 
   Future<void> _openUrl(String rawUrl) async {
     final cleaned = rawUrl.replaceAll(RegExp(r'[)\].,;!?]+$'), '');
@@ -42,6 +42,7 @@ class MarkdownLite extends StatelessWidget {
   // Parses one line into inline spans (bold / italic / code / links).
   InlineSpan _parseInline(String line) {
     final tokens = <_Token>[
+      ..._linkRegex.allMatches(line).map((m) => _Token(m.start, m.end, _TokType.link, '${m.group(1)}\u0000${m.group(2)}')),
       ..._urlRegex.allMatches(line).map((m) => _Token(m.start, m.end, _TokType.url, m.group(0)!)),
       ..._boldRegex.allMatches(line).map((m) => _Token(m.start, m.end, _TokType.bold, m.group(1)!)),
       ..._codeRegex.allMatches(line).map((m) => _Token(m.start, m.end, _TokType.code, m.group(1)!)),
@@ -68,12 +69,31 @@ class MarkdownLite extends StatelessWidget {
           spans.add(WidgetSpan(
             alignment: PlaceholderAlignment.baseline,
             baseline:  TextBaseline.alphabetic,
-            child: GestureDetector(
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
               onTap: () => _openUrl(t.text),
               child: Text(t.text, style: style?.copyWith(
                 color: linkColor, fontWeight: FontWeight.w600,
                 decoration: TextDecoration.underline, decorationColor: linkColor,
               )),
+            )),
+          ));
+          break;
+        case _TokType.link:
+          final parts = t.text.split('\u0000');
+          spans.add(WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => _openUrl(parts.last),
+                child: Text(parts.first, style: style?.copyWith(
+                  color: linkColor, fontWeight: FontWeight.w700,
+                  decoration: TextDecoration.underline, decorationColor: linkColor,
+                )),
+              ),
             ),
           ));
           break;
@@ -157,7 +177,6 @@ class MarkdownLite extends StatelessWidget {
     // ── Standalone image: "![alt](url)" on its own line ─────────────────
     final imgMatch = RegExp(r'^!\[[^\]]*\]\((\S+)\)$');
 
-    final lastIdx = lines.lastIndexWhere((l) => l.trim().isNotEmpty);
     final scheme = Theme.of(context).colorScheme;
 
     while (i < lines.length) {
@@ -175,36 +194,6 @@ class MarkdownLite extends StatelessWidget {
         }
         widgets.add(_CodeBlock(lang: lang, code: buf.join('\n')));
         i = j + 1;
-        continue;
-      }
-
-      // ── Final answer alone on the last line in **bold** → boxed ─────────
-      final ans = RegExp(r'^\*\*([^*]+)\*\*[.!]?$').firstMatch(line.trim());
-      if (ans != null && i == lastIdx && i > 0 && materialShapesNotifier.value) {
-        widgets.add(Container(
-          margin: const EdgeInsets.only(top: 8, bottom: 4),
-          padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
-          decoration: ShapeDecoration(
-            color: scheme.primaryContainer,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
-              side: BorderSide(color: scheme.primary.withValues(alpha: 0.5), width: 1.5),
-            ),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            M3CookieBadge(
-              size: 32,
-              color: scheme.primary,
-              child: Icon(Icons.check_rounded, size: 18, color: scheme.onPrimary),
-            ),
-            const SizedBox(width: 10),
-            Flexible(
-              child: Text(ans.group(1)!,
-                  style: style?.copyWith(fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer)),
-            ),
-          ]),
-        ));
-        i++;
         continue;
       }
 
@@ -252,6 +241,52 @@ class MarkdownLite extends StatelessWidget {
         continue;
       }
 
+      // Horizontal rule
+      if (RegExp(r'^(-{3,}|\*{3,}|_{3,})$').hasMatch(line.trim())) {
+        widgets.add(Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Divider(height: 1, color: scheme.outlineVariant)));
+        i++;
+        continue;
+      }
+
+      // Block quote
+      final quoteMatch = RegExp(r'^>\s?(.*)').firstMatch(line);
+      if (quoteMatch != null) {
+        widgets.add(Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(16),
+            border: Border(left: BorderSide(color: scheme.primary, width: 4)),
+          ),
+          child: Text.rich(_parseInline(quoteMatch.group(1)!), style: style),
+        ));
+        i++;
+        continue;
+      }
+
+      // Numbered lists: "1. item"
+      final numMatch = RegExp(r'^(\d+)[.)]\s+(.*)').firstMatch(line);
+      if (numMatch != null) {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 6),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              width: 24,
+              height: 24,
+              margin: const EdgeInsets.only(right: 10, top: 1),
+              alignment: Alignment.center,
+              decoration: ShapeDecoration(color: scheme.primaryContainer, shape: const StadiumBorder()),
+              child: Text(numMatch.group(1)!,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer)),
+            ),
+            Expanded(child: Text.rich(_parseInline(numMatch.group(2)!), style: style)),
+          ]),
+        ));
+        i++;
+        continue;
+      }
+
       // Bullet lists: "- item" or "* item"
       final bulletMatch = RegExp(r'^[-*]\s+(.*)').firstMatch(line);
       if (bulletMatch != null) {
@@ -277,7 +312,7 @@ class MarkdownLite extends StatelessWidget {
   }
 }
 
-enum _TokType { url, bold, italic, code }
+enum _TokType { url, link, bold, italic, code }
 
 class _Token {
   final int start, end;

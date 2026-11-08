@@ -99,6 +99,9 @@ class ResetService {
     autoTitleNotifier.value = true;
     sendOnEnterNotifier.value = true;
     webSearchNotifier.value = false;
+    ultraModeNotifier.value = false;
+    autoCommandsNotifier.value = true;
+    cityManualNotifier.value = '';
     memoryEnabledNotifier.value = true;
     webMaxSourcesNotifier.value = 8;
     autoSpeakNotifier.value = false;

@@ -57,6 +57,20 @@ class _ContextPageState extends State<ContextPage> {
             ),
           ]),
           const SizedBox(height: 20),
+          SettingsSection(label: tr('ctx_auto'), children: [
+            SettingSwitchRow(
+              icon: Icons.bolt_rounded,
+              title: tr('ctx_auto_cmd'),
+              subtitle: tr('ctx_auto_cmd_sub'),
+              value: autoCommandsNotifier.value,
+              onChanged: (v) {
+                autoCommandsNotifier.value = v;
+                savePref('pc_auto_cmd', v);
+                setState(() {});
+              },
+            ),
+          ]),
+          const SizedBox(height: 20),
           SettingsSection(label: tr('ctx_device'), children: [
             SettingSwitchRow(
               icon: Icons.location_on_rounded,
@@ -74,6 +88,20 @@ class _ContextPageState extends State<ContextPage> {
                 setState(() {});
               },
             ),
+            if (on)
+              SettingTextRow(
+                icon: Icons.edit_location_alt_rounded,
+                title: tr('ctx_city'),
+                keyboardType: TextInputType.text,
+                hint: tr('ctx_city_hint'),
+                value: cityManualNotifier.value,
+                onChanged: (v) {
+                  cityManualNotifier.value = v.trim();
+                  savePref('pc_city', v.trim());
+                  _loc.refresh();
+                  setState(() {});
+                },
+              ),
             if (on)
               SettingActionRow(
                 icon: Icons.my_location_rounded,

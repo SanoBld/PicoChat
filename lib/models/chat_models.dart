@@ -22,6 +22,8 @@ class ChatMessage {
   List<String> files; // names of attached files (display only)
   List<Map<String, String>> sources; // web pages used for this answer
   List<String> memories; // facts saved to memory by this answer
+  List<Map<String, dynamic>> cards; // visual data cards (weather, score, calc)
+  List<Map<String, String>> steps; // what the AI did: title, detail, state (run/done)
 
   ChatMessage({
     String? id,
@@ -34,8 +36,12 @@ class ChatMessage {
     List<String>? files,
     List<Map<String, String>>? sources,
     List<String>? memories,
+    List<Map<String, dynamic>>? cards,
+    List<Map<String, String>>? steps,
   })  : files = files ?? [],
         memories = memories ?? [],
+        cards = cards ?? [],
+        steps = steps ?? [],
         sources = sources ?? [],
         id = id ?? newId(),
         createdAt = createdAt ?? DateTime.now();
@@ -51,6 +57,8 @@ class ChatMessage {
         if (files.isNotEmpty) 'files': files,
         if (sources.isNotEmpty) 'sources': sources,
         if (memories.isNotEmpty) 'memories': memories,
+        if (cards.isNotEmpty) 'cards': cards,
+        if (steps.isNotEmpty) 'steps': steps,
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -63,6 +71,8 @@ class ChatMessage {
         context: (j['context'] as String?) ?? '',
         files: ((j['files'] as List?) ?? []).whereType<String>().toList(),
         memories: ((j['memories'] as List?) ?? []).whereType<String>().toList(),
+        cards: ((j['cards'] as List?) ?? []).whereType<Map>().map((m) => Map<String, dynamic>.from(m)).toList(),
+        steps: ((j['steps'] as List?) ?? []).whereType<Map>().map((m) => m.map((k, v) => MapEntry('$k', '$v'))).toList(),
         sources: ((j['sources'] as List?) ?? [])
             .whereType<Map>()
             .map((m) => m.map((k, v) => MapEntry('$k', '$v')))

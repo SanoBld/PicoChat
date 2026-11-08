@@ -5,6 +5,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../app_state.dart';
+
 class LocationService extends ChangeNotifier {
   LocationService._();
   static final LocationService instance = LocationService._();
@@ -15,6 +17,13 @@ class LocationService extends ChangeNotifier {
 
   Future<void> refresh() async {
     if (busy) return;
+    final manual = cityManualNotifier.value.trim();
+    if (manual.isNotEmpty) {
+      city = manual;
+      label = manual;
+      notifyListeners();
+      return;
+    }
     busy = true;
     notifyListeners();
     try {
