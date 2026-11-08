@@ -70,6 +70,13 @@ class _SettingsPageState extends State<_SettingsPage> {
               onTap: () => _open(const _ModelsPage()),
             ),
             SettingActionRow(
+              icon: Icons.psychology_rounded,
+              title: tr('memory_title'),
+              subtitle: tr('memory_sub'),
+              trailing: chevron,
+              onTap: () => _open(const MemoryPage()),
+            ),
+            SettingActionRow(
               icon: Icons.hub_rounded,
               title: tr('set_hf'),
               subtitle: tr('set_hf_sub'),

@@ -25,6 +25,8 @@ import '../services/chat_service.dart';
 import '../services/file_output.dart';
 import '../services/prefs.dart';
 import '../services/voice.dart';
+import '../services/voice_input.dart';
+import 'settings/memory_page.dart';
 import '../widgets/chat_tools_sheet.dart';
 import '../services/chat_store.dart';
 import '../services/hf_service.dart';

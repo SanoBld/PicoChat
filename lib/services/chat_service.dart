@@ -12,6 +12,7 @@ import '../models/chat_models.dart';
 import 'attachments.dart';
 import 'chat_store.dart';
 import 'inference_engine.dart';
+import 'memory_store.dart';
 import 'model_manager.dart';
 import 'voice.dart';
 import 'web_search.dart';
@@ -39,6 +40,21 @@ class ChatService extends ChangeNotifier {
   static const _fileHelp =
       '\nIf the user asks you to create a file, write it in a code block that starts with ```file:NAME.ext '
       '(example: ```file:notes.txt) and close it with ```. Only do this when a file is requested.';
+
+  static String _memoryHelp() {
+    if (!memoryEnabledNotifier.value) return '';
+    final facts = MemoryStore.instance.items;
+    final b = StringBuffer();
+    if (facts.isNotEmpty) {
+      b.write('\nWhat you remember about the user:\n');
+      for (final f in facts) {
+        b.write('- $f\n');
+      }
+    }
+    b.write('If the user shares a lasting personal fact (name, job, tastes, goals) or asks you to remember '
+        'something, add at the very end of your answer: [[memory: short fact]]. Never mention this tag.');
+    return b.toString();
+  }
 
   Future<void> send(Conversation chat, String text,
       {List<Attachment> files = const [], bool web = false}) async {
@@ -103,10 +119,11 @@ class ChatService extends ChangeNotifier {
         if (web && query.isNotEmpty) {
           _searching = true;
           notifyListeners();
-          var r = await WebSearch.run(query);
+          final found = await WebSearch.run(query, max: webMaxSourcesNotifier.value);
           _searching = false;
-          if (r.isNotEmpty) {
-            if (r.length > 3000) r = r.substring(0, 3000);
+          if (found.isNotEmpty) {
+            final r = WebSearch.format(found, budget ~/ 2);
+            reply.sources = [for (final w in found) {'title': w.title, 'url': w.url, 'domain': w.domain}];
             ctx.writeln('--- Web results (use them and cite the URLs) ---\n$r\n');
           }
         }
@@ -126,14 +143,14 @@ class ChatService extends ChangeNotifier {
         notifyListeners();
       }
       final options = GenerationOptions(
-        systemPrompt: systemPromptNotifier.value + _fileHelp,
+        systemPrompt: systemPromptNotifier.value + _fileHelp + _memoryHelp(),
         temperature: temperatureNotifier.value,
         maxTokens: maxTokensNotifier.value,
       );
       await for (final piece in engine.generate(history, options)) {
         buffer.write(piece);
         if (streamResponsesNotifier.value) {
-          reply.text = buffer.toString();
+          reply.text = MemoryStore.visible(buffer.toString());
           final now = DateTime.now();
           if (now.difference(lastPush).inMilliseconds > 40) {
             lastPush = now;
@@ -141,14 +158,15 @@ class ChatService extends ChangeNotifier {
           }
         }
       }
-      reply.text = buffer.toString();
+      if (memoryEnabledNotifier.value) await MemoryStore.instance.harvest(buffer.toString());
+      reply.text = MemoryStore.visible(buffer.toString());
       reply.stopped = _stopRequested;
       if (autoSpeakNotifier.value && !_stopRequested && reply.text.isNotEmpty) {
         VoiceService.instance.speak(reply.id, reply.text);
       }
     } catch (e) {
       debugPrint('Generation failed: $e');
-      reply.text = buffer.toString();
+      reply.text = MemoryStore.visible(buffer.toString());
       reply.failed = true;
     } finally {
       _loadingModel = false;

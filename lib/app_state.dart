@@ -37,6 +37,8 @@ final streamResponsesNotifier  = ValueNotifier<bool>(true);                   //
 final autoTitleNotifier        = ValueNotifier<bool>(true);                   // pc_auto_title
 final sendOnEnterNotifier      = ValueNotifier<bool>(true);                   // pc_send_on_enter
 final webSearchNotifier        = ValueNotifier<bool>(false);                  // pc_web_search
+final memoryEnabledNotifier    = ValueNotifier<bool>(true);                   // pc_memory
+final webMaxSourcesNotifier    = ValueNotifier<int>(8);                       // pc_web_max (0 = no limit)
 final autoSpeakNotifier        = ValueNotifier<bool>(false);                  // pc_auto_speak
 
 // ── Models / Hugging Face ────────────────────────────────────────────────────

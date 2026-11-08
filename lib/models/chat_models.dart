@@ -20,6 +20,7 @@ class ChatMessage {
   bool failed; // the engine failed while writing this answer
   String context; // hidden text sent with this message (files, web results)
   List<String> files; // names of attached files (display only)
+  List<Map<String, String>> sources; // web pages used for this answer
 
   ChatMessage({
     String? id,
@@ -30,7 +31,9 @@ class ChatMessage {
     this.failed = false,
     this.context = '',
     List<String>? files,
+    List<Map<String, String>>? sources,
   })  : files = files ?? [],
+        sources = sources ?? [],
         id = id ?? newId(),
         createdAt = createdAt ?? DateTime.now();
 
@@ -43,6 +46,7 @@ class ChatMessage {
         if (failed) 'failed': true,
         if (context.isNotEmpty) 'context': context,
         if (files.isNotEmpty) 'files': files,
+        if (sources.isNotEmpty) 'sources': sources,
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -54,6 +58,10 @@ class ChatMessage {
         failed: j['failed'] == true,
         context: (j['context'] as String?) ?? '',
         files: ((j['files'] as List?) ?? []).whereType<String>().toList(),
+        sources: ((j['sources'] as List?) ?? [])
+            .whereType<Map>()
+            .map((m) => m.map((k, v) => MapEntry('$k', '$v')))
+            .toList(),
       );
 }
 

@@ -70,6 +70,14 @@ class _ChatViewState extends State<_ChatView> {
     });
   }
 
+  Future<void> _toggleMic() async {
+    final v = VoiceInput.instance;
+    if (v.listening.value) return v.stop();
+    final base = _ctrl.text.isEmpty ? '' : '${_ctrl.text.trimRight()} ';
+    final ok = await v.start((w) => _ctrl.text = '$base$w');
+    if (!ok && mounted) _toast(context, tr('voice_unavailable'));
+  }
+
   Future<void> _attach() async {
     final picked = await Attachments.pick();
     if (picked.isNotEmpty && mounted) setState(() => _files = [..._files, ...picked]);
@@ -279,6 +287,18 @@ class _ChatViewState extends State<_ChatView> {
                     savePref('pc_web_search', webSearchNotifier.value);
                   },
                 ),
+                ValueListenableBuilder<bool>(
+                  valueListenable: VoiceInput.instance.listening,
+                  builder: (_, on, __) => IconButton(
+                    tooltip: tr('voice_input'),
+                    isSelected: on,
+                    icon: Icon(on ? Icons.mic_rounded : Icons.mic_none_rounded),
+                    style: on
+                        ? IconButton.styleFrom(backgroundColor: scheme.primaryContainer, foregroundColor: scheme.onPrimaryContainer)
+                        : null,
+                    onPressed: canChat ? _toggleMic : null,
+                  ),
+                ),
                 IconButton(
                   tooltip: tr('tools_power'),
                   icon: const Icon(Icons.tune_rounded),
@@ -431,7 +451,7 @@ class _MessageView extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const SizedBox(width: double.infinity, child: M3WavyProgress(indeterminate: true, height: 14)),
+                  const SizedBox(width: double.infinity, child: M3WavyProgress(value: 1, height: 14)),
                   const SizedBox(height: 8),
                   Text(
                     loadingModel
@@ -471,6 +491,15 @@ class _MessageView extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(tr('gen_failed'), style: text.bodySmall?.copyWith(color: scheme.error)),
               ),
+            if (message.sources.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: ActionChip(
+                  avatar: const Icon(Icons.public_rounded, size: 18),
+                  label: Text(_sourcesLabel(message.sources)),
+                  onPressed: () => _showSources(context, message.sources),
+                ),
+              ),
             if (showActions)
               Row(children: [
                 IconButton(
@@ -503,4 +532,43 @@ class _MessageView extends StatelessWidget {
       ]),
     );
   }
+}
+
+// ── Web sources bubble ───────────────────────────────────────────────────────
+
+String _sourcesLabel(List<Map<String, String>> src) {
+  final names = <String>[];
+  for (final s in src) {
+    final d = s['domain'] ?? '';
+    if (d.isNotEmpty && !names.contains(d)) names.add(d);
+  }
+  final first = names.take(2).join(', ');
+  return src.length > 2 ? '$first +${src.length - 2}' : first;
+}
+
+void _showSources(BuildContext context, List<Map<String, String>> src) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.7),
+        child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(8, 0, 8, 16), children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text('${tr('sources_title')} (${src.length})',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          ),
+          for (final s in src)
+            ListTile(
+              leading: const Icon(Icons.public_rounded),
+              title: Text(s['title'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),
+              subtitle: Text(s['domain'] ?? ''),
+              onTap: () => launchUrl(Uri.parse(s['url'] ?? ''), mode: LaunchMode.externalApplication),
+            ),
+        ]),
+      ),
+    ),
+  );
 }

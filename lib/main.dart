@@ -1,4 +1,5 @@
 // lib/main.dart
+import 'services/memory_store.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
 import 'dart:ui' show PlatformDispatcher;
@@ -85,13 +86,15 @@ Future<void> _mainImpl() async {
   autoTitleNotifier.value = p.getBool('pc_auto_title') ?? true;
   sendOnEnterNotifier.value = p.getBool('pc_send_on_enter') ?? true;
   webSearchNotifier.value = p.getBool('pc_web_search') ?? false;
+  memoryEnabledNotifier.value = p.getBool('pc_memory') ?? true;
+  webMaxSourcesNotifier.value = p.getInt('pc_web_max') ?? 8;
   autoSpeakNotifier.value = p.getBool('pc_auto_speak') ?? false;
 
   activeModelNotifier.value = p.getString('pc_active_model') ?? '';
   hfTokenNotifier.value = p.getString('pc_hf_token') ?? '';
   hfEndpointNotifier.value = p.getString('pc_hf_endpoint') ?? kDefaultHfEndpoint;
 
-  await Future.wait([ChatStore.instance.init(), ModelManager.instance.init()]);
+  await Future.wait([ChatStore.instance.init(), ModelManager.instance.init(), MemoryStore.instance.init()]);
 
   runApp(PicoChatApp(onboarded: p.getBool('pc_onboarded') ?? false));
 }

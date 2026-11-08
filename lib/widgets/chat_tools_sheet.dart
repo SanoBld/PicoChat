@@ -106,6 +106,26 @@ class _ToolsSheetState extends State<_ToolsSheet> {
             onChanged: (v) => setState(() => contextSizeNotifier.value = _ctxs[v.round()]),
             onChangeEnd: (v) => savePref('pc_context_size', _ctxs[v.round()]),
           ),
+          const SizedBox(height: 8),
+          Text(tr('tools_web_max'), style: text.titleSmall),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<int>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: 5, label: Text('5')),
+                ButtonSegment(value: 10, label: Text('10')),
+                ButtonSegment(value: 20, label: Text('20')),
+                ButtonSegment(value: 0, label: Text('∞')),
+              ],
+              selected: {webMaxSourcesNotifier.value},
+              onSelectionChanged: (s) {
+                setState(() => webMaxSourcesNotifier.value = s.first);
+                savePref('pc_web_max', s.first);
+              },
+            ),
+          ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(tr('tools_auto_speak')),

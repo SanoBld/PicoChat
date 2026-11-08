@@ -73,6 +73,20 @@ class _HfPageState extends State<HfPage> {
           ]),
           const SizedBox(height: 20),
           SettingsSection(label: tr('hf_advanced'), children: [
+            for (final src in const [
+              ('Hugging Face', 'https://huggingface.co'),
+              ('HF-Mirror', 'https://hf-mirror.com'),
+            ])
+              SettingActionRow(
+                icon: hfEndpointNotifier.value == src.$2 ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
+                title: src.$1,
+                subtitle: src.$2,
+                onTap: () {
+                  hfEndpointNotifier.value = src.$2;
+                  savePref('pc_hf_endpoint', src.$2);
+                  setState(() {});
+                },
+              ),
             SettingTextRow(
               icon: Icons.dns_rounded,
               title: tr('hf_endpoint'),
