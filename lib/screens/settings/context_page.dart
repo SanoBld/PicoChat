@@ -57,6 +57,33 @@ class _ContextPageState extends State<ContextPage> {
             ),
           ]),
           const SizedBox(height: 20),
+          SettingsSection(label: tr('voice_section'), children: [
+            SettingSwitchRow(
+              icon: Icons.graphic_eq_rounded,
+              title: tr('voice_engine'),
+              subtitle: tr('voice_engine_sub'),
+              value: voiceEngineNotifier.value == 'whisper',
+              onChanged: (v) {
+                voiceEngineNotifier.value = v ? 'whisper' : 'system';
+                savePref('pc_voice_engine', voiceEngineNotifier.value);
+                setState(() {});
+              },
+            ),
+            if (voiceEngineNotifier.value == 'whisper')
+              SettingChoiceRow(
+                icon: Icons.mic_rounded,
+                title: tr('voice_model'),
+                description: tr('voice_model_sub'),
+                options: const [('tiny', 'Tiny', null), ('base', 'Base', null), ('small', 'Small', null)],
+                value: voiceModelNotifier.value,
+                onChanged: (v) {
+                  voiceModelNotifier.value = v;
+                  savePref('pc_voice_model', v);
+                  setState(() {});
+                },
+              ),
+          ]),
+          const SizedBox(height: 20),
           SettingsSection(label: tr('ctx_auto'), children: [
             SettingSwitchRow(
               icon: Icons.bolt_rounded,

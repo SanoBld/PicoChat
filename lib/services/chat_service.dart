@@ -4,6 +4,7 @@
 // errors and automatic titles.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
@@ -131,6 +132,8 @@ class ChatService extends ChangeNotifier {
     notifyListeners();
 
     final ultra = ultraModeNotifier.value;
+    final rm = reasoningModeNotifier.value;
+    final thinking = rm == 'on' || (rm == 'auto' && (ultra || maxTokensNotifier.value >= 3072));
     void push() => store.messageChanged(chat);
     void step(String title, [String detail = '']) {
       if (reply.steps.isNotEmpty) reply.steps.last['state'] = 'done';
@@ -169,17 +172,6 @@ class ChatService extends ChangeNotifier {
         step('step_files', files.map((f) => f.name).join(', '));
       }
 
-      // Model
-      if (engine.loadedModelId != model.id || _loadedCtx != contextSizeNotifier.value) {
-        step('step_load', model.displayName);
-        _loadingModel = true;
-        notifyListeners();
-        await engine.load(model, contextSize: contextSizeNotifier.value);
-        _loadedCtx = contextSizeNotifier.value;
-        _loadingModel = false;
-        notifyListeners();
-      }
-
       // Exact data: calculator, weather, scores
       CardResult? card;
       if (query.isNotEmpty) {
@@ -192,6 +184,23 @@ class ChatService extends ChangeNotifier {
           reply.cards.add(card.card);
           ctx.writeln('--- Verified data ---\n${card.summary}\n');
         }
+      }
+
+      // A single calculation is answered by the built-in calculator only.
+      if (card != null && card.card['type'] == 'calc' && files.isEmpty) {
+        reply.text = '';
+        return;
+      }
+
+      // Model
+      if (engine.loadedModelId != model.id || _loadedCtx != contextSizeNotifier.value) {
+        step('step_load', model.displayName);
+        _loadingModel = true;
+        notifyListeners();
+        await engine.load(model, contextSize: contextSizeNotifier.value);
+        _loadedCtx = contextSizeNotifier.value;
+        _loadingModel = false;
+        notifyListeners();
       }
 
       // Web
@@ -238,7 +247,7 @@ class ChatService extends ChangeNotifier {
       }
 
       // Ultra: a first private pass that analyses the request and the data.
-      if (ultra && !_stopRequested) {
+      if (thinking && !_stopRequested) {
         step('step_reason');
         final analysis = StringBuffer();
         final h2 = _withLast(
@@ -251,7 +260,7 @@ class ChatService extends ChangeNotifier {
             GenerationOptions(
                 systemPrompt: CorePrompt.build(fileRequested: false),
                 temperature: 0.3,
-                maxTokens: maxTokensNotifier.value < 700 ? maxTokensNotifier.value : 700))) {
+                maxTokens: math.min(maxTokensNotifier.value, ultra ? 700 : 350)))) {
           analysis.write(piece);
           if (_stopRequested) break;
         }

@@ -86,6 +86,11 @@ Future<void> _mainImpl() async {
   streamResponsesNotifier.value = p.getBool('pc_stream') ?? true;
   autoTitleNotifier.value = p.getBool('pc_auto_title') ?? true;
   sendOnEnterNotifier.value = p.getBool('pc_send_on_enter') ?? true;
+  voiceEngineNotifier.value = p.getString('pc_voice_engine') ?? 'whisper';
+  voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'base';
+  reasoningModeNotifier.value = p.getString('pc_reasoning') ?? 'auto';
+  showStepsNotifier.value = p.getBool('pc_show_steps') ?? true;
+  stepsOpenNotifier.value = p.getBool('pc_steps_open') ?? true;
   autoCommandsNotifier.value = p.getBool('pc_auto_cmd') ?? true;
   ultraModeNotifier.value = p.getBool('pc_ultra') ?? false;
   cityManualNotifier.value = p.getString('pc_city') ?? '';

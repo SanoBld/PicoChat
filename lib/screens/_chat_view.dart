@@ -85,19 +85,21 @@ class _ChatViewState extends State<_ChatView> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(10, 10, 4, 4),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          ValueListenableBuilder<String>(
+          ValueListenableBuilder<bool>(
+            valueListenable: v.loading,
+            builder: (_, _, _) => ValueListenableBuilder<String>(
             valueListenable: v.transcript,
             builder: (_, t, _) => AnimatedSwitcher(
               duration: const Duration(milliseconds: 150),
               child: Text(
-                t.isEmpty ? tr('voice_listening') : t,
+                t.isEmpty ? tr(v.loading.value ? 'voice_loading' : 'voice_listening') : t,
                 key: ValueKey(t.isEmpty),
                 maxLines: 5,
                 overflow: TextOverflow.ellipsis,
                 style: text.bodyLarge?.copyWith(color: scheme.onSurfaceVariant, fontStyle: t.isEmpty ? FontStyle.italic : FontStyle.normal),
               ),
             ),
-          ),
+          )),
           const SizedBox(height: 14),
           ValueListenableBuilder<List<double>>(
             valueListenable: v.levels,
@@ -590,7 +592,7 @@ class _MessageView extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (message.steps.isNotEmpty) StepsTimeline(steps: message.steps, running: generating),
+            if (message.steps.isNotEmpty && showStepsNotifier.value) StepsTimeline(steps: message.steps, running: generating),
             for (final cd in message.cards) InfoCard(data: cd),
             if (waiting)
               // Loading model / searching web / first words not here yet: full-width wavy line.

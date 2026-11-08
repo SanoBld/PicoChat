@@ -101,6 +101,11 @@ class ResetService {
     webSearchNotifier.value = false;
     ultraModeNotifier.value = false;
     autoCommandsNotifier.value = true;
+    voiceEngineNotifier.value = 'whisper';
+    voiceModelNotifier.value = 'base';
+    reasoningModeNotifier.value = 'auto';
+    showStepsNotifier.value = true;
+    stepsOpenNotifier.value = true;
     cityManualNotifier.value = '';
     memoryEnabledNotifier.value = true;
     webMaxSourcesNotifier.value = 8;

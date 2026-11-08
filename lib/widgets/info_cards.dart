@@ -168,7 +168,7 @@ class _WeatherCard extends StatelessWidget {
           _chip(s, Icons.water_drop_outlined, '${d['hum']}%'),
         ]),
         const SizedBox(height: 14),
-        Row(children: [
+        IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           for (final (i, e) in days.indexed)
             Expanded(
               child: FadeSlideIn(
@@ -185,13 +185,17 @@ class _WeatherCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text('${e['max']}°', style: t.labelLarge?.copyWith(fontWeight: FontWeight.w800)),
                     Text('${e['min']}°', style: t.labelSmall?.copyWith(color: s.onSurfaceVariant)),
-                    if ((e['rain'] as num) >= 30)
-                      Text('${e['rain']}%', style: t.labelSmall?.copyWith(color: s.tertiary, fontWeight: FontWeight.w700)),
+                    SizedBox(
+                      height: 16,
+                      child: (e['rain'] as num) >= 30
+                          ? Text('${e['rain']}%', style: t.labelSmall?.copyWith(color: s.tertiary, fontWeight: FontWeight.w700))
+                          : null,
+                    ),
                   ]),
                 ),
               ),
             ),
-        ]),
+        ])),
       ]),
     );
   }
@@ -332,13 +336,13 @@ class StepsTimeline extends StatefulWidget {
 }
 
 class _StepsTimelineState extends State<StepsTimeline> {
-  bool? _open; // null = automatic (open while running)
+  bool? _open; // null = automatic (open while running if the option is on)
 
   @override
   Widget build(BuildContext context) {
     final s = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
-    final open = _open ?? widget.running;
+    final open = _open ?? (widget.running && stepsOpenNotifier.value);
     final n = widget.steps.length;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
