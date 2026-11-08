@@ -73,14 +73,47 @@ class _ChatViewState extends State<_ChatView> {
   Future<void> _toggleMic() async {
     final v = VoiceInput.instance;
     if (v.listening.value) return v.stop();
-    final base = _ctrl.text.isEmpty ? '' : '${_ctrl.text.trimRight()} ';
-    final ok = await v.start((w) => _ctrl.text = '$base$w');
+    final ok = await v.start(_ctrl);
     if (!ok && mounted) _toast(context, tr('voice_unavailable'));
   }
 
   Future<void> _attach() async {
     final picked = await Attachments.pick();
     if (picked.isNotEmpty && mounted) setState(() => _files = [..._files, ...picked]);
+  }
+
+  void _addFiles(Iterable<Attachment> list) {
+    final l = list.toList();
+    if (l.isNotEmpty && mounted) setState(() => _files = [..._files, ...l]);
+  }
+
+  Future<void> _onDrop(DropDoneDetails d) async {
+    final out = <Attachment>[];
+    for (final f in d.files) {
+      final a = Attachments.fromBytes(f.name, await f.readAsBytes());
+      if (a != null) out.add(a);
+    }
+    _addFiles(out);
+    if (out.length < d.files.length && mounted) _toast(context, tr('file_unsupported'));
+  }
+
+  // Ctrl/Cmd+V with files in the clipboard: attach them instead of pasting text.
+  Future<bool> _pasteFiles() async {
+    if (kIsWeb) return false;
+    try {
+      final paths = await Pasteboard.files();
+      if (paths.isEmpty) return false;
+      final out = <Attachment>[];
+      for (final p in paths) {
+        final bytes = await File(p).readAsBytes();
+        final a = Attachments.fromBytes(p.split(RegExp(r'[\\/]')).last, Uint8List.fromList(bytes));
+        if (a != null) out.add(a);
+      }
+      _addFiles(out);
+      return out.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<void> _send([String? preset]) async {
@@ -136,7 +169,9 @@ class _ChatViewState extends State<_ChatView> {
           const SizedBox(width: 4),
         ],
       ),
-      body: Column(children: [
+      body: DropTarget(
+        onDragDone: _onDrop,
+        child: Column(children: [
         if (service.canChat && InferenceService.engine.isPlaceholder)
           Container(
             width: double.infinity,
@@ -182,7 +217,7 @@ class _ChatViewState extends State<_ChatView> {
                 ),
         ),
         _composer(scheme, text, busy),
-      ]),
+      ])),
     );
   }
 
@@ -218,6 +253,26 @@ class _ChatViewState extends State<_ChatView> {
               Expanded(
                 child: Focus(
                   onKeyEvent: (node, e) {
+                    if (e is KeyDownEvent &&
+                        e.logicalKey == LogicalKeyboardKey.keyV &&
+                        (HardwareKeyboard.instance.isControlPressed || HardwareKeyboard.instance.isMetaPressed)) {
+                      _pasteFiles().then((ok) {
+                        if (!ok) {
+                          Clipboard.getData(Clipboard.kTextPlain).then((t) {
+                            final v = t?.text;
+                            if (v == null || v.isEmpty) return;
+                            final s = _ctrl.selection;
+                            final at = s.isValid ? s.start : _ctrl.text.length;
+                            final to = s.isValid ? s.end : _ctrl.text.length;
+                            _ctrl.value = TextEditingValue(
+                              text: _ctrl.text.replaceRange(at, to, v),
+                              selection: TextSelection.collapsed(offset: at + v.length),
+                            );
+                          });
+                        }
+                      });
+                      return KeyEventResult.handled;
+                    }
                     final isEnter = e.logicalKey == LogicalKeyboardKey.enter;
                     if (isEnter &&
                         _isDesktopPlatform &&
@@ -490,6 +545,15 @@ class _MessageView extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Text(tr('gen_failed'), style: text.bodySmall?.copyWith(color: scheme.error)),
+              ),
+            if (message.memories.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: ActionChip(
+                  avatar: const Icon(Icons.psychology_rounded, size: 18),
+                  label: Text(tr('memory_saved')),
+                  onPressed: () => _toast(context, message.memories.join('\n')),
+                ),
               ),
             if (message.sources.isNotEmpty)
               Padding(

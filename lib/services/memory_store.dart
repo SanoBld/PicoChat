@@ -54,9 +54,14 @@ class MemoryStore extends ChangeNotifier {
     return out.trimRight();
   }
 
-  Future<void> harvest(String s) async {
+  Future<List<String>> harvest(String s) async {
+    final added = <String>[];
     for (final m in tag.allMatches(s)) {
-      await add(m.group(1) ?? '');
+      final f = (m.group(1) ?? '').trim();
+      if (f.isEmpty) continue;
+      added.add(f);
+      await add(f);
     }
+    return added;
   }
 }

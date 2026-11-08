@@ -223,6 +223,8 @@ const Map<String, String> kStringsEs = {
   "voice_read": "Leer en voz alta",
   "voice_stop": "Detener lectura",
   "file_saved": "Archivo guardado",
+  "memory_saved": "Guardado en memoria",
+  "file_unsupported": "Formato no compatible",
   "memory_title": "Memoria",
   "memory_sub": "Lo que la IA recuerda de ti",
   "memory_enable": "Usar memoria",

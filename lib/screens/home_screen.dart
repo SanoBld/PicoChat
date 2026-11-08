@@ -7,8 +7,13 @@
 // ══════════════════════════════════════════════════════════════════════════
 
 import 'dart:async';
+import 'dart:io' show File;
 
+import 'dart:typed_data';
+
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:pasteboard/pasteboard.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show Clipboard, ClipboardData, HardwareKeyboard, KeyDownEvent, LogicalKeyboardKey;

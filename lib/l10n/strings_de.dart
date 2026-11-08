@@ -223,6 +223,8 @@ const Map<String, String> kStringsDe = {
   "voice_read": "Vorlesen",
   "voice_stop": "Lesen stoppen",
   "file_saved": "Datei gespeichert",
+  "memory_saved": "Im Gedächtnis gespeichert",
+  "file_unsupported": "Dateiformat nicht unterstützt",
   "memory_title": "Gedächtnis",
   "memory_sub": "Was die KI über dich weiß",
   "memory_enable": "Gedächtnis nutzen",
