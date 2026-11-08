@@ -54,7 +54,15 @@ jobs:
           echo "$HOME/flutter/bin" >> "$GITHUB_PATH"
 
       - name: Get dependencies
-        run: flutter pub get
+        shell: bash
+        run: |
+          # Network hiccups (GitHub / pub.dev 5xx) should not fail the build: up to 3 tries.
+          for attempt in 1 2 3; do
+            if flutter pub get; then exit 0; fi
+            echo "Attempt $attempt failed, retrying in 20 s..."
+            sleep 20
+          done
+          exit 1
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
@@ -63,7 +71,13 @@ jobs:
           APP_VERSION: ${{ inputs.version }}
           RUN_NUMBER: ${{ github.run_number }}
           REPO: ${{ github.repository }}
-        run: bash linux/packaging/ci-build.sh ${{ matrix.arch }} ${{ matrix.zip }}
+        run: |
+          for attempt in 1 2 3; do
+            if bash linux/packaging/ci-build.sh ${{ matrix.arch }} ${{ matrix.zip }}; then exit 0; fi
+            echo "Attempt $attempt failed, retrying in 20 s..."
+            sleep 20
+          done
+          exit 1
 
       - uses: actions/upload-artifact@v4
         with:

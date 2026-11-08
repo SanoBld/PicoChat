@@ -57,7 +57,15 @@ jobs:
           working-directory: macos
 
       - name: Get dependencies
-        run: flutter pub get
+        shell: bash
+        run: |
+          # Network hiccups (GitHub / pub.dev 5xx) should not fail the build: up to 3 tries.
+          for attempt in 1 2 3; do
+            if flutter pub get; then exit 0; fi
+            echo "Attempt $attempt failed, retrying in 20 s..."
+            sleep 20
+          done
+          exit 1
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
@@ -66,7 +74,13 @@ jobs:
         env:
           APP_VERSION: ${{ inputs.version }}
           RUN_NUMBER: ${{ github.run_number }}
-        run: bundle exec fastlane package arch:${{ matrix.arch }} zip:${{ matrix.zip }} dmg:${{ matrix.dmg }}
+        run: |
+          for attempt in 1 2 3; do
+            if bundle exec fastlane package arch:${{ matrix.arch }} zip:${{ matrix.zip }} dmg:${{ matrix.dmg }}; then exit 0; fi
+            echo "Attempt $attempt failed, retrying in 20 s..."
+            sleep 20
+          done
+          exit 1
 
       - uses: actions/upload-artifact@v4
         with:

@@ -74,7 +74,15 @@ jobs:
           cat "$props"
 
       - name: Get dependencies
-        run: flutter pub get
+        shell: bash
+        run: |
+          # Network hiccups (GitHub / pub.dev 5xx) should not fail the build: up to 3 tries.
+          for attempt in 1 2 3; do
+            if flutter pub get; then exit 0; fi
+            echo "Attempt $attempt failed, retrying in 20 s..."
+            sleep 20
+          done
+          exit 1
       - name: Generate launcher icons
         run: dart run flutter_launcher_icons
 
@@ -85,7 +93,12 @@ jobs:
           IN_VERSION: ${{ inputs.version }}
         run: |
           VERSION="${IN_VERSION:-0.0.0-dev.${{ github.run_number }}}"
-          flutter build apk --release ${{ matrix.flags }} --build-name="$VERSION" --build-number=${{ github.run_number }}
+          for attempt in 1 2 3; do
+            if flutter build apk --release ${{ matrix.flags }} --build-name="$VERSION" --build-number=${{ github.run_number }}; then exit 0; fi
+            echo "Attempt $attempt failed, retrying in 20 s..."
+            sleep 20
+          done
+          exit 1
 
       # Gradle (Kotlin DSL) task: copy + rename the APK into dist/
       - name: Collect APK with Gradle
