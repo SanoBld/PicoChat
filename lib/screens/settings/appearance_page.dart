@@ -70,7 +70,6 @@ class _AppearancePageState extends State<AppearancePage> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final dyn = useDynamicColorNotifier.value;
-    final nothing = themeStyleNotifier.value == 'nothing';
 
     return Scaffold(
       appBar: M3AppBar(title: tr('set_appearance')),
@@ -93,41 +92,20 @@ class _AppearancePageState extends State<AppearancePage> {
                 setState(() {});
               },
             ),
-            SettingChoiceRow(
-              icon: Icons.style_rounded,
-              title: tr('ap_style'),
-              description: nothing ? tr('ap_style_nothing_note') : null,
-              options: [
-                ('default', tr('ap_style_default'), Icons.auto_awesome_rounded),
-                ('nothing', tr('ap_style_nothing'), Icons.circle_outlined),
-              ],
-              value: themeStyleNotifier.value,
-              onChanged: (v) {
-                themeStyleNotifier.value = v;
-                savePref('pc_theme_style', v);
-                setState(() {});
-              },
-            ),
             SettingSwitchRow(
               icon: Icons.phone_android_rounded,
               title: tr('ap_oled'),
               subtitle: tr('ap_oled_sub'),
               value: oledModeNotifier.value,
-              onChanged: nothing
-                  ? null
-                  : (v) {
-                      oledModeNotifier.value = v;
-                      savePref('pc_oled_mode', v);
-                      setState(() {});
-                    },
+              onChanged: (v) {
+                oledModeNotifier.value = v;
+                savePref('pc_oled_mode', v);
+                setState(() {});
+              },
             ),
           ]),
           const SizedBox(height: 20),
-          Opacity(
-            opacity: nothing ? 0.4 : 1,
-            child: IgnorePointer(
-              ignoring: nothing,
-              child: SettingsSection(label: tr('ap_accent'), children: [
+          SettingsSection(label: tr('ap_accent'), children: [
                 SettingSwitchRow(
                   icon: Icons.wallpaper_rounded,
                   title: tr('ap_dynamic'),
@@ -202,9 +180,7 @@ class _AppearancePageState extends State<AppearancePage> {
                     setState(() {});
                   },
                 ),
-              ]),
-            ),
-          ),
+          ]),
           const SizedBox(height: 20),
           SettingsSection(label: tr('ap_text'), children: [
             SettingChoiceRow(
@@ -217,7 +193,6 @@ class _AppearancePageState extends State<AppearancePage> {
                 ('Roboto', 'Roboto', null),
                 ('OpenSans', 'Open Sans', null),
                 ('SpaceGrotesk', 'Space Grotesk', null),
-                ('NType82', 'NType 82', null),
               ],
               value: appFontNotifier.value,
               onChanged: (v) {

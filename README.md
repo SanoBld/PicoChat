@@ -5,7 +5,7 @@ interface; models are downloaded from [Hugging Face](https://huggingface.co)
 (GGUF files) and stay on your device. No account, no cloud, no tracking.
 
 Same design system and project layout as LastStats (Material 3 expressive,
-Nothing OS theme, adaptive sidebar/drawer layout).
+adaptive sidebar/drawer layout).
 
 ## Status
 
@@ -20,7 +20,7 @@ llama.cpp and set `InferenceService.engine` in `main.dart`.
 
 ```
 lib/
-  main.dart, app_state.dart, supported_locales.dart, nothing_theme.dart
+  main.dart, app_state.dart, supported_locales.dart
   l10n/        strings_en|fr|es|de.dart + l10n.dart (tr('key'))
   theme/       m3_interaction, m3_motion, m3_shapes
   widgets/     m3_components, skeleton, markdown_lite, title bar, ...

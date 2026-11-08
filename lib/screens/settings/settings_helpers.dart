@@ -3,6 +3,7 @@
 // colour picker and the accent palette.
 
 import 'package:flutter/material.dart';
+import '../../app_state.dart';
 import '../../theme/m3_motion.dart';
 import '../../widgets/m3_components.dart';
 import '../../l10n/l10n.dart';

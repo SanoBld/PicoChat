@@ -2,7 +2,7 @@
 // ══════════════════════════════════════════════════════════════════════════
 //  Custom, theme-matched title bar for Windows/Linux desktop builds.
 //  Replaces the native OS caption buttons with ones styled from the app's
-//  own ColorScheme, so it stays consistent with Material You / Nothing OS /
+//  own ColorScheme, so it stays consistent with Material You /
 //  OLED themes instead of standing out as a generic Windows title bar.
 //  No-op (returns child untouched) on mobile, web, and macOS.
 // ══════════════════════════════════════════════════════════════════════════

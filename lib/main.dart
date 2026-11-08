@@ -11,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app_state.dart';
-import 'nothing_theme.dart';
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
 import 'services/chat_store.dart';
@@ -60,12 +59,13 @@ Future<void> _mainImpl() async {
   accentNotifier.value = accentFromString(p.getString('pc_accent'));
   useDynamicColorNotifier.value = p.getBool('pc_use_dynamic_color') ?? false;
   localeNotifier.value = p.getString('pc_locale') ?? fallbackLang;
-  themeStyleNotifier.value = p.getString('pc_theme_style') ?? 'default';
-  nothingAccentNotifier.value = p.getString('pc_nothing_accent') ?? 'classic';
   colorHarmonyNotifier.value = p.getString('pc_color_harmony') ?? 'mono';
   oledModeNotifier.value = p.getBool('pc_oled_mode') ?? false;
   textScaleNotifier.value = p.getDouble('pc_text_scale') ?? 1.0;
-  appFontNotifier.value = p.getString('pc_app_font') ?? 'GoogleSansFlex';
+  // A font removed together with the old theme falls back to the default.
+  const knownFonts = {'GoogleSansFlex', 'Inter', 'Roboto', 'OpenSans', 'SpaceGrotesk'};
+  final savedFont = p.getString('pc_app_font');
+  appFontNotifier.value = knownFonts.contains(savedFont) ? savedFont! : 'GoogleSansFlex';
   imageShapeNotifier.value = p.getString('pc_image_shape') ?? 'mix';
   hapticFeedbackNotifier.value = p.getBool('pc_haptic_feedback') ?? true;
   pcModeNotifier.value = p.getString('pc_layout') ?? 'auto';
@@ -105,48 +105,35 @@ class PicoChatApp extends StatelessWidget {
             accentNotifier,
             useDynamicColorNotifier,
             localeNotifier,
-            themeStyleNotifier,
-            nothingAccentNotifier,
             colorHarmonyNotifier,
             oledModeNotifier,
           ]),
           builder: (_, _) {
-            final ThemeData light, dark;
-
-            if (themeStyleNotifier.value == 'nothing') {
-              // Nothing OS look (own colours, black + red).
-              final accent = nothingAccentNotifier.value;
-              light = NothingTheme.build(accent: accent, brightness: Brightness.light)
-                  .copyWith(pageTransitionsTheme: kM3PageTransitions);
-              dark = NothingTheme.build(accent: accent, brightness: Brightness.dark)
-                  .copyWith(pageTransitionsTheme: kM3PageTransitions);
-            } else {
-              // Default look: Material You with the chosen accent.
-              final harmony = colorHarmonyNotifier.value;
-              final useDyn = useDynamicColorNotifier.value;
-              final accent = accentNotifier.value;
-              final lightScheme = (useDyn && lightDynamic != null)
-                  ? applyColorHarmony(neutralizeIfGraySchemeItself(lightDynamic.harmonized()), harmony)
-                  : buildAppScheme(accent, Brightness.light, harmony);
-              var darkScheme = (useDyn && darkDynamic != null)
-                  ? applyColorHarmony(neutralizeIfGraySchemeItself(darkDynamic.harmonized()), harmony)
-                  : buildAppScheme(accent, Brightness.dark, harmony);
-              if (oledModeNotifier.value) {
-                darkScheme = darkScheme.copyWith(
-                  surface: Colors.black,
-                  surfaceDim: Colors.black,
-                  surfaceBright: const Color(0xFF1C1C1C),
-                  surfaceContainerLowest: Colors.black,
-                  surfaceContainerLow: const Color(0xFF080808),
-                  surfaceContainer: const Color(0xFF0D0D0D),
-                  surfaceContainerHigh: const Color(0xFF141414),
-                  surfaceContainerHighest: const Color(0xFF1C1C1C),
-                );
-                if (harmony == 'tinted') darkScheme = tintNeutrals(darkScheme);
-              }
-              light = _decorate(ThemeData(colorScheme: lightScheme, useMaterial3: true));
-              dark = _decorate(ThemeData(colorScheme: darkScheme, useMaterial3: true));
+            // Material You look with the chosen accent.
+            final harmony = colorHarmonyNotifier.value;
+            final useDyn = useDynamicColorNotifier.value;
+            final accent = accentNotifier.value;
+            final lightScheme = (useDyn && lightDynamic != null)
+                ? applyColorHarmony(neutralizeIfGraySchemeItself(lightDynamic.harmonized()), harmony)
+                : buildAppScheme(accent, Brightness.light, harmony);
+            var darkScheme = (useDyn && darkDynamic != null)
+                ? applyColorHarmony(neutralizeIfGraySchemeItself(darkDynamic.harmonized()), harmony)
+                : buildAppScheme(accent, Brightness.dark, harmony);
+            if (oledModeNotifier.value) {
+              darkScheme = darkScheme.copyWith(
+                surface: Colors.black,
+                surfaceDim: Colors.black,
+                surfaceBright: const Color(0xFF1C1C1C),
+                surfaceContainerLowest: Colors.black,
+                surfaceContainerLow: const Color(0xFF080808),
+                surfaceContainer: const Color(0xFF0D0D0D),
+                surfaceContainerHigh: const Color(0xFF141414),
+                surfaceContainerHighest: const Color(0xFF1C1C1C),
+              );
+              if (harmony == 'tinted') darkScheme = tintNeutrals(darkScheme);
             }
+            final light = _decorate(ThemeData(colorScheme: lightScheme, useMaterial3: true));
+            final dark = _decorate(ThemeData(colorScheme: darkScheme, useMaterial3: true));
 
             return MaterialApp(
               title: 'PicoChat',
