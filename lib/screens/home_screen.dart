@@ -16,7 +16,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show Clipboard, ClipboardData, HardwareKeyboard, KeyDownEvent, LogicalKeyboardKey;
+import 'package:flutter/services.dart'
+    show Clipboard, ClipboardData, HardwareKeyboard, KeyDownEvent, LogicalKeyboardKey, MethodChannel;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -41,6 +42,7 @@ import '../services/location_service.dart';
 import '../services/web_intent.dart';
 import '../widgets/chat_tools_sheet.dart';
 import '../services/chat_store.dart';
+import '../services/device_info.dart';
 import '../services/hf_service.dart';
 import '../services/inference_engine.dart';
 import '../services/model_manager.dart';
@@ -109,6 +111,22 @@ class _HomeScreenState extends State<HomeScreen> {
     localeNotifier.addListener(_rebuild);
     pcModeNotifier.addListener(_rebuild);
     sidebarCollapsedNotifier.addListener(_rebuild);
+    _initAssist();
+  }
+
+  // Android assistant: the system opens PicoChat from the "assist" gesture / button.
+  static const _assist = MethodChannel('picochat/assist');
+
+  void _initAssist() {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    // Called by Kotlin when the app is already running.
+    _assist.setMethodCallHandler((call) async {
+      if (call.method == 'assist' && mounted) setState(() => _chat = ChatStore.instance.create());
+    });
+    // Called once at start-up: was the app started by the assist gesture?
+    _assist.invokeMethod<bool>('consume').then((v) {
+      if (v == true && mounted) setState(() => _chat = ChatStore.instance.create());
+    }).catchError((_) {});
   }
 
   @override

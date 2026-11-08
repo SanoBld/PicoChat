@@ -35,7 +35,10 @@ abstract class InferenceEngine {
   /// Id of the model currently in memory, or null.
   String? get loadedModelId;
 
-  Future<void> load(InstalledModel model, {required int contextSize});
+  /// True when the loaded model can read images.
+  bool get supportsVision;
+
+  Future<void> load(InstalledModel model, {required int contextSize, String? projectorPath});
 
   /// Streams the answer piece by piece. [history] ends with the person's
   /// message. The stream must end after [stop] is called.
@@ -68,7 +71,10 @@ class PlaceholderEngine implements InferenceEngine {
   String? get loadedModelId => _loaded;
 
   @override
-  Future<void> load(InstalledModel model, {required int contextSize}) async {
+  bool get supportsVision => false;
+
+  @override
+  Future<void> load(InstalledModel model, {required int contextSize, String? projectorPath}) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     _loaded = model.id;
   }

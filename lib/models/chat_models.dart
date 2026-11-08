@@ -20,6 +20,7 @@ class ChatMessage {
   bool failed; // the engine failed while writing this answer
   String context; // hidden text sent with this message (files, web results)
   List<String> files; // names of attached files (display only)
+  List<String> images; // image paths for vision models (not saved)
   List<Map<String, String>> sources; // web pages used for this answer
   List<String> memories; // facts saved to memory by this answer
   List<Map<String, dynamic>> cards; // visual data cards (weather, score, calc)
@@ -34,11 +35,13 @@ class ChatMessage {
     this.failed = false,
     this.context = '',
     List<String>? files,
+    List<String>? images,
     List<Map<String, String>>? sources,
     List<String>? memories,
     List<Map<String, dynamic>>? cards,
     List<Map<String, String>>? steps,
   })  : files = files ?? [],
+        images = images ?? [],
         memories = memories ?? [],
         cards = cards ?? [],
         steps = steps ?? [],

@@ -30,6 +30,8 @@ dependencies:
   record: ^6.0.0
   pasteboard: ^0.3.0
   archive: ^4.0.0
+  syncfusion_flutter_pdf: ^28.1.33
+  device_info_plus: ^11.2.0
 
 dev_dependencies:
   flutter_test:

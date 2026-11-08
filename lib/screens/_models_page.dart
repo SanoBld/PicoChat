@@ -62,8 +62,8 @@ class _ModelsPageState extends State<_ModelsPage> with SingleTickerProviderState
         M3TabSwitch(
           controller: _tabs,
           labels: [
-            tr('tab_installed'),
             tr('tab_discover'),
+            tr('tab_installed'),
             activeDownloads > 0 ? '${tr('tab_downloads')} ($activeDownloads)' : tr('tab_downloads'),
           ],
         ),
@@ -71,8 +71,8 @@ class _ModelsPageState extends State<_ModelsPage> with SingleTickerProviderState
           child: kIsWeb
               ? M3EmptyState(icon: Icons.desktop_windows_rounded, message: tr('web_unsupported'))
               : TabBarView(controller: _tabs, children: [
-                  _InstalledTab(onDiscover: () => _tabs.animateTo(1)),
                   const _DiscoverTab(),
+                  _InstalledTab(onDiscover: () => _tabs.animateTo(0)),
                   const _DownloadsTab(),
                 ]),
         ),
@@ -277,6 +277,7 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
             ],
           ),
         ),
+        _ForYouCard(onOpen: (r) => _showDetail(context, r)),
         const SizedBox(height: 12),
         SizedBox(
           height: 236,
@@ -293,7 +294,7 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
               child: _FeaturedCard(
                 model: featured[i],
                 onGet: () => _downloadRecommended(featured[i]),
-                onOpen: () => _showFiles(context, featured[i].repo),
+                onOpen: () => _showDetail(context, featured[i]),
               ),
             ),
           ),
@@ -441,6 +442,10 @@ class _FeaturedCard extends StatelessWidget {
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tint.onAccent)),
             ),
             const Spacer(),
+            if (model.vision) ...[
+              Icon(Icons.visibility_rounded, size: 18, color: tint.accent),
+              const SizedBox(width: 8),
+            ],
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
@@ -562,6 +567,9 @@ class _FilesSheet extends StatefulWidget {
 
 class _FilesSheetState extends State<_FilesSheet> {
   late final Future<List<HfFileInfo>> _files = HfService.listGgufFiles(widget.repo);
+  late final Future<List<HfFileInfo>> _proj =
+      HfService.listProjectors(widget.repo).catchError((_) => <HfFileInfo>[]);
+  bool _vision = false; // also download the vision projector
 
   @override
   Widget build(BuildContext context) {
@@ -583,6 +591,20 @@ class _FilesSheetState extends State<_FilesSheet> {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
         child: Text(tr('files_hint'), style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+      ),
+      FutureBuilder<List<HfFileInfo>>(
+        future: _proj,
+        builder: (_, snap) {
+          final pick = HfService.pickProjector(snap.data ?? []);
+          if (pick == null) return const SizedBox.shrink();
+          return SwitchListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+            title: Text(tr('detail_vision_opt')),
+            subtitle: Text('+${formatBytes(pick.size)}'),
+            value: _vision,
+            onChanged: (v) => setState(() => _vision = v),
+          );
+        },
       ),
       Expanded(
         child: FutureBuilder<List<HfFileInfo>>(
@@ -625,6 +647,7 @@ class _FilesSheetState extends State<_FilesSheet> {
                                 icon: const Icon(Icons.download_rounded),
                                 onPressed: () {
                                   mgr.download(widget.repo, f.path, size: f.size);
+                                  if (_vision) mgr.downloadProjector(widget.repo).catchError((_) {});
                                   _toast(context, tr('download_started'));
                                 },
                               ),
@@ -703,6 +726,146 @@ class _DownloadsTab extends StatelessWidget {
                 failed ? _errorText(t.errorKind) : info.join(' · '),
                 style: text.bodySmall?.copyWith(color: failed ? scheme.error : scheme.onSurfaceVariant),
               ),
+            ]),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Store: model details + suggestion for this device ───────────────────────
+
+Future<void> _installRecommended(BuildContext context, RecommendedModel r, bool vision) async {
+  try {
+    await ModelManager.instance.downloadRecommended(r.repo);
+    if (vision) await ModelManager.instance.downloadProjector(r.repo);
+    if (context.mounted) _toast(context, tr('download_started'));
+  } on HfException catch (e) {
+    if (context.mounted) _toast(context, _errorText(e.kind));
+  }
+}
+
+void _showDetail(BuildContext context, RecommendedModel r) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => _DetailSheet(model: r, parent: context),
+  );
+}
+
+class _DetailSheet extends StatefulWidget {
+  final RecommendedModel model;
+  final BuildContext parent; // used to open the files sheet after closing this one
+  const _DetailSheet({required this.model, required this.parent});
+
+  @override
+  State<_DetailSheet> createState() => _DetailSheetState();
+}
+
+class _DetailSheetState extends State<_DetailSheet> {
+  bool _vision = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final r = widget.model;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(r.title, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(tr(r.blurbKey), style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            Chip(label: Text(r.params)),
+            for (final t in r.tags) Chip(label: Text(tr(t))),
+          ]),
+          const SizedBox(height: 12),
+          Text(tr('detail_needs', {'gb': '${r.minRamGb}', 'size': formatBytes(r.approxMb * 1024 * 1024)}),
+              style: text.bodyMedium),
+          FutureBuilder<double?>(
+            future: DeviceSpecs.ramGb(),
+            builder: (_, snap) {
+              final ram = snap.data;
+              if (ram == null) return const SizedBox.shrink();
+              final fits = ram >= r.minRamGb;
+              final tight = !fits && ram >= r.minRamGb * 0.7;
+              return Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  tr(fits ? 'store_fits' : (tight ? 'store_tight' : 'store_toobig')),
+                  style: text.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700, color: fits ? scheme.primary : (tight ? scheme.tertiary : scheme.error)),
+                ),
+              );
+            },
+          ),
+          if (r.vision)
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(tr('detail_vision_opt')),
+              value: _vision,
+              onChanged: (v) => setState(() => _vision = v),
+            ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: M3LabelButton(
+                kind: M3ButtonKind.tonal,
+                icon: Icons.tune_rounded,
+                label: tr('detail_choose_quant'),
+                onTap: () {
+                  Navigator.pop(context);
+                  if (widget.parent.mounted) _showFiles(widget.parent, r.repo);
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            _StoreAction(repo: r.repo, onGet: () => _installRecommended(context, r, _vision)),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
+/// "Recommended for your device": the biggest suggested model that fits the RAM.
+class _ForYouCard extends StatelessWidget {
+  final void Function(RecommendedModel) onOpen;
+  const _ForYouCard({required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return FutureBuilder<double?>(
+      future: DeviceSpecs.ramGb(),
+      builder: (_, snap) {
+        final ram = snap.data;
+        final r = ram == null ? null : DeviceSpecs.bestFor(ram);
+        if (ram == null || r == null) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: M3PressCard(
+            color: scheme.primaryContainer,
+            onTap: () => onOpen(r),
+            child: Row(children: [
+              Icon(Icons.auto_awesome_rounded, color: scheme.onPrimaryContainer),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(tr('store_for_you'), style: text.labelMedium?.copyWith(color: scheme.onPrimaryContainer)),
+                  Text(r.title,
+                      style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: scheme.onPrimaryContainer)),
+                  Text(tr('store_ram', {'gb': ram.toStringAsFixed(0)}),
+                      style: text.bodySmall?.copyWith(color: scheme.onPrimaryContainer)),
+                ]),
+              ),
+              Icon(Icons.chevron_right_rounded, color: scheme.onPrimaryContainer),
             ]),
           ),
         );

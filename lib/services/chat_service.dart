@@ -49,7 +49,12 @@ class ChatService extends ChangeNotifier {
     final first = chat.messages.isEmpty;
     chat.modelId = ModelManager.instance.active!.id;
     VoiceService.instance.stop();
-    final msg = ChatMessage(role: ChatRole.user, text: clean, files: [for (final f in files) f.name]);
+    final msg = ChatMessage(
+      role: ChatRole.user,
+      text: clean,
+      files: [for (final f in files) f.name],
+      images: [for (final f in files) if (f.imagePath != null) f.imagePath!],
+    );
     ChatStore.instance.addMessage(chat, msg);
     if (first && autoTitleNotifier.value) {
       ChatStore.instance.setAutoTitle(chat, _titleFrom(clean));
@@ -108,7 +113,7 @@ class ChatService extends ChangeNotifier {
     final out = List<ChatMessage>.of(h);
     for (var i = out.length - 1; i >= 0; i--) {
       if (out[i].role == ChatRole.user) {
-        out[i] = ChatMessage(role: ChatRole.user, text: text, context: out[i].context);
+        out[i] = ChatMessage(role: ChatRole.user, text: text, context: out[i].context, images: out[i].images);
         break;
       }
     }
@@ -164,7 +169,7 @@ class ChatService extends ChangeNotifier {
       // Files
       if (files.isNotEmpty) {
         final budget = ((contextSizeNotifier.value - maxTokensNotifier.value - 500) * 3).clamp(1500, 60000);
-        for (final f in files) {
+        for (final f in files.where((f) => !f.isImage)) {
           final cut = budget ~/ files.length;
           final t = f.text.length > cut ? f.text.substring(0, cut) : f.text;
           ctx.writeln('--- File: ${f.name} ---\n$t\n');
@@ -197,10 +202,17 @@ class ChatService extends ChangeNotifier {
         step('step_load', model.displayName);
         _loadingModel = true;
         notifyListeners();
-        await engine.load(model, contextSize: contextSizeNotifier.value);
+        await engine.load(model,
+            contextSize: contextSizeNotifier.value, projectorPath: ModelManager.instance.projectorFor(model));
         _loadedCtx = contextSizeNotifier.value;
         _loadingModel = false;
         notifyListeners();
+      }
+
+      // An image was sent but the model cannot see: tell the person how to fix it.
+      if (history.last.images.isNotEmpty && !engine.supportsVision) {
+        ctx.writeln('--- Note ---\nThe user attached an image, but the current model cannot see images. '
+            'Say it in one short sentence and suggest installing a model with the Vision tag from the Models store.\n');
       }
 
       // Web

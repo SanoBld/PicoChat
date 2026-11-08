@@ -174,6 +174,37 @@ class ModelManager extends ChangeNotifier {
     unawaited(_run(task));
   }
 
+  // ── Vision projector (mmproj) ─────────────────────────────────────────────
+  // Saved as "<repo>/mmproj.gguf". It is not a chat model: it is never listed.
+
+  static const _projName = 'mmproj.gguf';
+
+  /// Path of the projector saved for [m]'s repo, or null.
+  String? projectorFor(InstalledModel m) {
+    if (_dir == null || m.isLocalImport) return null;
+    final f = File(_finalPath('${m.repo}/$_projName'));
+    return f.existsSync() ? f.path : null;
+  }
+
+  /// Downloads the vision projector of [repo]. Throws [HfException].
+  Future<void> downloadProjector(String repo) async {
+    if (_dir == null) return;
+    final id = '$repo/$_projName';
+    if (File(_finalPath(id)).existsSync() || _tasks[id]?.status == DownloadStatus.downloading) return;
+    final pick = HfService.pickProjector(await HfService.listProjectors(repo));
+    if (pick == null) throw const HfException('notFound');
+    final task = DownloadTask(
+      id: id,
+      repo: repo,
+      fileName: _projName,
+      url: HfService.downloadUrl(repo, pick.path),
+      total: pick.size,
+    );
+    _tasks[id] = task;
+    notifyListeners();
+    unawaited(_run(task));
+  }
+
   /// Picks the best default .gguf file of [repo] and downloads it.
   /// Throws [HfException] when Hugging Face is unreachable or has no .gguf.
   Future<void> downloadRecommended(String repo) async {
@@ -347,6 +378,10 @@ class ModelManager extends ChangeNotifier {
     }
     final dest = _finalPath(t.id);
     await part.rename(dest);
+    if (t.fileName == _projName) {
+      _tasks.remove(t.id); // projector: keep the file only
+      return;
+    }
     _installed.removeWhere((m) => m.id == t.id);
     _installed.add(InstalledModel(
       id: t.id,
@@ -396,6 +431,10 @@ class ModelManager extends ChangeNotifier {
     if (m == null) return;
     await _deleteQuietly(File(m.path));
     _installed.remove(m);
+    // Remove the projector when no other model of this repo is left.
+    if (!_installed.any((o) => o.repo == m.repo)) {
+      await _deleteQuietly(File(_finalPath('${m.repo}/$_projName')));
+    }
     if (activeModelNotifier.value == id) {
       await _setActive(_installed.isEmpty ? '' : _installed.first.id);
     }

@@ -107,6 +107,34 @@ class HfService {
     return files;
   }
 
+  /// Lists the vision projector files (mmproj) of a repo.
+  static Future<List<HfFileInfo>> listProjectors(String repo) async {
+    final data = await _getJson('$base/api/models/$repo/tree/main');
+    if (data is! List) throw const HfException('parse');
+    final out = <HfFileInfo>[];
+    for (final e in data.whereType<Map>()) {
+      final path = e['path'];
+      if (e['type'] != 'file' || path is! String) continue;
+      final lower = path.toLowerCase();
+      if (!lower.endsWith('.gguf') || !lower.contains('mmproj')) continue;
+      final lfs = e['lfs'];
+      final size = (lfs is Map ? lfs['size'] : null) ?? e['size'];
+      out.add(HfFileInfo(path: path, size: (size as num?)?.toInt() ?? 0));
+    }
+    return out;
+  }
+
+  /// Best projector: F16 first, then BF16, else the smallest.
+  static HfFileInfo? pickProjector(List<HfFileInfo> files) {
+    if (files.isEmpty) return null;
+    for (final k in const ['f16', 'bf16']) {
+      for (final f in files) {
+        if (f.path.toLowerCase().contains(k)) return f;
+      }
+    }
+    return ([...files]..sort((a, b) => a.size.compareTo(b.size))).first;
+  }
+
   /// Best default file: Q4_K_M first, then close relatives, else the smallest.
   static HfFileInfo? pickDefault(List<HfFileInfo> files) {
     files = files.where((f) => !f.path.toLowerCase().contains('mmproj')).toList();

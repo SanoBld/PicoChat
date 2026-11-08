@@ -114,21 +114,29 @@ class RecommendedModel {
   final String params;
   final int approxMb; // size of the default Q4 file, display only
   final String blurbKey; // l10n key
+  final int minRamGb; // RAM needed to run it comfortably
+  final bool vision; // can read images (a projector file is offered)
+  final List<String> tags; // l10n keys of the feature chips
   const RecommendedModel({
     required this.repo,
     required this.title,
     required this.params,
     required this.approxMb,
     required this.blurbKey,
+    this.minRamGb = 4,
+    this.vision = false,
+    this.tags = const [],
   });
 }
 
 const List<RecommendedModel> kRecommendedModels = [
-  RecommendedModel(repo: 'unsloth/Qwen3-0.6B-GGUF', title: 'Qwen3 0.6B', params: '0.6B', approxMb: 400, blurbKey: 'rec_tiny'),
-  RecommendedModel(repo: 'unsloth/gemma-3-1b-it-GGUF', title: 'Gemma 3 1B', params: '1B', approxMb: 810, blurbKey: 'rec_fast'),
-  RecommendedModel(repo: 'unsloth/Qwen3-1.7B-GGUF', title: 'Qwen3 1.7B', params: '1.7B', approxMb: 1110, blurbKey: 'rec_balanced'),
-  RecommendedModel(repo: 'bartowski/Llama-3.2-3B-Instruct-GGUF', title: 'Llama 3.2 3B', params: '3B', approxMb: 2020, blurbKey: 'rec_reliable'),
-  RecommendedModel(repo: 'unsloth/Qwen3-4B-Instruct-2507-GGUF', title: 'Qwen3 4B 2507', params: '4B', approxMb: 2500, blurbKey: 'rec_smart'),
-  RecommendedModel(repo: 'ggml-org/gemma-4-E2B-it-GGUF', title: 'Gemma 4 E2B', params: '2B', approxMb: 3430, blurbKey: 'rec_best'),
-  RecommendedModel(repo: 'unsloth/Qwen3-8B-GGUF', title: 'Qwen3 8B', params: '8B', approxMb: 5030, blurbKey: 'rec_pc'),
+  RecommendedModel(repo: 'unsloth/Qwen3-0.6B-GGUF', title: 'Qwen3 0.6B', params: '0.6B', approxMb: 400, blurbKey: 'rec_tiny', minRamGb: 2, tags: ['tag_fast', 'tag_thinking']),
+  RecommendedModel(repo: 'unsloth/gemma-3-1b-it-GGUF', title: 'Gemma 3 1B', params: '1B', approxMb: 810, blurbKey: 'rec_fast', minRamGb: 3, tags: ['tag_fast', 'tag_multi']),
+  RecommendedModel(repo: 'ggml-org/SmolVLM2-2.2B-Instruct-GGUF', title: 'SmolVLM2 2.2B', params: '2.2B', approxMb: 1800, blurbKey: 'rec_vision_small', minRamGb: 4, vision: true, tags: ['tag_vision']),
+  RecommendedModel(repo: 'unsloth/Qwen3-1.7B-GGUF', title: 'Qwen3 1.7B', params: '1.7B', approxMb: 1110, blurbKey: 'rec_balanced', minRamGb: 4, tags: ['tag_thinking', 'tag_multi']),
+  RecommendedModel(repo: 'bartowski/Llama-3.2-3B-Instruct-GGUF', title: 'Llama 3.2 3B', params: '3B', approxMb: 2020, blurbKey: 'rec_reliable', minRamGb: 6, tags: ['tag_multi']),
+  RecommendedModel(repo: 'unsloth/Qwen3-4B-Instruct-2507-GGUF', title: 'Qwen3 4B 2507', params: '4B', approxMb: 2500, blurbKey: 'rec_smart', minRamGb: 6, tags: ['tag_multi', 'tag_code']),
+  RecommendedModel(repo: 'ggml-org/gemma-3-4b-it-GGUF', title: 'Gemma 3 4B Vision', params: '4B', approxMb: 2500, blurbKey: 'rec_vision', minRamGb: 6, vision: true, tags: ['tag_vision', 'tag_multi']),
+  RecommendedModel(repo: 'ggml-org/gemma-4-E2B-it-GGUF', title: 'Gemma 4 E2B', params: '2B', approxMb: 3430, blurbKey: 'rec_best', minRamGb: 8, tags: ['tag_multi']),
+  RecommendedModel(repo: 'unsloth/Qwen3-8B-GGUF', title: 'Qwen3 8B', params: '8B', approxMb: 5030, blurbKey: 'rec_pc', minRamGb: 12, tags: ['tag_thinking', 'tag_code']),
 ];

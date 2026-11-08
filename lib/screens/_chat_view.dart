@@ -345,7 +345,7 @@ class _ChatViewState extends State<_ChatView> {
                   child: Wrap(spacing: 6, children: [
                     for (final f in _files)
                       InputChip(
-                        avatar: const Icon(Icons.attach_file_rounded, size: 16),
+                        avatar: Icon(f.isImage ? Icons.image_rounded : Icons.attach_file_rounded, size: 16),
                         label: Text(f.name),
                         onDeleted: () => setState(() => _files = [..._files]..remove(f)),
                       ),

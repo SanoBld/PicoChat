@@ -19,6 +19,10 @@ class LlamaDartEngine implements InferenceEngine {
   LlamaEngine? _engine;
   String? _loaded;
   bool _stopped = false;
+  bool _vision = false;
+
+  @override
+  bool get supportsVision => _vision;
 
   @override
   String get name => 'llama.cpp';
@@ -30,11 +34,24 @@ class LlamaDartEngine implements InferenceEngine {
   String? get loadedModelId => _loaded;
 
   @override
-  Future<void> load(InstalledModel model, {required int contextSize}) async {
+  Future<void> load(InstalledModel model, {required int contextSize, String? projectorPath}) async {
     await unload();
     // Throws when the file is missing or is not a valid GGUF model; the
     // chat service shows that as a failed answer.
-    final engine = await LlamaEngine.load(
+    LlamaEngine? engine;
+    _vision = false;
+    if (projectorPath != null) {
+      try {
+        engine = await LlamaEngine.load(
+          LlamaModel(ModelSource.path(model.path), projector: ModelSource.path(projectorPath)),
+          params: ModelParams(contextSize: contextSize),
+        );
+        _vision = true;
+      } catch (_) {
+        engine = null; // bad projector: load the model as text only
+      }
+    }
+    engine ??= await LlamaEngine.load(
       LlamaModel(ModelSource.path(model.path)),
       params: ModelParams(contextSize: contextSize),
     );
@@ -55,10 +72,20 @@ class LlamaDartEngine implements InferenceEngine {
         LlamaChatMessage.fromText(role: LlamaChatRole.system, text: options.systemPrompt.trim()),
       for (final m in history)
         if (m.role != ChatRole.system && m.text.trim().isNotEmpty && !m.failed)
-          LlamaChatMessage.fromText(
-            role: m.role == ChatRole.user ? LlamaChatRole.user : LlamaChatRole.assistant,
-            text: (m.id == lastUser.id && m.context.isNotEmpty) ? '${m.context}\n\n${m.text}' : m.text,
-          ),
+          if (_vision && m.id == lastUser.id && m.images.isNotEmpty)
+            // Images + text in one message (vision models only).
+            LlamaChatMessage.withContent(
+              role: LlamaChatRole.user,
+              content: [
+                for (final p in m.images) LlamaImageContent(path: p),
+                LlamaTextContent(m.context.isNotEmpty ? '${m.context}\n\n${m.text}' : m.text),
+              ],
+            )
+          else
+            LlamaChatMessage.fromText(
+              role: m.role == ChatRole.user ? LlamaChatRole.user : LlamaChatRole.assistant,
+              text: (m.id == lastUser.id && m.context.isNotEmpty) ? '${m.context}\n\n${m.text}' : m.text,
+            ),
     ];
 
     final stream = engine.create(
@@ -88,6 +115,7 @@ class LlamaDartEngine implements InferenceEngine {
     final engine = _engine;
     _engine = null;
     _loaded = null;
+    _vision = false;
     if (engine != null) await engine.dispose();
   }
 }

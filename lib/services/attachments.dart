@@ -1,15 +1,20 @@
 // lib/services/attachments.dart
-// Pick / drop / paste files and read them as text (text, code, docx, xlsx, pptx, odt, ods).
+// Pick / drop / paste files. Text, code, pdf, docx, xlsx, pptx, odt, ods are read as text; images go to vision models.
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 class Attachment {
   final String name;
   final String text;
-  const Attachment(this.name, this.text);
+  final String? imagePath; // set for images: the file the vision model reads
+  const Attachment(this.name, this.text, {this.imagePath});
+  bool get isImage => imagePath != null;
 }
 
 class Attachments {
@@ -20,7 +25,8 @@ class Attachments {
     'tex', 'rtf', 'srt', 'gitignore',
   ];
   static const _zip = ['docx', 'xlsx', 'pptx', 'odt', 'ods', 'odp'];
-  static final all = [..._text, ..._zip];
+  static const _img = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'];
+  static final all = [..._text, ..._zip, 'pdf', ..._img];
 
   static Future<List<Attachment>> pick() async {
     final res = await FilePicker.platform.pickFiles(
@@ -41,6 +47,20 @@ class Attachments {
     final dot = name.lastIndexOf('.');
     final ext = dot < 0 ? name.toLowerCase() : name.substring(dot + 1).toLowerCase();
     try {
+      if (_img.contains(ext)) {
+        if (kIsWeb) return null;
+        // Save a copy in the temp folder: the engine reads images from a path.
+        final f = File('${Directory.systemTemp.path}${Platform.pathSeparator}pc_${DateTime.now().microsecondsSinceEpoch}.$ext');
+        f.writeAsBytesSync(bytes);
+        return Attachment(name, '', imagePath: f.path);
+      }
+      if (ext == 'pdf') {
+        final doc = PdfDocument(inputBytes: bytes);
+        final t = PdfTextExtractor(doc).extractText();
+        doc.dispose();
+        // A scanned PDF has no text layer: nothing to read.
+        return t.trim().isEmpty ? null : Attachment(name, t);
+      }
       if (_zip.contains(ext)) {
         final t = _readZip(ext, bytes);
         return t.trim().isEmpty ? null : Attachment(name, t);
