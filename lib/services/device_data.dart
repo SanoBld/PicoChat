@@ -31,15 +31,35 @@ class DeviceData {
       caseSensitive: false);
 
   // ── Permissions (used by settings and intro too) ────────────────────────────
+  static const _pContacts = 'android.permission.READ_CONTACTS';
+  static const _pSms = 'android.permission.READ_SMS';
+  static const _pCal = 'android.permission.READ_CALENDAR';
+
+  /// Real Android permission state, read natively (permission_handler's calendar status is unreliable).
+  static Future<bool> granted(String perm) async {
+    try {
+      return (await _ch.invokeMethod<bool>('granted', {'p': perm})) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<bool> enable(String what) async {
     if (!supported) return false;
     switch (what) {
       case 'contacts':
-        return (await Permission.contacts.request()).isGranted;
+        await Permission.contacts.request();
+        return granted(_pContacts);
       case 'sms':
-        return (await Permission.sms.request()).isGranted;
+        await Permission.sms.request();
+        return granted(_pSms);
       case 'calendar':
-        return (await Permission.calendarFullAccess.request()).isGranted;
+        await Permission.calendarFullAccess.request();
+        if (!await granted(_pCal)) {
+          // ignore: deprecated_member_use
+          await Permission.calendar.request();
+        }
+        return granted(_pCal);
       case 'notif':
         if (await notifAccess()) return true;
         try {
@@ -72,19 +92,19 @@ class DeviceData {
             'step_device', 'notifications');
       }
       if (accSmsNotifier.value && _smsRe.hasMatch(q)) {
-        if (!await Permission.sms.isGranted) return const DeviceResult(_denied, 'step_device', 'SMS');
+        if (!await granted(_pSms)) return const DeviceResult(_denied, 'step_device', 'SMS');
         final l = await _list('sms', {'limit': 10});
         return DeviceResult(l.isEmpty ? 'No text message found.' : 'Latest text messages received:\n${l.join('\n')}',
             'step_device', 'SMS');
       }
       if (accCalendarNotifier.value && _calRe.hasMatch(q)) {
-        if (!await Permission.calendarFullAccess.isGranted) return const DeviceResult(_denied, 'step_device', 'calendar');
+        if (!await granted(_pCal)) return const DeviceResult(_denied, 'step_device', 'calendar');
         final l = await _list('calendar', {'days': 14});
         return DeviceResult(l.isEmpty ? 'No event in the next 14 days.' : 'Calendar, next 14 days:\n${l.join('\n')}',
             'step_device', 'calendar');
       }
       if (accContactsNotifier.value && _contactRe.hasMatch(q)) {
-        if (!await Permission.contacts.isGranted) return const DeviceResult(_denied, 'step_device', 'contacts');
+        if (!await granted(_pContacts)) return const DeviceResult(_denied, 'step_device', 'contacts');
         // Names are the capitalised words of the question; nothing capitalised = list a few.
         final tokens = RegExp(r"\b[A-ZÀ-Ý][\wÀ-ÿ'-]{2,}")
             .allMatches(q)
@@ -95,7 +115,9 @@ class DeviceData {
         final l = await _list('contacts', {'tokens': tokens});
         return DeviceResult(l.isEmpty ? 'No matching contact.' : 'Contacts:\n${l.join('\n')}', 'step_device', 'contacts');
       }
-    } catch (_) {}
+    } catch (e) {
+      return DeviceResult('Reading the phone data failed: $e. Tell the user.', 'step_device', 'error');
+    }
     return null;
   }
 

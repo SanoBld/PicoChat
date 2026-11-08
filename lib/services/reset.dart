@@ -106,6 +106,7 @@ class ResetService {
     voiceEngineNotifier.value = 'whisper';
     voiceModelNotifier.value = 'base';
     devModeNotifier.value = false;
+    webAskNotifier.value = true;
     assistModelNotifier.value = '';
     accContactsNotifier.value = false;
     accSmsNotifier.value = false;

@@ -8,6 +8,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../widgets/net_consent.dart';
+import '../l10n/l10n.dart';
+
 import '../app_state.dart';
 import '../models/chat_models.dart';
 import '../models/model_models.dart';
@@ -36,6 +39,18 @@ class ChatService extends ChangeNotifier {
   bool _searching = false;
   int _loadedCtx = 0;
   String? _chatId;
+
+  final Map<String, bool> _netAsked = {}; // answers of this message, per kind of request
+
+  /// Asks the person before using the internet. Once per kind per message.
+  Future<bool> _netOk(String kind, String what) async {
+    if (!webAskNotifier.value) return true;
+    final known = _netAsked[kind];
+    if (known != null) return known;
+    final ok = await askNetConsent(what);
+    _netAsked[kind] = ok;
+    return ok;
+  }
 
   List<String> _pendingMem = []; // memory changes made by the app for the current message
 
@@ -148,6 +163,7 @@ class ChatService extends ChangeNotifier {
     _generating = true;
     _chatId = chat.id;
     _stopRequested = false;
+    _netAsked.clear();
     notifyListeners();
 
     final ultra = ultraModeNotifier.value;
@@ -194,10 +210,20 @@ class ChatService extends ChangeNotifier {
       // Exact data: calculator, weather, scores
       CardResult? card;
       if (query.isNotEmpty) {
-        _searching = true;
-        notifyListeners();
-        card = await MapService.build(query) ?? await CardService.build(query);
-        _searching = false;
+        final mapNet = MapService.needsNetwork(query);
+        final dataNet = CardService.needsNetwork(query);
+        final allowed = (!mapNet && !dataNet) ||
+            await _netOk('cards', mapNet ? tr('net_what_map') : '${tr('net_what_data')}\n“$query”');
+        if (allowed) {
+          _searching = true;
+          notifyListeners();
+          card = await MapService.build(query) ?? await CardService.build(query);
+          _searching = false;
+        } else {
+          ctx.writeln('--- Note ---\nThe user refused internet access for this request. Say it in one short sentence and '
+              'answer only with what you already know, stating that it may be outdated.\n');
+        }
+        if (MapService.mapIntent(query)) ctx.writeln('--- Map control ---\n${MapService.hint}\n');
         if (card != null) {
           step(card.step, card.detail);
           reply.cards.add(card.card);
@@ -250,6 +276,10 @@ class ChatService extends ChangeNotifier {
           queries = [...queries, ...plan];
           reply.steps.last['detail'] = queries.join('\n');
         }
+        if (!await _netOk('web', '${tr('net_what_web')}\n${queries.map((q) => '• $q').join('\n')}')) {
+          _searching = false;
+          ctx.writeln('--- Note ---\nThe user refused web search. Answer only with what you already know and say it may be outdated.\n');
+        } else {
         step('step_search', queries.join('\n'));
         _searching = true;
         notifyListeners();
@@ -270,6 +300,7 @@ class ChatService extends ChangeNotifier {
           step('step_read', '${list.length} · ${list.map((w) => w.domain).toSet().take(6).join(', ')}');
           ctx.writeln('--- Web results (use them and cite the URLs) ---\n${WebSearch.format(list, budget ~/ 2)}\n');
         }
+      }
       }
 
       if (ctx.isNotEmpty) {
@@ -348,6 +379,11 @@ class ChatService extends ChangeNotifier {
           'ctx': contextSizeNotifier.value,
           'promptTok': (reply.prompt.length / 3.5).round(),
         };
+      }
+      // The AI controls the map with hidden tags (markers, routes).
+      final raw = buffer.toString();
+      if (MapService.hasTags(raw) && await _netOk('maptags', tr('net_what_map'))) {
+        await MapService.applyTags(reply, raw);
       }
       final mem = <String>[..._pendingMem];
       _pendingMem = [];

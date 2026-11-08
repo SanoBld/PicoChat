@@ -113,6 +113,7 @@ Future<SharedPreferences> _loadState() async {
   memoryEnabledNotifier.value = p.getBool('pc_memory') ?? true;
   webMaxSourcesNotifier.value = p.getInt('pc_web_max') ?? 8;
   autoSpeakNotifier.value = p.getBool('pc_auto_speak') ?? false;
+  webAskNotifier.value = p.getBool('pc_web_ask') ?? true;
   devModeNotifier.value = p.getBool('pc_dev') ?? false;
   assistModelNotifier.value = p.getString('pc_assist_model') ?? '';
   accContactsNotifier.value = p.getBool('pc_acc_contacts') ?? false;
@@ -191,6 +192,7 @@ class PicoChatApp extends StatelessWidget {
             final dark = _decorate(ThemeData(colorScheme: darkScheme, useMaterial3: true));
 
             return MaterialApp(
+              navigatorKey: rootNavKey,
               title: 'PicoChat',
               debugShowCheckedModeBanner: false,
               localizationsDelegates: GlobalMaterialLocalizations.delegates,

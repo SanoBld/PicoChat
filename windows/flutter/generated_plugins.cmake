@@ -6,7 +6,9 @@ list(APPEND FLUTTER_PLUGIN_LIST
   desktop_drop
   dynamic_color
   flutter_tts
+  geolocator_windows
   pasteboard
+  permission_handler_windows
   record_windows
   screen_retriever_windows
   speech_to_text_windows

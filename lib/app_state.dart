@@ -46,6 +46,8 @@ final showStepsNotifier        = ValueNotifier<bool>(true);                   //
 final stepsOpenNotifier        = ValueNotifier<bool>(true);                   // pc_steps_open
 final ultraModeNotifier        = ValueNotifier<bool>(false);                  // pc_ultra
 final cityManualNotifier       = ValueNotifier<String>('');                   // pc_city
+final rootNavKey = GlobalKey<NavigatorState>();                                  // dialogs from services
+final webAskNotifier           = ValueNotifier<bool>(true);                   // pc_web_ask: ask before any internet use
 final devModeNotifier          = ValueNotifier<bool>(false);                  // pc_dev: tokens/s + prompt viewer
 final assistModelNotifier      = ValueNotifier<String>('');                   // pc_assist_model: '' = same as the app
 final accContactsNotifier      = ValueNotifier<bool>(false);                  // pc_acc_contacts

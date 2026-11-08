@@ -125,11 +125,12 @@ class MemoryStore extends ChangeNotifier {
 
   // "[[memory: fact]]", "[[forget: fact]]", "[[update: old => new]]" tags written by the AI.
   static final tag = RegExp(r'\[{1,2}(memory|forget|update):\s*(.*?)\]{1,2}', dotAll: true);
-  static const _prefixes = ['[[memory:', '[[forget:', '[[update:'];
+  static final mapTag = RegExp(r'\[\[map-(?:point|route|clear)[^\]]*\]\]');
+  static const _prefixes = ['[[memory:', '[[forget:', '[[update:', '[[map-'];
 
   // Text without tags (also hides a tag that is still being written).
   static String visible(String s) {
-    var out = s.replaceAll(tag, '');
+    var out = s.replaceAll(tag, '').replaceAll(mapTag, '');
     final open = out.lastIndexOf('[[');
     if (open != -1) {
       final tail = out.substring(open);

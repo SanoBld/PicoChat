@@ -43,6 +43,8 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     autoTitleNotifier.value = true;
     sendOnEnterNotifier.value = true;
     devModeNotifier.value = false;
+    webAskNotifier.value = true;
+    await savePref('pc_web_ask', true);
     assistModelNotifier.value = '';
     await savePref('pc_dev', false);
     await savePref('pc_assist_model', '');
@@ -114,6 +116,20 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               onChanged: (v) {
                 contextSizeNotifier.value = int.parse(v);
                 savePref('pc_context_size', int.parse(v));
+                setState(() {});
+              },
+            ),
+          ]),
+          const SizedBox(height: 20),
+          SettingsSection(label: tr('cs_internet'), children: [
+            SettingSwitchRow(
+              icon: Icons.public_rounded,
+              title: tr('cs_web_ask'),
+              subtitle: tr('cs_web_ask_sub'),
+              value: webAskNotifier.value,
+              onChanged: (v) {
+                webAskNotifier.value = v;
+                savePref('pc_web_ask', v);
                 setState(() {});
               },
             ),

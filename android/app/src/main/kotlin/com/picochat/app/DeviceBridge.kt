@@ -23,6 +23,10 @@ object DeviceBridge {
                     "sms" -> result.success(sms(ctx, call.argument<Int>("limit") ?: 10))
                     "calendar" -> result.success(calendar(ctx, call.argument<Int>("days") ?: 14))
                     "notifications" -> result.success(PicoNotificationListener.recent())
+                    "granted" -> result.success(
+                        androidx.core.content.ContextCompat.checkSelfPermission(ctx, call.argument<String>("p") ?: "") ==
+                            android.content.pm.PackageManager.PERMISSION_GRANTED
+                    )
                     "notifAccess" -> result.success(
                         NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName)
                     )
@@ -74,7 +78,10 @@ object DeviceBridge {
 
     private fun calendar(ctx: Context, days: Int): List<String> {
         val out = mutableListOf<String>()
-        val now = System.currentTimeMillis()
+        val cal = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0); set(java.util.Calendar.SECOND, 0)
+        }
+        val now = cal.timeInMillis // start of today: earlier events of today count
         val end = now + days * 86_400_000L
         val fmt = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
         val uri = CalendarContract.Instances.CONTENT_URI.buildUpon().also {

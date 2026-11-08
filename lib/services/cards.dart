@@ -23,6 +23,9 @@ class CardService {
       caseSensitive: false);
   static final _scoreRe = RegExp(r"\bscore\b|r[ée]sultat|\bmatch\b|gagn[ée]|\bwon\b|resultado|ergebnis|spiel", caseSensitive: false);
 
+  /// True when answering this needs the internet (weather, scores), not the local calculator.
+  static bool needsNetwork(String q) => _calc(q) == null && (_weatherRe.hasMatch(q) || _scoreRe.hasMatch(q));
+
   static Future<CardResult?> build(String q) async {
     try {
       final c = _calc(q);
