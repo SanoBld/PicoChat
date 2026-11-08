@@ -36,6 +36,8 @@ final contextSizeNotifier      = ValueNotifier<int>(4096);                    //
 final streamResponsesNotifier  = ValueNotifier<bool>(true);                   // pc_stream
 final autoTitleNotifier        = ValueNotifier<bool>(true);                   // pc_auto_title
 final sendOnEnterNotifier      = ValueNotifier<bool>(true);                   // pc_send_on_enter
+final webSearchNotifier        = ValueNotifier<bool>(false);                  // pc_web_search
+final autoSpeakNotifier        = ValueNotifier<bool>(false);                  // pc_auto_speak
 
 // ── Models / Hugging Face ────────────────────────────────────────────────────
 const String kDefaultHfEndpoint = 'https://huggingface.co';

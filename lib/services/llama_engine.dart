@@ -49,6 +49,7 @@ class LlamaDartEngine implements InferenceEngine {
     _stopped = false;
 
     // The engine is stateless: send the whole conversation every time.
+    final lastUser = history.lastWhere((m) => m.role == ChatRole.user, orElse: () => history.last);
     final messages = <LlamaChatMessage>[
       if (options.systemPrompt.trim().isNotEmpty)
         LlamaChatMessage.fromText(role: LlamaChatRole.system, text: options.systemPrompt.trim()),
@@ -56,7 +57,7 @@ class LlamaDartEngine implements InferenceEngine {
         if (m.role != ChatRole.system && m.text.trim().isNotEmpty && !m.failed)
           LlamaChatMessage.fromText(
             role: m.role == ChatRole.user ? LlamaChatRole.user : LlamaChatRole.assistant,
-            text: m.text,
+            text: (m.id == lastUser.id && m.context.isNotEmpty) ? '${m.context}\n\n${m.text}' : m.text,
           ),
     ];
 

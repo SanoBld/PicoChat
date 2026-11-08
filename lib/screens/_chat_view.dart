@@ -25,6 +25,7 @@ class _ChatViewState extends State<_ChatView> {
   final _scroll = ScrollController();
   final _focus = FocusNode();
   bool _hasText = false;
+  List<Attachment> _files = [];
 
   @override
   void initState() {
@@ -33,6 +34,7 @@ class _ChatViewState extends State<_ChatView> {
     ChatService.instance.addListener(_onChange);
     ModelManager.instance.addListener(_onChange);
     localeNotifier.addListener(_onChange);
+    webSearchNotifier.addListener(_onChange);
     _ctrl.addListener(() {
       final has = _ctrl.text.trim().isNotEmpty;
       if (has != _hasText) setState(() => _hasText = has);
@@ -45,6 +47,7 @@ class _ChatViewState extends State<_ChatView> {
     ChatService.instance.removeListener(_onChange);
     ModelManager.instance.removeListener(_onChange);
     localeNotifier.removeListener(_onChange);
+    webSearchNotifier.removeListener(_onChange);
     _ctrl.dispose();
     _scroll.dispose();
     _focus.dispose();
@@ -67,6 +70,11 @@ class _ChatViewState extends State<_ChatView> {
     });
   }
 
+  Future<void> _attach() async {
+    final picked = await Attachments.pick();
+    if (picked.isNotEmpty && mounted) setState(() => _files = [..._files, ...picked]);
+  }
+
   Future<void> _send([String? preset]) async {
     final text = (preset ?? _ctrl.text).trim();
     if (text.isEmpty) return;
@@ -77,7 +85,9 @@ class _ChatViewState extends State<_ChatView> {
     if (ChatService.instance.isGenerating) return;
     m3Haptic();
     _ctrl.clear();
-    final f = ChatService.instance.send(widget.chat, text);
+    final files = _files;
+    setState(() => _files = []);
+    final f = ChatService.instance.send(widget.chat, text, files: files, web: webSearchNotifier.value);
     _scrollToEnd(force: true);
     await f;
   }
@@ -183,7 +193,20 @@ class _ChatViewState extends State<_ChatView> {
               color: scheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(28),
             ),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (_files.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Wrap(spacing: 6, children: [
+                    for (final f in _files)
+                      InputChip(
+                        avatar: const Icon(Icons.attach_file_rounded, size: 16),
+                        label: Text(f.name),
+                        onDeleted: () => setState(() => _files = [..._files]..remove(f)),
+                      ),
+                  ]),
+                ),
+              Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Expanded(
                 child: Focus(
                   onKeyEvent: (node, e) {
@@ -236,6 +259,32 @@ class _ChatViewState extends State<_ChatView> {
                         onPressed: canSend ? _send : null,
                       ),
               ),
+              ]),
+              Row(children: [
+                IconButton(
+                  tooltip: tr('attach_file'),
+                  icon: const Icon(Icons.attach_file_rounded),
+                  onPressed: canChat ? _attach : null,
+                ),
+                IconButton(
+                  tooltip: tr('web_search'),
+                  isSelected: webSearchNotifier.value,
+                  icon: const Icon(Icons.public_rounded),
+                  selectedIcon: const Icon(Icons.public_rounded),
+                  style: webSearchNotifier.value
+                      ? IconButton.styleFrom(backgroundColor: scheme.primaryContainer, foregroundColor: scheme.onPrimaryContainer)
+                      : null,
+                  onPressed: () {
+                    webSearchNotifier.value = !webSearchNotifier.value;
+                    savePref('pc_web_search', webSearchNotifier.value);
+                  },
+                ),
+                IconButton(
+                  tooltip: tr('tools_power'),
+                  icon: const Icon(Icons.tune_rounded),
+                  onPressed: () => showChatToolsSheet(context),
+                ),
+              ]),
             ]),
           ),
         ),
@@ -347,7 +396,18 @@ class _MessageView extends StatelessWidget {
               bottomRight: Radius.circular(6),
             ),
           ),
-          child: Text(message.text, style: text.bodyLarge?.copyWith(color: scheme.onPrimaryContainer)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            for (final n in message.files)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.attach_file_rounded, size: 16, color: scheme.onPrimaryContainer),
+                  const SizedBox(width: 4),
+                  Flexible(child: Text(n, style: text.labelMedium?.copyWith(color: scheme.onPrimaryContainer))),
+                ]),
+              ),
+            Text(message.text, style: text.bodyLarge?.copyWith(color: scheme.onPrimaryContainer)),
+          ]),
         ),
       );
     }
@@ -366,28 +426,38 @@ class _MessageView extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (waiting && loadingModel)
-              // The model is being read from disk: wavy loading bar.
+            if (waiting)
+              // Loading model / searching web / first words not here yet: full-width wavy line.
               Padding(
-                padding: const EdgeInsets.only(top: 8, right: 24),
+                padding: const EdgeInsets.only(top: 8),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const M3WavyProgress(indeterminate: true, height: 14),
+                  const SizedBox(width: double.infinity, child: M3WavyProgress(indeterminate: true, height: 14)),
                   const SizedBox(height: 8),
-                  Text(tr('loading_model'), style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
-                ]),
-              )
-            else if (waiting)
-              // Model ready, first words not here yet.
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Row(children: [
-                  const ThinkingDots(),
-                  const SizedBox(width: 10),
-                  ShimmerText(tr('thinking'), style: text.bodyMedium),
+                  Text(
+                    loadingModel
+                        ? tr('loading_model')
+                        : ChatService.instance.isSearching
+                            ? tr('searching_web')
+                            : tr('thinking'),
+                    style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                  ),
                 ]),
               )
             else if (message.text.isNotEmpty)
               MarkdownLite(text: message.text, style: text.bodyLarge, linkColor: scheme.primary),
+            if (!generating)
+              for (final f in FileOutput.extract(message.text))
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: ActionChip(
+                    avatar: const Icon(Icons.download_rounded, size: 18),
+                    label: Text(f.name),
+                    onPressed: () async {
+                      final ok = await FileOutput.save(f);
+                      if (ok && context.mounted) _toast(context, tr('file_saved'));
+                    },
+                  ),
+                ),
             // While the answer is written, dots keep moving below the text.
             if (generating && !waiting && message.text.isNotEmpty)
               const Padding(padding: EdgeInsets.only(top: 6), child: ThinkingDots(size: 6)),
@@ -411,6 +481,15 @@ class _MessageView extends StatelessWidget {
                     Clipboard.setData(ClipboardData(text: message.text));
                     _toast(context, tr('copied'));
                   },
+                ),
+                ValueListenableBuilder<String?>(
+                  valueListenable: VoiceService.instance.speakingId,
+                  builder: (_, id, __) => IconButton(
+                    tooltip: tr(id == message.id ? 'voice_stop' : 'voice_read'),
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(id == message.id ? Icons.stop_circle_outlined : Icons.volume_up_rounded, size: 18),
+                    onPressed: () => VoiceService.instance.speak(message.id, message.text),
+                  ),
                 ),
                 IconButton(
                   tooltip: tr('regenerate'),

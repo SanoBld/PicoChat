@@ -18,6 +18,8 @@ class ChatMessage {
   final DateTime createdAt;
   bool stopped; // the person pressed stop while this answer was written
   bool failed; // the engine failed while writing this answer
+  String context; // hidden text sent with this message (files, web results)
+  List<String> files; // names of attached files (display only)
 
   ChatMessage({
     String? id,
@@ -26,7 +28,10 @@ class ChatMessage {
     DateTime? createdAt,
     this.stopped = false,
     this.failed = false,
-  })  : id = id ?? newId(),
+    this.context = '',
+    List<String>? files,
+  })  : files = files ?? [],
+        id = id ?? newId(),
         createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -36,6 +41,8 @@ class ChatMessage {
         'createdAt': createdAt.toIso8601String(),
         if (stopped) 'stopped': true,
         if (failed) 'failed': true,
+        if (context.isNotEmpty) 'context': context,
+        if (files.isNotEmpty) 'files': files,
       };
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -45,6 +52,8 @@ class ChatMessage {
         createdAt: DateTime.tryParse((j['createdAt'] as String?) ?? ''),
         stopped: j['stopped'] == true,
         failed: j['failed'] == true,
+        context: (j['context'] as String?) ?? '',
+        files: ((j['files'] as List?) ?? []).whereType<String>().toList(),
       );
 }
 

@@ -343,13 +343,15 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
   for (final c in seed.codeUnits) {
     h = (h * 31 + c) & 0xFFFFF;
   }
-  final hue = (h % 360).toDouble();
-  final dark = scheme.brightness == Brightness.dark;
-  return (
-    container: HSLColor.fromAHSL(1, hue, dark ? 0.28 : 0.55, dark ? 0.20 : 0.88).toColor(),
-    accent: HSLColor.fromAHSL(1, hue, dark ? 0.50 : 0.55, dark ? 0.62 : 0.40).toColor(),
-    onAccent: dark ? const Color(0xFF101010) : Colors.white,
-  );
+  // Only colours of the chosen app theme.
+  switch (h % 3) {
+    case 0:
+      return (container: scheme.primaryContainer, accent: scheme.primary, onAccent: scheme.onPrimary);
+    case 1:
+      return (container: scheme.secondaryContainer, accent: scheme.secondary, onAccent: scheme.onSecondary);
+    default:
+      return (container: scheme.tertiaryContainer, accent: scheme.tertiary, onAccent: scheme.onTertiary);
+  }
 }
 
 String _initial(String s) => s.isEmpty ? '?' : String.fromCharCode(s.runes.first).toUpperCase();

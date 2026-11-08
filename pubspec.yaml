@@ -23,6 +23,7 @@ dependencies:
   url_launcher: ^6.3.0
   package_info_plus: ^8.1.1
   llamadart: ^0.17.5
+  flutter_tts: ^4.2.0
 
 dev_dependencies:
   flutter_test:
