@@ -35,6 +35,8 @@ class _ChatViewState extends State<_ChatView> {
     ModelManager.instance.addListener(_onChange);
     localeNotifier.addListener(_onChange);
     webSearchNotifier.addListener(_onChange);
+    locationEnabledNotifier.addListener(_onChange);
+    LocationService.instance.addListener(_onChange);
     _ctrl.addListener(() {
       final has = _ctrl.text.trim().isNotEmpty;
       if (has != _hasText) setState(() => _hasText = has);
@@ -48,6 +50,8 @@ class _ChatViewState extends State<_ChatView> {
     ModelManager.instance.removeListener(_onChange);
     localeNotifier.removeListener(_onChange);
     webSearchNotifier.removeListener(_onChange);
+    locationEnabledNotifier.removeListener(_onChange);
+    LocationService.instance.removeListener(_onChange);
     _ctrl.dispose();
     _scroll.dispose();
     _focus.dispose();
@@ -128,7 +132,7 @@ class _ChatViewState extends State<_ChatView> {
     _ctrl.clear();
     final files = _files;
     setState(() => _files = []);
-    final f = ChatService.instance.send(widget.chat, text, files: files, web: webSearchNotifier.value);
+    final f = ChatService.instance.send(widget.chat, text, files: files, web: webSearchNotifier.value || (webAutoNotifier.value && WebIntent.needsWeb(text)));
     _scrollToEnd(force: true);
     await f;
   }
@@ -237,6 +241,18 @@ class _ChatViewState extends State<_ChatView> {
               borderRadius: BorderRadius.circular(28),
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (locationEnabledNotifier.value && LocationService.instance.label != null)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Chip(
+                      visualDensity: VisualDensity.compact,
+                      avatar: const Icon(Icons.location_on_rounded, size: 16),
+                      label: Text(LocationService.instance.label!),
+                    ),
+                  ),
+                ),
               if (_files.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,

@@ -3,6 +3,7 @@
 // They are not shown or editable in the settings.
 import '../app_state.dart';
 import '../supported_locales.dart';
+import 'location_service.dart';
 import 'memory_store.dart';
 import 'model_manager.dart';
 
@@ -48,8 +49,22 @@ class CorePrompt {
           'remember something, end your answer with [[memory: <the real fact>]] (replace <the real fact> by the fact itself). '
           'This tag is a hidden command: never explain or mention it.');
     }
+    final ctx = <String>[];
+    if (contextTimeNotifier.value) {
+      final n = DateTime.now();
+      final off = n.timeZoneOffset;
+      final sign = off.isNegative ? '-' : '+';
+      final hh = off.abs().inHours.toString().padLeft(2, '0');
+      final mm = (off.abs().inMinutes % 60).toString().padLeft(2, '0');
+      ctx.add('current date and time ${n.toString().substring(0, 16)} (UTC$sign$hh:$mm)');
+    }
+    final place = LocationService.instance.label;
+    if (locationEnabledNotifier.value && place != null) ctx.add('approximate location $place');
+    if (ctx.isNotEmpty) {
+      b.writeln('DEVICE CONTEXT (use only when relevant, never invent beyond it): ${ctx.join('; ')}.');
+    }
     final instr = systemPromptNotifier.value.trim();
-    if (instr.isNotEmpty) b.writeln('USER INSTRUCTIONS (always follow):\n$instr');
+    if (instr.isNotEmpty && instr != kDefaultSystemPrompt) b.writeln('USER INSTRUCTIONS (always follow):\n$instr');
     final repo = ModelManager.instance.active?.repo.toLowerCase() ?? '';
     if (repo.contains('qwen3') && !repo.contains('2507')) b.writeln('/no_think');
     return b.toString().trim();

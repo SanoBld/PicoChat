@@ -17,6 +17,7 @@ import 'inference_engine.dart';
 import 'memory_store.dart';
 import 'model_manager.dart';
 import 'voice.dart';
+import 'web_intent.dart';
 import 'web_search.dart';
 
 class ChatService extends ChangeNotifier {
@@ -112,7 +113,7 @@ class ChatService extends ChangeNotifier {
         if (web && query.isNotEmpty) {
           _searching = true;
           notifyListeners();
-          final found = await WebSearch.run(query, max: webMaxSourcesNotifier.value);
+          final found = await WebSearch.run(WebIntent.augment(query), max: webMaxSourcesNotifier.value);
           _searching = false;
           if (found.isNotEmpty) {
             final r = WebSearch.format(found, budget ~/ 2);

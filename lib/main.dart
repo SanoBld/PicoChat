@@ -1,4 +1,5 @@
 // lib/main.dart
+import 'services/location_service.dart';
 import 'services/memory_store.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -85,6 +86,9 @@ Future<void> _mainImpl() async {
   streamResponsesNotifier.value = p.getBool('pc_stream') ?? true;
   autoTitleNotifier.value = p.getBool('pc_auto_title') ?? true;
   sendOnEnterNotifier.value = p.getBool('pc_send_on_enter') ?? true;
+  webAutoNotifier.value = p.getBool('pc_web_auto') ?? true;
+  locationEnabledNotifier.value = p.getBool('pc_location') ?? false;
+  contextTimeNotifier.value = p.getBool('pc_ctx_time') ?? true;
   webSearchNotifier.value = p.getBool('pc_web_search') ?? false;
   materialShapesNotifier.value = p.getBool('pc_shapes') ?? true;
   memoryEnabledNotifier.value = p.getBool('pc_memory') ?? true;
@@ -97,6 +101,7 @@ Future<void> _mainImpl() async {
 
   await Future.wait([ChatStore.instance.init(), ModelManager.instance.init(), MemoryStore.instance.init()]);
 
+  if (locationEnabledNotifier.value) LocationService.instance.refresh();
   runApp(PicoChatApp(onboarded: p.getBool('pc_onboarded') ?? false));
 }
 

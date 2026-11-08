@@ -77,6 +77,13 @@ class _SettingsPageState extends State<_SettingsPage> {
               onTap: () => _open(const MemoryPage()),
             ),
             SettingActionRow(
+              icon: Icons.travel_explore_rounded,
+              title: tr('set_context'),
+              subtitle: tr('set_context_sub'),
+              trailing: chevron,
+              onTap: () => _open(const ContextPage()),
+            ),
+            SettingActionRow(
               icon: Icons.hub_rounded,
               title: tr('set_hf'),
               subtitle: tr('set_hf_sub'),
