@@ -11,6 +11,7 @@ import '../app_state.dart';
 import '../models/chat_models.dart';
 import 'attachments.dart';
 import 'chat_store.dart';
+import 'file_output.dart';
 import 'core_prompt.dart';
 import 'inference_engine.dart';
 import 'memory_store.dart';
@@ -49,7 +50,12 @@ class ChatService extends ChangeNotifier {
     if (first && autoTitleNotifier.value) {
       ChatStore.instance.setAutoTitle(chat, _titleFrom(clean));
     }
-    await _answer(chat, files: files, web: web, query: clean);
+    String? remembered;
+    if (memoryEnabledNotifier.value) {
+      remembered = MemoryStore.intentFact(clean);
+      if (remembered != null) await MemoryStore.instance.add(remembered);
+    }
+    await _answer(chat, files: files, web: web, query: clean, remembered: remembered);
   }
 
   /// Deletes the last assistant answer and writes a new one.
@@ -70,7 +76,7 @@ class ChatService extends ChangeNotifier {
   }
 
   Future<void> _answer(Conversation chat,
-      {List<Attachment> files = const [], bool web = false, String query = ''}) async {
+      {List<Attachment> files = const [], bool web = false, String query = '', String? remembered}) async {
     final store = ChatStore.instance;
     final engine = InferenceService.engine;
     final model = ModelManager.instance.active;
@@ -85,6 +91,12 @@ class ChatService extends ChangeNotifier {
     _stopRequested = false;
     notifyListeners();
 
+    final lastUser = history.lastWhere((m) => m.role == ChatRole.user, orElse: () => ChatMessage(role: ChatRole.user, text: '')).text;
+    final wantsFile = FileOutput.requested(lastUser);
+    String shown(String t) {
+      final v = MemoryStore.visible(t);
+      return wantsFile ? v : FileOutput.strip(v);
+    }
     final buffer = StringBuffer();
     var lastPush = DateTime.fromMillisecondsSinceEpoch(0);
     try {
@@ -124,14 +136,14 @@ class ChatService extends ChangeNotifier {
         notifyListeners();
       }
       final options = GenerationOptions(
-        systemPrompt: '${CorePrompt.build()}\n\n${systemPromptNotifier.value}',
+        systemPrompt: '${CorePrompt.build(fileRequested: wantsFile)}\n\n${systemPromptNotifier.value}',
         temperature: temperatureNotifier.value,
         maxTokens: maxTokensNotifier.value,
       );
       await for (final piece in engine.generate(history, options)) {
         buffer.write(piece);
         if (streamResponsesNotifier.value) {
-          reply.text = MemoryStore.visible(buffer.toString());
+          reply.text = shown(buffer.toString());
           final now = DateTime.now();
           if (now.difference(lastPush).inMilliseconds > 40) {
             lastPush = now;
@@ -139,15 +151,19 @@ class ChatService extends ChangeNotifier {
           }
         }
       }
-      if (memoryEnabledNotifier.value) reply.memories = await MemoryStore.instance.harvest(buffer.toString());
-      reply.text = MemoryStore.visible(buffer.toString());
+      if (remembered != null) {
+        reply.memories = [remembered];
+      } else if (memoryEnabledNotifier.value) {
+        reply.memories = await MemoryStore.instance.harvest(buffer.toString());
+      }
+      reply.text = shown(buffer.toString());
       reply.stopped = _stopRequested;
       if (autoSpeakNotifier.value && !_stopRequested && reply.text.isNotEmpty) {
         VoiceService.instance.speak(reply.id, reply.text);
       }
     } catch (e) {
       debugPrint('Generation failed: $e');
-      reply.text = MemoryStore.visible(buffer.toString());
+      reply.text = shown(buffer.toString());
       reply.failed = true;
     } finally {
       _loadingModel = false;

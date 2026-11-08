@@ -3,8 +3,12 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  desktop_drop
   dynamic_color
+  flutter_tts
+  pasteboard
   screen_retriever_windows
+  speech_to_text_windows
   url_launcher_windows
   window_manager
 )

@@ -152,9 +152,24 @@ class _SidebarState extends State<_Sidebar> {
                             ),
                             PopupMenuButton<String>(
                               icon: Icon(Icons.more_horiz_rounded, size: 20, color: scheme.onSurfaceVariant),
-                              onSelected: (v) => v == 'rename' ? _rename(c) : _delete(c),
+                              onSelected: (v) async {
+                                if (v == 'rename') {
+                                  _rename(c);
+                                } else if (v == 'delete') {
+                                  _delete(c);
+                                } else if (v == 'export') {
+                                  Backup.exportChat(c);
+                                } else if (v == 'import') {
+                                  final r = await Backup.import();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr(r == null ? 'import_failed' : 'imported'))));
+                                  }
+                                }
+                              },
                               itemBuilder: (_) => [
                                 PopupMenuItem(value: 'rename', child: Text(tr('rename'))),
+                                PopupMenuItem(value: 'export', child: Text(tr('export'))),
+                                PopupMenuItem(value: 'import', child: Text(tr('import'))),
                                 PopupMenuItem(value: 'delete', child: Text(tr('delete'))),
                               ],
                             ),

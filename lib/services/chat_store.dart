@@ -46,6 +46,13 @@ class ChatStore extends ChangeNotifier {
   /// Creates an empty chat. It joins the history with its first message.
   Conversation create({String modelId = ''}) => Conversation(modelId: modelId);
 
+  void importChat(Conversation c) {
+    _chats.insert(0, c);
+    _sort();
+    notifyListeners();
+    _scheduleSave();
+  }
+
   void addMessage(Conversation c, ChatMessage m) {
     if (!_chats.contains(c)) _chats.insert(0, c);
     c.messages.add(m);

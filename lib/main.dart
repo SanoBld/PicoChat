@@ -86,6 +86,7 @@ Future<void> _mainImpl() async {
   autoTitleNotifier.value = p.getBool('pc_auto_title') ?? true;
   sendOnEnterNotifier.value = p.getBool('pc_send_on_enter') ?? true;
   webSearchNotifier.value = p.getBool('pc_web_search') ?? false;
+  aiStyleNotifier.value = p.getString('pc_ai_style') ?? '';
   memoryEnabledNotifier.value = p.getBool('pc_memory') ?? true;
   webMaxSourcesNotifier.value = p.getInt('pc_web_max') ?? 8;
   autoSpeakNotifier.value = p.getBool('pc_auto_speak') ?? false;

@@ -15,6 +15,16 @@ class GeneratedFile {
 class FileOutput {
   static final _re = RegExp(r'```file:([^\s`]+)[ \t]*\n([\s\S]*?)```');
 
+  static final _ask = RegExp(
+      r'fichier|file|télécharg|telecharg|download|export|datei|archivo|descarg|\.(txt|csv|json|md|xlsx?|docx?|pdf|py|js|html|xml)\b|excel|tableur|spreadsheet|tabelle|hoja de c',
+      caseSensitive: false);
+
+  static bool requested(String userText) => _ask.hasMatch(userText);
+
+  /// Turns file blocks into normal code blocks (used when no file was asked for).
+  static String strip(String text) =>
+      text.replaceAll(RegExp(r'```file:[^\s`]+[ \t]*\n?'), '```\n');
+
   static List<GeneratedFile> extract(String text) => [
         for (final m in _re.allMatches(text))
           GeneratedFile(m.group(1)!.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_'), m.group(2)!),

@@ -6,7 +6,7 @@ import '../supported_locales.dart';
 import 'memory_store.dart';
 
 class CorePrompt {
-  static String build() {
+  static String build({bool fileRequested = false}) {
     final lang = supportedLocaleFor(localeNotifier.value).englishName;
     final b = StringBuffer()
       ..writeln('You are PicoChat, a private AI assistant running 100% on the user\'s device.')
@@ -14,10 +14,6 @@ class CorePrompt {
           'Only switch if the user writes in another language or asks you to.')
       ..writeln('CODE: show code in normal markdown code blocks with the language (```python). '
           'Never wrap normal code or text answers in a file block.')
-      ..writeln('FILES: only when the user explicitly asks for a file to download/save, '
-          'write one block that starts with ```file:NAME.EXT on its own line (NAME.EXT = a fitting name and extension '
-          'for the request) and ends with ```. Spreadsheets/tables: CSV file. Never create a file otherwise, '
-          'and never mention this syntax.')
       ..writeln('APP HELP (use when asked how to do something): '
           'attach files with the paperclip button, by drag and drop, or by pasting (Ctrl+V). '
           'Readable formats: text, code, csv, json, xml, html, docx, xlsx, pptx, odt, ods. '
@@ -25,6 +21,12 @@ class CorePrompt {
           'Speaker icon under an answer = read aloud, copy and regenerate buttons are next to it. '
           'The tune button = chat tools. Settings > Memory = list and delete what you remember. '
           'Models page = download or switch the AI model. Everything stays on the device.');
+    if (fileRequested) {
+      b.writeln('FILES: the user asked for a file. Write it as ONE block: a line ```file:NAME.EXT (a real fitting name '
+          'and extension), then the content, then ```. Tables: CSV. Never mention this syntax.');
+    }
+    final style = aiStyleNotifier.value.trim();
+    if (style.isNotEmpty) b.writeln('The user wants you to be: $style');
     if (memoryEnabledNotifier.value) {
       final facts = MemoryStore.instance.items;
       if (facts.isNotEmpty) {
@@ -34,7 +36,7 @@ class CorePrompt {
         }
       }
       b.writeln('MEMORY: if the user shares a lasting personal fact (name, job, tastes, goals) or asks you to '
-          'remember something, end your answer with [[memory: short fact]]. '
+          'remember something, end your answer with [[memory: <the real fact>]] (replace <the real fact> by the fact itself). '
           'This tag is a hidden command: never explain or mention it.');
     }
     return b.toString().trim();

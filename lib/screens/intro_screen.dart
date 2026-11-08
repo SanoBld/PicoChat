@@ -9,6 +9,7 @@ import '../app_state.dart';
 import '../l10n/l10n.dart';
 import '../models/model_models.dart';
 import '../services/hf_service.dart';
+import '../services/memory_store.dart';
 import '../services/model_manager.dart';
 import '../services/prefs.dart';
 import '../supported_locales.dart';
@@ -27,7 +28,11 @@ class IntroScreen extends StatefulWidget {
 class _IntroScreenState extends State<IntroScreen> {
   final _pageCtrl = PageController();
   int _page = 0;
-  static const _pages = 4;
+  static const _pages = 5;
+  final _name = TextEditingController();
+  final _work = TextEditingController();
+  final _likes = TextEditingController();
+  final _aiStyle = TextEditingController();
 
   @override
   void initState() {
@@ -39,6 +44,9 @@ class _IntroScreenState extends State<IntroScreen> {
   void dispose() {
     localeNotifier.removeListener(_rebuild);
     _pageCtrl.dispose();
+    for (final c in [_name, _work, _likes, _aiStyle]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -51,6 +59,18 @@ class _IntroScreenState extends State<IntroScreen> {
   }
 
   Future<void> _finish() async {
+    final name = _name.text.trim();
+    if (name.isNotEmpty) {
+      displayNameNotifier.value = name;
+      await savePref('pc_display_name', name);
+      await MemoryStore.instance.add('Name: $name');
+    }
+    if (_work.text.trim().isNotEmpty) await MemoryStore.instance.add('Work/studies: ${_work.text.trim()}');
+    if (_likes.text.trim().isNotEmpty) await MemoryStore.instance.add('Interests: ${_likes.text.trim()}');
+    if (_aiStyle.text.trim().isNotEmpty) {
+      aiStyleNotifier.value = _aiStyle.text.trim();
+      await savePref('pc_ai_style', _aiStyle.text.trim());
+    }
     await savePref('pc_onboarded', true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -94,7 +114,13 @@ class _IntroScreenState extends State<IntroScreen> {
                 controller: _pageCtrl,
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (i) => setState(() => _page = i),
-                children: const [_WelcomeStep(), _PrivacyStep(), _ModelStep(), _ReadyStep()],
+                children: [
+                  const _WelcomeStep(),
+                  const _PrivacyStep(),
+                  _AboutStep(name: _name, work: _work, likes: _likes, aiStyle: _aiStyle),
+                  const _ModelStep(),
+                  const _ReadyStep(),
+                ],
               ),
             ),
             Padding(
@@ -389,4 +415,43 @@ class _ReadyStep extends StatelessWidget {
           _Point(Icons.tune_rounded, tr('intro4_b_t'), tr('intro4_b_s')),
         ]),
       );
+}
+
+
+class _AboutStep extends StatelessWidget {
+  final TextEditingController name, work, likes, aiStyle;
+  const _AboutStep({required this.name, required this.work, required this.likes, required this.aiStyle});
+
+  Widget _f(TextEditingController c, String q) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: TextField(
+          controller: c,
+          maxLines: 2,
+          minLines: 1,
+          decoration: InputDecoration(labelText: q, border: const OutlineInputBorder()),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(tr('onb_title'), style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 6),
+            Text(tr('onb_sub'), style: text.bodyMedium),
+            const SizedBox(height: 20),
+            _f(name, tr('onb_q_name')),
+            _f(work, tr('onb_q_work')),
+            _f(likes, tr('onb_q_likes')),
+            _f(aiStyle, tr('onb_q_ai')),
+          ]),
+        ),
+      ),
+    );
+  }
 }

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../app_state.dart';
 import '../../l10n/l10n.dart';
+import '../../services/backup.dart';
 import '../../services/memory_store.dart';
 import '../../services/prefs.dart';
 
@@ -45,6 +46,30 @@ class _MemoryPageState extends State<MemoryPage> {
     if (v != null) await _store.add(v);
   }
 
+  Future<void> _style() async {
+    final c = TextEditingController(text: aiStyleNotifier.value);
+    final v = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(tr('ai_style')),
+        content: TextField(controller: c, autofocus: true, maxLines: 4, minLines: 2),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(tr('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(context, c.text), child: Text(tr('save'))),
+        ],
+      ),
+    );
+    if (v == null) return;
+    setState(() => aiStyleNotifier.value = v.trim());
+    await savePref('pc_ai_style', v.trim());
+  }
+
+  Future<void> _import() async {
+    final r = await Backup.import();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr(r == null ? 'import_failed' : 'imported'))));
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -53,6 +78,8 @@ class _MemoryPageState extends State<MemoryPage> {
       appBar: AppBar(
         title: Text(tr('memory_title')),
         actions: [
+          IconButton(tooltip: tr('import'), icon: const Icon(Icons.file_upload_outlined), onPressed: _import),
+          IconButton(tooltip: tr('export'), icon: const Icon(Icons.file_download_outlined), onPressed: Backup.exportMemory),
           if (_store.items.isNotEmpty)
             IconButton(tooltip: tr('memory_clear'), icon: const Icon(Icons.delete_sweep_rounded), onPressed: _store.clear),
         ],
@@ -67,6 +94,12 @@ class _MemoryPageState extends State<MemoryPage> {
             setState(() => memoryEnabledNotifier.value = v);
             savePref('pc_memory', v);
           },
+        ),
+        ListTile(
+          leading: const Icon(Icons.tune_rounded),
+          title: Text(tr('ai_style')),
+          subtitle: Text(aiStyleNotifier.value.isEmpty ? '—' : aiStyleNotifier.value, maxLines: 2, overflow: TextOverflow.ellipsis),
+          onTap: _style,
         ),
         if (_store.items.isEmpty)
           Padding(

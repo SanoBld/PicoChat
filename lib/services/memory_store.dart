@@ -33,13 +33,31 @@ class MemoryStore extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> replaceAll(List<String> list) async {
+    for (final f in list) {
+      await add(f);
+    }
+  }
+
+  // "remember that..." typed by the user: the app saves it itself (small models are unreliable).
+  static final _intent = RegExp(
+      r'^\s*(?:please\s+|stp\s+|s\x27il te pla[iî]t\s+)?(?:enregistre|retiens|rappelle[- ]toi|souviens[- ]toi|m[ée]morise|note|remember|save|memorize|merk dir|speichere|recuerda|guarda)\b[\s,:]*(?:que|that|dass|qu\x27|:)?\s*(.+)$',
+      caseSensitive: false,
+      dotAll: true);
+
+  static String? intentFact(String userText) {
+    final m = _intent.firstMatch(userText.trim());
+    final f = m?.group(1)?.trim();
+    return (f == null || f.length < 3) ? null : f;
+  }
+
   Future<void> clear() async {
     items = [];
     await _save();
   }
 
   // "[[memory: fact]]" tags written by the AI.
-  static final tag = RegExp(r'\[\[memory:\s*(.*?)\]\]', dotAll: true);
+  static final tag = RegExp(r'\[{1,2}memory:\s*(.*?)\]{1,2}', dotAll: true);
 
   // Text without tags (also hides a tag that is still being written).
   static String visible(String s) {
@@ -58,7 +76,7 @@ class MemoryStore extends ChangeNotifier {
     final added = <String>[];
     for (final m in tag.allMatches(s)) {
       final f = (m.group(1) ?? '').trim();
-      if (f.isEmpty) continue;
+      if (f.isEmpty || f.toLowerCase().contains('short fact') || f == '...') continue;
       added.add(f);
       await add(f);
     }

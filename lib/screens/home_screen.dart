@@ -26,6 +26,7 @@ import '../models/chat_models.dart';
 import '../models/model_models.dart';
 import '../supported_locales.dart';
 import '../services/attachments.dart';
+import '../services/backup.dart';
 import '../services/chat_service.dart';
 import '../services/file_output.dart';
 import '../services/prefs.dart';
