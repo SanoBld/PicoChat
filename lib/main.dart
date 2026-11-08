@@ -86,6 +86,8 @@ Future<void> _mainImpl() async {
   streamResponsesNotifier.value = p.getBool('pc_stream') ?? true;
   autoTitleNotifier.value = p.getBool('pc_auto_title') ?? true;
   sendOnEnterNotifier.value = p.getBool('pc_send_on_enter') ?? true;
+  searchEngineNotifier.value = p.getString('pc_search_engine') ?? 'duckduckgo';
+  sidebarCollapsedNotifier.value = p.getBool('pc_sidebar_collapsed') ?? false;
   voiceEngineNotifier.value = p.getString('pc_voice_engine') ?? 'whisper';
   voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'base';
   reasoningModeNotifier.value = p.getString('pc_reasoning') ?? 'auto';

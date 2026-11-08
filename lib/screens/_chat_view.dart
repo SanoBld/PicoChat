@@ -7,6 +7,7 @@ class _ChatView extends StatefulWidget {
   final VoidCallback? onMenu; // null on wide layouts (sidebar is always visible)
   final VoidCallback onNewChat;
   final VoidCallback onOpenModels;
+  final VoidCallback? onToggleSidebar; // wide layouts only
 
   const _ChatView({
     super.key,
@@ -14,6 +15,7 @@ class _ChatView extends StatefulWidget {
     required this.onMenu,
     required this.onNewChat,
     required this.onOpenModels,
+    this.onToggleSidebar,
   });
 
   @override
@@ -204,11 +206,21 @@ class _ChatViewState extends State<_ChatView> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: widget.onMenu == null
-            ? null
-            : IconButton(icon: const Icon(Icons.menu_rounded), onPressed: widget.onMenu),
+        leading: widget.onMenu != null
+            ? IconButton(icon: const Icon(Icons.menu_rounded), onPressed: widget.onMenu)
+            : widget.onToggleSidebar != null
+                ? IconButton(
+                    tooltip: tr(sidebarCollapsedNotifier.value ? 'sidebar_show' : 'sidebar_hide'),
+                    icon: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(sidebarCollapsedNotifier.value ? Icons.menu_rounded : Icons.menu_open_rounded,
+                          key: ValueKey(sidebarCollapsedNotifier.value)),
+                    ),
+                    onPressed: widget.onToggleSidebar,
+                  )
+                : null,
         automaticallyImplyLeading: false,
-        titleSpacing: widget.onMenu == null ? 20 : 0,
+        titleSpacing: (widget.onMenu == null && widget.onToggleSidebar == null) ? 20 : 0,
         title: Text(
           widget.chat.title.isEmpty ? 'PicoChat' : widget.chat.title,
           maxLines: 1,
@@ -258,7 +270,7 @@ class _ChatViewState extends State<_ChatView> {
                       // scrolled back into view stay still.
                       final fresh = DateTime.now().difference(m.createdAt).inMilliseconds < 2500;
                       return M3MaxWidth(
-                        maxWidth: 820,
+                        maxWidth: _contentW(context),
                         child: FadeSlideIn(
                           key: ValueKey(m.id),
                           skip: !fresh,
@@ -287,7 +299,7 @@ class _ChatViewState extends State<_ChatView> {
     return SafeArea(
       top: false,
       child: M3MaxWidth(
-        maxWidth: 820,
+        maxWidth: _contentW(context),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
           child: Container(
@@ -578,7 +590,7 @@ class _MessageView extends StatelessWidget {
       );
     }
 
-    return Padding(
+    return _HoverScope(builder: (context, hover) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         PulseScale(
@@ -656,7 +668,7 @@ class _MessageView extends StatelessWidget {
                   onPressed: () => _showSources(context, message.sources),
                 ),
               ),
-            if (showActions)
+            if (showActions || (hover && !generating && message.text.isNotEmpty))
               Row(children: [
                 IconButton(
                   tooltip: tr('copy'),
@@ -676,6 +688,7 @@ class _MessageView extends StatelessWidget {
                     onPressed: () => VoiceService.instance.speak(message.id, message.text),
                   ),
                 ),
+                if (showActions)
                 IconButton(
                   tooltip: tr('regenerate'),
                   visualDensity: VisualDensity.compact,
@@ -686,7 +699,7 @@ class _MessageView extends StatelessWidget {
           ]),
         ),
       ]),
-    );
+    ));
   }
 }
 
@@ -817,4 +830,31 @@ class _FileCard extends StatelessWidget {
       ),
     );
   }
+}
+
+
+/// Message column width: grows on big screens.
+double _contentW(BuildContext c) {
+  final w = MediaQuery.of(c).size.width;
+  return w > 1700 ? 1100 : (w > 1300 ? 960 : 820);
+}
+
+/// Tells its builder when the mouse is over it (desktop hover).
+class _HoverScope extends StatefulWidget {
+  final Widget Function(BuildContext, bool) builder;
+  const _HoverScope({required this.builder});
+
+  @override
+  State<_HoverScope> createState() => _HoverScopeState();
+}
+
+class _HoverScopeState extends State<_HoverScope> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: widget.builder(context, _hover),
+      );
 }

@@ -44,6 +44,23 @@ class _ContextPageState extends State<ContextPage> {
         maxWidth: 720,
         child: ListView(padding: const EdgeInsets.all(20), children: [
           SettingsSection(label: tr('ctx_web'), children: [
+            SettingChoiceRow(
+              icon: Icons.search_rounded,
+              title: tr('engine_title'),
+              description: tr('engine_sub'),
+              options: const [
+                ('duckduckgo', 'DuckDuckGo', null),
+                ('bing', 'Bing', null),
+                ('google', 'Google', null),
+                ('mojeek', 'Mojeek', null),
+              ],
+              value: searchEngineNotifier.value,
+              onChanged: (v) {
+                searchEngineNotifier.value = v;
+                savePref('pc_search_engine', v);
+                setState(() {});
+              },
+            ),
             SettingSwitchRow(
               icon: Icons.travel_explore_rounded,
               title: tr('ctx_web_auto'),

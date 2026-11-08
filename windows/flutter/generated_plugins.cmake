@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   dynamic_color
   flutter_tts
   pasteboard
+  record_windows
   screen_retriever_windows
   speech_to_text_windows
   url_launcher_windows
@@ -15,6 +16,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
   jni
+  whisper_ggml
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

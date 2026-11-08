@@ -101,18 +101,21 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   Conversation _chat = ChatStore.instance.create();
+  bool _hover = false; // sidebar shown over the chat while hovering the left edge
 
   @override
   void initState() {
     super.initState();
     localeNotifier.addListener(_rebuild);
     pcModeNotifier.addListener(_rebuild);
+    sidebarCollapsedNotifier.addListener(_rebuild);
   }
 
   @override
   void dispose() {
     localeNotifier.removeListener(_rebuild);
     pcModeNotifier.removeListener(_rebuild);
+    sidebarCollapsedNotifier.removeListener(_rebuild);
     super.dispose();
   }
 
@@ -165,16 +168,70 @@ class _HomeScreenState extends State<HomeScreen> {
       onMenu: wide ? null : () => _scaffoldKey.currentState?.openDrawer(),
       onNewChat: _newChat,
       onOpenModels: () => _push(const _ModelsPage()),
+      onToggleSidebar: wide
+          ? () {
+              _hover = false;
+              sidebarCollapsedNotifier.value = !sidebarCollapsedNotifier.value;
+              savePref('pc_sidebar_collapsed', sidebarCollapsedNotifier.value);
+            }
+          : null,
     );
+    final collapsed = sidebarCollapsedNotifier.value;
 
     return Scaffold(
       key: _scaffoldKey,
       drawer: wide ? null : Drawer(child: SafeArea(child: sidebar(inDrawer: true))),
       body: wide
-          ? Row(children: [
-              SizedBox(width: 300, child: ColoredBox(color: scheme.surfaceContainerLow, child: SafeArea(child: sidebar(inDrawer: false)))),
-              VerticalDivider(width: 1, color: scheme.outlineVariant),
-              Expanded(child: chatView),
+          ? Stack(children: [
+              Row(children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeOutCubic,
+                  width: collapsed ? 0 : 300,
+                  clipBehavior: Clip.hardEdge,
+                  decoration: const BoxDecoration(),
+                  child: OverflowBox(
+                    alignment: Alignment.centerLeft,
+                    minWidth: 300,
+                    maxWidth: 300,
+                    child: SizedBox(
+                      width: 300,
+                      child: Row(children: [
+                        Expanded(child: ColoredBox(color: scheme.surfaceContainerLow, child: SafeArea(child: sidebar(inDrawer: false)))),
+                        VerticalDivider(width: 1, color: scheme.outlineVariant),
+                      ]),
+                    ),
+                  ),
+                ),
+                Expanded(child: chatView),
+              ]),
+              if (collapsed) ...[
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: 14,
+                  child: MouseRegion(onEnter: (_) => setState(() => _hover = true), child: const SizedBox.expand()),
+                ),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  left: _hover ? 8 : -320,
+                  top: 8,
+                  bottom: 8,
+                  width: 300,
+                  child: MouseRegion(
+                    onExit: (_) => setState(() => _hover = false),
+                    child: Material(
+                      elevation: 12,
+                      color: scheme.surfaceContainerLow,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                      clipBehavior: Clip.antiAlias,
+                      child: sidebar(inDrawer: false),
+                    ),
+                  ),
+                ),
+              ],
             ])
           : chatView,
     );

@@ -101,6 +101,8 @@ class ResetService {
     webSearchNotifier.value = false;
     ultraModeNotifier.value = false;
     autoCommandsNotifier.value = true;
+    searchEngineNotifier.value = 'duckduckgo';
+    sidebarCollapsedNotifier.value = false;
     voiceEngineNotifier.value = 'whisper';
     voiceModelNotifier.value = 'base';
     reasoningModeNotifier.value = 'auto';

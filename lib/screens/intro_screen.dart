@@ -449,6 +449,24 @@ class _AboutStep extends StatelessWidget {
             _f(work, tr('onb_q_work')),
             _f(likes, tr('onb_q_likes')),
             _f(aiStyle, tr('onb_q_ai')),
+            const SizedBox(height: 4),
+            Text(tr('engine_title'), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            ValueListenableBuilder<String>(
+              valueListenable: searchEngineNotifier,
+              builder: (_, cur, _) => Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final e in const {'duckduckgo': 'DuckDuckGo', 'bing': 'Bing', 'google': 'Google', 'mojeek': 'Mojeek'}.entries)
+                  ChoiceChip(
+                    shape: const StadiumBorder(),
+                    label: Text(e.value),
+                    selected: cur == e.key,
+                    onSelected: (_) {
+                      searchEngineNotifier.value = e.key;
+                      savePref('pc_search_engine', e.key);
+                    },
+                  ),
+              ]),
+            ),
           ]),
         ),
       ),
