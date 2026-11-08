@@ -59,19 +59,34 @@ jobs:
           channel: 'stable'
           cache: true
 
-      # GitHub's release CDN sometimes answers 504 when Gradle downloads itself.
-      # Download it here with retries and point the wrapper at the local file.
-      - name: Pre-download Gradle (with retries)
+      # services.gradle.org redirects to GitHub releases, which sometimes answers
+      # 504 for minutes. Try the official URL, then public mirrors, and point the
+      # wrapper at the first valid zip. If none works the wrapper keeps its URL.
+      - name: Pre-download Gradle (mirrors)
         shell: bash
         run: |
-          curl -fL --retry 8 --retry-all-errors --retry-delay 15 \
-            -o "$RUNNER_TEMP/gradle.zip" \
-            https://services.gradle.org/distributions/gradle-8.14-bin.zip
-          props=android/gradle/wrapper/gradle-wrapper.properties
-          grep -v '^distributionUrl=' "$props" > "$props.tmp"
-          printf 'distributionUrl=file\\:%s\n' "$RUNNER_TEMP/gradle.zip" >> "$props.tmp"
-          mv "$props.tmp" "$props"
-          cat "$props"
+          ZIP="$RUNNER_TEMP/gradle.zip"
+          ok=0
+          for url in \
+            https://services.gradle.org/distributions/gradle-8.14-bin.zip \
+            https://mirrors.cloud.tencent.com/gradle/gradle-8.14-bin.zip \
+            https://mirrors.huaweicloud.com/gradle/gradle-8.14-bin.zip; do
+            echo "Trying $url"
+            if curl -fL --retry 2 --retry-all-errors --retry-delay 10 --max-time 300 -o "$ZIP" "$url" \
+               && [ "$(stat -c %s "$ZIP")" -gt 50000000 ] && unzip -tq "$ZIP" >/dev/null; then
+              ok=1; break
+            fi
+            rm -f "$ZIP"
+          done
+          if [ "$ok" = 1 ]; then
+            props=android/gradle/wrapper/gradle-wrapper.properties
+            grep -v '^distributionUrl=' "$props" > "$props.tmp"
+            printf 'distributionUrl=file\\:%s\n' "$ZIP" >> "$props.tmp"
+            mv "$props.tmp" "$props"
+            cat "$props"
+          else
+            echo "::warning::Could not pre-download Gradle, the wrapper will try by itself"
+          fi
 
       - name: Get dependencies
         shell: bash
