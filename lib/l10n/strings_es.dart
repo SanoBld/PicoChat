@@ -203,4 +203,12 @@ const Map<String, String> kStringsEs = {
   "intro4_a_s": "Haz preguntas, escribe, genera ideas y aprende.",
   "intro4_b_t": "Personalízalo",
   "intro4_b_s": "Cambia el aspecto, el idioma y el comportamiento en Ajustes.",
+  "store_featured": "Destacados",
+  "store_get": "Obtener",
+  "store_installed": "Instalado",
+  "cat_all": "Todos",
+  "cat_light": "Ligero",
+  "cat_balanced": "Equilibrado",
+  "cat_power": "Potente",
+  "searching": "Buscando en Hugging Face…",
 };

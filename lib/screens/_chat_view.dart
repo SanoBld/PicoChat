@@ -141,14 +141,22 @@ class _ChatViewState extends State<_ChatView> {
                     itemBuilder: (_, i) {
                       final m = messages[i];
                       final isLast = i == messages.length - 1;
+                      // Only messages written just now slide in; old ones
+                      // scrolled back into view stay still.
+                      final fresh = DateTime.now().difference(m.createdAt).inMilliseconds < 2500;
                       return M3MaxWidth(
                         maxWidth: 820,
-                        child: _MessageView(
-                          message: m,
-                          showActions: isLast && !busy && m.role == ChatRole.assistant && m.text.isNotEmpty,
-                          waiting: busy && isLast && m.role == ChatRole.assistant && m.text.isEmpty,
-                          loadingModel: service.isLoadingModel,
-                          onRegenerate: () => service.regenerate(widget.chat),
+                        child: FadeSlideIn(
+                          key: ValueKey(m.id),
+                          skip: !fresh,
+                          child: _MessageView(
+                            message: m,
+                            showActions: isLast && !busy && m.role == ChatRole.assistant && m.text.isNotEmpty,
+                            waiting: busy && isLast && m.role == ChatRole.assistant && m.text.isEmpty,
+                            generating: busy && isLast && m.role == ChatRole.assistant,
+                            loadingModel: service.isLoadingModel,
+                            onRegenerate: () => service.regenerate(widget.chat),
+                          ),
                         ),
                       );
                     },
@@ -210,18 +218,24 @@ class _ChatViewState extends State<_ChatView> {
                 ),
               ),
               const SizedBox(width: 4),
-              if (busy)
-                IconButton.filled(
-                  tooltip: tr('stop'),
-                  icon: const Icon(Icons.stop_rounded),
-                  onPressed: ChatService.instance.requestStop,
-                )
-              else
-                IconButton.filled(
-                  tooltip: tr('send'),
-                  icon: const Icon(Icons.arrow_upward_rounded),
-                  onPressed: canSend ? _send : null,
-                ),
+              AnimatedSwitcher(
+                duration: M3Motion.effectsDefaultDuration,
+                switchInCurve: M3Motion.spatialFast,
+                transitionBuilder: (c, a) => ScaleTransition(scale: a, child: FadeTransition(opacity: a, child: c)),
+                child: busy
+                    ? IconButton.filled(
+                        key: const ValueKey('stop'),
+                        tooltip: tr('stop'),
+                        icon: const Icon(Icons.stop_rounded),
+                        onPressed: ChatService.instance.requestStop,
+                      )
+                    : IconButton.filled(
+                        key: const ValueKey('send'),
+                        tooltip: tr('send'),
+                        icon: const Icon(Icons.arrow_upward_rounded),
+                        onPressed: canSend ? _send : null,
+                      ),
+              ),
             ]),
           ),
         ),
@@ -250,10 +264,12 @@ class _EmptyChat extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            M3CookieBadge(
-              size: 88,
-              color: scheme.primary,
-              child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 44, color: scheme.onPrimary),
+            FadeSlideIn(
+              child: M3CookieBadge(
+                size: 88,
+                color: scheme.primary,
+                child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 44, color: scheme.onPrimary),
+              ),
             ),
             const SizedBox(height: 20),
             Text(
@@ -279,8 +295,11 @@ class _EmptyChat extends StatelessWidget {
               )
             else
               Wrap(spacing: 10, runSpacing: 10, alignment: WrapAlignment.center, children: [
-                for (final k in const ['suggest_1', 'suggest_2', 'suggest_3', 'suggest_4'])
-                  ActionChip(label: Text(tr(k)), onPressed: () => onSuggest(tr(k))),
+                for (final (i, k) in const ['suggest_1', 'suggest_2', 'suggest_3', 'suggest_4'].indexed)
+                  FadeSlideIn(
+                    delay: Duration(milliseconds: 150 + i * 70),
+                    child: ActionChip(label: Text(tr(k)), onPressed: () => onSuggest(tr(k))),
+                  ),
               ]),
           ]),
         ),
@@ -295,6 +314,7 @@ class _MessageView extends StatelessWidget {
   final ChatMessage message;
   final bool showActions;
   final bool waiting;
+  final bool generating;
   final bool loadingModel;
   final VoidCallback onRegenerate;
 
@@ -302,6 +322,7 @@ class _MessageView extends StatelessWidget {
     required this.message,
     required this.showActions,
     required this.waiting,
+    required this.generating,
     required this.loadingModel,
     required this.onRegenerate,
   });
@@ -334,26 +355,42 @@ class _MessageView extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        M3CookieBadge(
-          size: 34,
-          color: scheme.primary,
-          child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 18, color: scheme.onPrimary),
+        PulseScale(
+          active: generating,
+          child: M3CookieBadge(
+            size: 34,
+            color: scheme.primary,
+            child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 18, color: scheme.onPrimary),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (waiting)
+            if (waiting && loadingModel)
+              // The model is being read from disk: wavy loading bar.
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: 8, right: 24),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const M3WavyProgress(indeterminate: true, height: 14),
+                  const SizedBox(height: 8),
+                  Text(tr('loading_model'), style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                ]),
+              )
+            else if (waiting)
+              // Model ready, first words not here yet.
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
                 child: Row(children: [
-                  const M3LoadingIndicator(size: 24),
+                  const ThinkingDots(),
                   const SizedBox(width: 10),
-                  Text(loadingModel ? tr('loading_model') : tr('thinking'),
-                      style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                  ShimmerText(tr('thinking'), style: text.bodyMedium),
                 ]),
               )
             else if (message.text.isNotEmpty)
               MarkdownLite(text: message.text, style: text.bodyLarge, linkColor: scheme.primary),
+            // While the answer is written, dots keep moving below the text.
+            if (generating && !waiting && message.text.isNotEmpty)
+              const Padding(padding: EdgeInsets.only(top: 6), child: ThinkingDots(size: 6)),
             if (message.stopped)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

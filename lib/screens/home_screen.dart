@@ -30,6 +30,7 @@ import '../theme/m3_motion.dart';
 import '../widgets/brand_icon.dart';
 import '../widgets/m3_components.dart';
 import '../widgets/markdown_lite.dart';
+import '../widgets/pc_motion.dart';
 import '../widgets/skeleton.dart';
 import 'settings/appearance_page.dart';
 import 'settings/chat_settings_page.dart';

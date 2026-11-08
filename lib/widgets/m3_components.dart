@@ -943,13 +943,15 @@ class M3NetImage extends StatelessWidget {
 class M3WavyProgress extends StatefulWidget {
   const M3WavyProgress({
     super.key,
-    required this.value,
+    this.value = 0,
+    this.indeterminate = false,
     this.height = 12,
     this.color,
     this.trackColor,
     this.stroke = 4,
   });
   final double value;       // 0..1
+  final bool indeterminate; // true: the wave grows and shrinks forever, [value] is ignored
   final double height;
   final double stroke;
   final Color? color;
@@ -988,6 +990,19 @@ class _M3WavyProgressState extends State<M3WavyProgress>
     final s = Theme.of(context).colorScheme;
     final color = widget.color ?? s.primary;
     final track = widget.trackColor ?? s.primary.withValues(alpha: 0.22);
+    if (widget.indeterminate) {
+      return AnimatedBuilder(
+        animation: _c,
+        builder: (_, _) {
+          // Smooth back-and-forth between 18 % and 90 % of the bar.
+          final v = 0.18 + 0.72 * (1 - math.cos(_c.value * 2 * math.pi)) / 2;
+          return CustomPaint(
+            size: Size(double.infinity, widget.height),
+            painter: _WavyPainter(v, _c.value, color, track, widget.stroke),
+          );
+        },
+      );
+    }
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: widget.value.clamp(0.0, 1.0)),
       duration: const Duration(milliseconds: 400),

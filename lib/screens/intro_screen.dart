@@ -74,19 +74,10 @@ class _IntroScreenState extends State<IntroScreen> {
           child: Column(children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0, end: (_page + 1) / _pages),
-                  duration: const Duration(milliseconds: 320),
-                  curve: M3Motion.emphasizedDecelerate,
-                  builder: (_, v, _) => LinearProgressIndicator(
-                    value: v,
-                    minHeight: 5,
-                    backgroundColor: scheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation(scheme.primary),
-                  ),
-                ),
+              child: M3WavyProgress(
+                value: (_page + 1) / _pages,
+                height: 12,
+                stroke: 4,
               ),
             ),
             Padding(
@@ -337,14 +328,9 @@ class _ModelStepState extends State<_ModelStep> {
       ]);
     } else if (task != null && task.status != DownloadStatus.failed) {
       action = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: task.total > 0 ? task.fraction : null,
-            minHeight: 6,
-            backgroundColor: scheme.surfaceContainerHighest,
-          ),
-        ),
+        task.total > 0
+            ? M3WavyProgress(value: task.fraction, height: 14)
+            : const M3WavyProgress(indeterminate: true, height: 14),
         const SizedBox(height: 8),
         Text('${formatBytes(task.received)}${task.total > 0 ? ' / ${formatBytes(task.total)}' : ''}',
             style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),

@@ -121,7 +121,10 @@ class _InstalledTab extends StatelessWidget {
       itemBuilder: (_, i) {
         final m = list[i];
         final isActive = m.id == activeModelNotifier.value;
-        return Padding(
+        return FadeSlideIn(
+          key: ValueKey(m.id),
+          delay: staggerDelay(i),
+          child: Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: M3PressCard(
             color: isActive ? scheme.primaryContainer : scheme.surfaceContainerLow,
@@ -155,13 +158,14 @@ class _InstalledTab extends StatelessWidget {
               ),
             ]),
           ),
+          ),
         );
       },
     );
   }
 }
 
-// ── Discover ─────────────────────────────────────────────────────────────────
+// ── Discover (store look) ────────────────────────────────────────────────────
 
 class _DiscoverTab extends StatefulWidget {
   const _DiscoverTab();
@@ -176,6 +180,7 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
   List<HfModelSummary>? _results;
   String? _error;
   bool _loading = false;
+  int _cat = 0; // 0 all, 1 light, 2 balanced, 3 powerful
 
   @override
   bool get wantKeepAlive => true;
@@ -228,63 +233,75 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
     }
   }
 
+  List<RecommendedModel> get _featured => kRecommendedModels.where((r) {
+        switch (_cat) {
+          case 1:
+            return r.approxMb <= 900;
+          case 2:
+            return r.approxMb > 900 && r.approxMb <= 1500;
+          case 3:
+            return r.approxMb > 1500;
+          default:
+            return true;
+        }
+      }).toList();
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    final mgr = ModelManager.instance;
-    final showRecommended = _query.trim().isEmpty;
+    final store = _query.trim().isEmpty;
+    final cats = [tr('cat_all'), tr('cat_light'), tr('cat_balanced'), tr('cat_power')];
+    final featured = _featured;
 
     return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
       M3SearchField(hint: tr('hf_search_hint'), onChanged: _onQuery),
-      if (showRecommended) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: Text(tr('rec_title'),
-              style: text.titleSmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
-        ),
-        for (final r in kRecommendedModels)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Builder(builder: (_) {
-              final installed = mgr.installed.any((m) => m.repo == r.repo);
-              final downloading = mgr.tasks.any((t) => t.repo == r.repo);
-              return M3PressCard(
-                color: scheme.surfaceContainerLow,
-                child: Row(children: [
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${r.title}  ·  ${r.params}',
-                          style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 2),
-                      Text('${tr(r.blurbKey)} · ~${formatBytes(r.approxMb * 1024 * 1024)}',
-                          style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
-                    ]),
+      if (store) ...[
+        _StoreSection(tr('store_featured')),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              for (final (i, label) in cats.indexed)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: M3Chip(
+                    label: Text(label),
+                    selected: _cat == i,
+                    onSelected: (_) => setState(() => _cat = i),
                   ),
-                  const SizedBox(width: 8),
-                  if (installed)
-                    Icon(Icons.check_circle_rounded, color: scheme.primary)
-                  else if (downloading)
-                    const SizedBox(width: 24, height: 24, child: M3Spinner())
-                  else
-                    IconButton.filledTonal(
-                      tooltip: tr('download'),
-                      icon: const Icon(Icons.download_rounded),
-                      onPressed: () => _downloadRecommended(r),
-                    ),
-                ]),
-              );
-            }),
+                ),
+            ],
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-          child: Text(tr('hf_popular'),
-              style: text.titleSmall?.copyWith(color: scheme.primary, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
         ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 236,
+          child: ListView.separated(
+            // A new key per category replays the entrance of the cards.
+            key: ValueKey('featured_$_cat'),
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: featured.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            itemBuilder: (_, i) => FadeSlideIn(
+              dx: 0.08,
+              delay: staggerDelay(i, stepMs: 70),
+              child: _FeaturedCard(
+                model: featured[i],
+                onGet: () => _downloadRecommended(featured[i]),
+                onOpen: () => _showFiles(context, featured[i].repo),
+              ),
+            ),
+          ),
+        ),
+        _StoreSection(tr('hf_popular')),
       ],
       if (_loading && _results == null)
-        const Padding(padding: EdgeInsets.all(32), child: Center(child: M3LoadingIndicator(size: 40)))
+        WavyLoader(label: tr('searching'))
       else if (_error != null)
         Padding(
           padding: const EdgeInsets.all(24),
@@ -299,30 +316,215 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
           padding: const EdgeInsets.all(24),
           child: Center(child: Text(tr('no_results'), style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant))),
         )
-      else
-        for (final r in _results!)
+      else ...[
+        // Thin wavy bar under the list while a new search is running.
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(32, 0, 32, 10),
+            child: M3WavyProgress(indeterminate: true, height: 10),
+          ),
+        for (final (i, r) in _results!.indexed)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: M3PressCard(
-              color: scheme.surfaceContainerLow,
-              onTap: () => _showFiles(context, r.id),
-              child: Row(children: [
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${r.author} · ↓ ${_compact(r.downloads)} · ♥ ${_compact(r.likes)}${r.gated ? ' · ${tr('gated')}' : ''}',
-                      style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ]),
-                ),
-                Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
-              ]),
+            child: FadeSlideIn(
+              key: ValueKey('row_${r.id}'),
+              delay: staggerDelay(i),
+              child: _StoreRow(rank: store ? i + 1 : null, model: r, onOpen: () => _showFiles(context, r.id)),
             ),
           ),
+      ],
     ]);
+  }
+}
+
+// Stable colour per repo, so each model keeps its own "icon".
+({Color container, Color accent, Color onAccent}) _tintFor(String seed, ColorScheme scheme) {
+  var h = 7;
+  for (final c in seed.codeUnits) {
+    h = (h * 31 + c) & 0xFFFFF;
+  }
+  final hue = (h % 360).toDouble();
+  final dark = scheme.brightness == Brightness.dark;
+  return (
+    container: HSLColor.fromAHSL(1, hue, dark ? 0.28 : 0.55, dark ? 0.20 : 0.88).toColor(),
+    accent: HSLColor.fromAHSL(1, hue, dark ? 0.50 : 0.55, dark ? 0.62 : 0.40).toColor(),
+    onAccent: dark ? const Color(0xFF101010) : Colors.white,
+  );
+}
+
+String _initial(String s) => s.isEmpty ? '?' : String.fromCharCode(s.runes.first).toUpperCase();
+
+class _StoreSection extends StatelessWidget {
+  final String title;
+  const _StoreSection(this.title);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
+        child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+      );
+}
+
+/// GET / progress / installed, like the button of an app store.
+class _StoreAction extends StatelessWidget {
+  final String repo;
+  final VoidCallback onGet;
+  const _StoreAction({required this.repo, required this.onGet});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return ListenableBuilder(
+      listenable: ModelManager.instance,
+      builder: (_, _) {
+        final mgr = ModelManager.instance;
+        if (mgr.installed.any((m) => m.repo == repo)) {
+          return Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.check_circle_rounded, size: 20, color: scheme.primary),
+            const SizedBox(width: 6),
+            Text(tr('store_installed'), style: text.labelLarge?.copyWith(color: scheme.primary, fontWeight: FontWeight.w700)),
+          ]);
+        }
+        final running = mgr.tasks.where((t) => t.repo == repo && t.status != DownloadStatus.failed).toList();
+        if (running.isNotEmpty) {
+          final t = running.first;
+          return SizedBox(
+            width: 92,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              t.total > 0
+                  ? M3WavyProgress(value: t.fraction, height: 12)
+                  : const M3WavyProgress(indeterminate: true, height: 12),
+              const SizedBox(height: 4),
+              Text(t.total > 0 ? '${(t.fraction * 100).round()} %' : '…',
+                  textAlign: TextAlign.center,
+                  style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+            ]),
+          );
+        }
+        return M3LabelButton(
+          kind: M3ButtonKind.tonal,
+          height: 38,
+          icon: Icons.download_rounded,
+          label: tr('store_get'),
+          onTap: onGet,
+        );
+      },
+    );
+  }
+}
+
+class _FeaturedCard extends StatelessWidget {
+  final RecommendedModel model;
+  final VoidCallback onGet;
+  final VoidCallback onOpen;
+  const _FeaturedCard({required this.model, required this.onGet, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final tint = _tintFor(model.repo, scheme);
+    return SizedBox(
+      width: 264,
+      child: M3PressCard(
+        color: tint.container,
+        onTap: onOpen,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            M3CookieBadge(
+              size: 52,
+              color: tint.accent,
+              child: Text(_initial(model.title),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: tint.onAccent)),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: tint.accent.withValues(alpha: 0.22),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(model.params, style: text.labelMedium?.copyWith(fontWeight: FontWeight.w800)),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          Text(model.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          SizedBox(
+            height: 40,
+            child: Text(tr(model.blurbKey), maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+          ),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(
+              child: Text('~${formatBytes(model.approxMb * 1024 * 1024)}',
+                  style: text.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+            ),
+            _StoreAction(repo: model.repo, onGet: onGet),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
+class _StoreRow extends StatelessWidget {
+  final int? rank;
+  final HfModelSummary model;
+  final VoidCallback onOpen;
+  const _StoreRow({required this.rank, required this.model, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    final tint = _tintFor(model.id, scheme);
+    final small = text.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
+    return M3PressCard(
+      color: scheme.surfaceContainerLow,
+      onTap: onOpen,
+      padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+      child: Row(children: [
+        if (rank != null)
+          SizedBox(
+            width: 24,
+            child: Text('$rank',
+                textAlign: TextAlign.center,
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: scheme.onSurfaceVariant)),
+          ),
+        if (rank != null) const SizedBox(width: 8),
+        M3CookieBadge(
+          size: 44,
+          color: tint.accent,
+          child: Text(_initial(model.name),
+              style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: tint.onAccent)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(model.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: text.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text('${model.author}${model.gated ? ' · ${tr('gated')}' : ''}',
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: small),
+            const SizedBox(height: 4),
+            Row(children: [
+              Icon(Icons.download_rounded, size: 14, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 3),
+              Text(_compact(model.downloads), style: small),
+              const SizedBox(width: 10),
+              Icon(Icons.favorite_rounded, size: 14, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 3),
+              Text(_compact(model.likes), style: small),
+            ]),
+          ]),
+        ),
+        const SizedBox(width: 8),
+        _StoreAction(repo: model.id, onGet: onOpen),
+      ]),
+    );
   }
 }
 
@@ -385,7 +587,7 @@ class _FilesSheetState extends State<_FilesSheet> {
           future: _files,
           builder: (_, snap) {
             if (snap.connectionState != ConnectionState.done) {
-              return const Center(child: M3LoadingIndicator(size: 40));
+              return const WavyLoader();
             }
             if (snap.hasError) {
               final e = snap.error;
@@ -405,7 +607,10 @@ class _FilesSheetState extends State<_FilesSheet> {
                   final id = '${widget.repo}/${f.path}';
                   final installed = mgr.isInstalled(id);
                   final busy = mgr.tasks.any((t) => t.id == id);
-                  return ListTile(
+                  return FadeSlideIn(
+                    key: ValueKey(f.path),
+                    delay: staggerDelay(i),
+                    child: ListTile(
                     title: Text(f.quant.isEmpty ? f.path : f.quant, style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text('${formatBytes(f.size)}${identical(f, best) ? ' · ${tr('recommended')}' : ''}\n${f.path}',
                         maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -413,7 +618,7 @@ class _FilesSheetState extends State<_FilesSheet> {
                     trailing: installed
                         ? Icon(Icons.check_circle_rounded, color: scheme.primary)
                         : busy
-                            ? const SizedBox(width: 24, height: 24, child: M3Spinner())
+                            ? const SizedBox(width: 56, child: M3WavyProgress(indeterminate: true, height: 10))
                             : IconButton.filledTonal(
                                 icon: const Icon(Icons.download_rounded),
                                 onPressed: () {
@@ -421,6 +626,7 @@ class _FilesSheetState extends State<_FilesSheet> {
                                   _toast(context, tr('download_started'));
                                 },
                               ),
+                    ),
                   );
                 },
               ),
@@ -487,14 +693,9 @@ class _DownloadsTab extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(3),
-                child: LinearProgressIndicator(
-                  value: t.total > 0 ? t.fraction : null,
-                  minHeight: 5,
-                  backgroundColor: scheme.surfaceContainerHighest,
-                ),
-              ),
+              t.total > 0
+                  ? M3WavyProgress(value: t.fraction, height: 14)
+                  : const M3WavyProgress(indeterminate: true, height: 14),
               const SizedBox(height: 8),
               Text(
                 failed ? _errorText(t.errorKind) : info.join(' · '),
