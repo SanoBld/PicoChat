@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../app_state.dart';
 import '../l10n/l10n.dart';
 import 'm3_components.dart' show M3CookieBadge;
+import 'map_card.dart';
 import 'pc_motion.dart';
 
 class InfoCard extends StatelessWidget {
@@ -18,6 +19,7 @@ class InfoCard extends StatelessWidget {
       'weather' => _WeatherCard(d: data),
       'score' => _ScoreCards(d: data),
       'calc' => _CalcCard(d: data),
+      'map' => MapCard(d: data),
       _ => const SizedBox.shrink(),
     };
     return Padding(padding: const EdgeInsets.only(bottom: 10), child: FadeSlideIn(child: w));

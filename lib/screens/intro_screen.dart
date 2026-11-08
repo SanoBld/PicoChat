@@ -6,6 +6,8 @@
 import 'package:flutter/material.dart';
 
 import '../app_state.dart';
+import '../services/device_data.dart';
+import '../services/notif_service.dart';
 import '../l10n/l10n.dart';
 import '../models/model_models.dart';
 import '../services/hf_service.dart';
@@ -28,7 +30,7 @@ class IntroScreen extends StatefulWidget {
 class _IntroScreenState extends State<IntroScreen> {
   final _pageCtrl = PageController();
   int _page = 0;
-  static const _pages = 5;
+  static const _pages = 6;
   final _name = TextEditingController();
   final _work = TextEditingController();
   final _likes = TextEditingController();
@@ -118,6 +120,7 @@ class _IntroScreenState extends State<IntroScreen> {
                   const _WelcomeStep(),
                   const _PrivacyStep(),
                   _AboutStep(name: _name, work: _work, likes: _likes, aiStyle: _aiStyle),
+                  const _AccessStep(),
                   const _ModelStep(),
                   const _ReadyStep(),
                 ],
@@ -472,4 +475,58 @@ class _AboutStep extends StatelessWidget {
       ),
     );
   }
+}
+
+
+// ── Optional phone access ────────────────────────────────────────────────────
+
+class _AccessStep extends StatefulWidget {
+  const _AccessStep();
+
+  @override
+  State<_AccessStep> createState() => _AccessStepState();
+}
+
+class _AccessStepState extends State<_AccessStep> {
+  Widget _sw(IconData icon, String key, ValueNotifier<bool> n, String pref, String what) => SwitchListTile(
+        secondary: Icon(icon),
+        title: Text(tr('acc_$key')),
+        subtitle: Text(tr('acc_${key}_sub')),
+        value: n.value,
+        onChanged: (v) async {
+          if (v && !await DeviceData.enable(what) && what != 'notif') return;
+          n.value = v;
+          await savePref(pref, v);
+          if (mounted) setState(() {});
+        },
+      );
+
+  @override
+  Widget build(BuildContext context) => _Step(
+        icon: Icons.phonelink_lock_rounded,
+        title: tr('intro_acc_t'),
+        subtitle: tr('intro_acc_s'),
+        child: Column(children: [
+          _sw(Icons.contacts_rounded, 'contacts', accContactsNotifier, 'pc_acc_contacts', 'contacts'),
+          _sw(Icons.sms_rounded, 'sms', accSmsNotifier, 'pc_acc_sms', 'sms'),
+          _sw(Icons.notifications_active_rounded, 'notif', accNotifNotifier, 'pc_acc_notif', 'notif'),
+          _sw(Icons.event_rounded, 'cal', accCalendarNotifier, 'pc_acc_cal', 'calendar'),
+          SwitchListTile(
+            secondary: const Icon(Icons.downloading_rounded),
+            title: Text(tr('n_progress')),
+            subtitle: Text(tr('n_progress_sub')),
+            value: notifProgressNotifier.value,
+            onChanged: (v) async {
+              if (v) await NotifService.requestPermission();
+              notifProgressNotifier.value = v;
+              await savePref('pc_n_progress', v);
+              if (mounted) setState(() {});
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(tr('acc_note'), style: Theme.of(context).textTheme.bodySmall),
+          ),
+        ]),
+      );
 }

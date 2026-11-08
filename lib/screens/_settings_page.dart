@@ -70,6 +70,20 @@ class _SettingsPageState extends State<_SettingsPage> {
               onTap: () => _open(const _ModelsPage()),
             ),
             SettingActionRow(
+              icon: Icons.phonelink_lock_rounded,
+              title: tr('acc_title'),
+              subtitle: tr('acc_sub'),
+              trailing: chevron,
+              onTap: () => _open(const AccessSettingsPage()),
+            ),
+            SettingActionRow(
+              icon: Icons.notifications_rounded,
+              title: tr('n_title'),
+              subtitle: tr('n_sub'),
+              trailing: chevron,
+              onTap: () => _open(const NotificationsSettingsPage()),
+            ),
+            SettingActionRow(
               icon: Icons.psychology_rounded,
               title: tr('memory_title'),
               subtitle: tr('memory_sub'),

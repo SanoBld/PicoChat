@@ -700,6 +700,28 @@ class _MessageView extends StatelessWidget {
                   ),
                 ),
               ),
+            if (devModeNotifier.value && !generating && message.stats.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(spacing: 6, runSpacing: 6, children: [
+                  _statChip(context, Icons.speed_rounded,
+                      '${(message.stats['tps'] as num).toStringAsFixed(1)} ${tr('dev_tps')}'),
+                  _statChip(context, Icons.data_array_rounded, '${message.stats['tokens']} ${tr('dev_tokens')}'),
+                  _statChip(context, Icons.timer_outlined,
+                      '${((message.stats['firstMs'] as num) / 1000).toStringAsFixed(2)} s ${tr('dev_first')}'),
+                  _statChip(context, Icons.schedule_rounded,
+                      '${((message.stats['totalMs'] as num) / 1000).toStringAsFixed(1)} s'),
+                  _statChip(context, Icons.memory_rounded, '${message.stats['model']}'),
+                  _statChip(context, Icons.view_headline_rounded,
+                      '${tr('dev_prompt_tok')} ~${message.stats['promptTok']} / ctx ${message.stats['ctx']}'),
+                  if (message.prompt.isNotEmpty)
+                    ActionChip(
+                      avatar: const Icon(Icons.terminal_rounded, size: 18),
+                      label: Text(tr('dev_view_prompt')),
+                      onPressed: () => _showPrompt(context, message.prompt),
+                    ),
+                ]),
+              ),
             if (message.sources.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -742,6 +764,50 @@ class _MessageView extends StatelessWidget {
       ]),
     ));
   }
+}
+
+// ── Developer mode ───────────────────────────────────────────────────────────
+
+Widget _statChip(BuildContext context, IconData icon, String label) => Chip(
+      avatar: Icon(icon, size: 16),
+      label: Text(label, style: Theme.of(context).textTheme.labelMedium),
+      visualDensity: VisualDensity.compact,
+    );
+
+void _showPrompt(BuildContext context, String prompt) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) => DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.8,
+      maxChildSize: 0.95,
+      builder: (_, scroll) => Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+          child: Row(children: [
+            Expanded(child: Text(tr('dev_prompt_title'), style: Theme.of(ctx).textTheme.titleMedium)),
+            IconButton(
+              tooltip: tr('copy'),
+              icon: const Icon(Icons.copy_rounded),
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: prompt));
+                _toast(ctx, tr('copied'));
+              },
+            ),
+          ]),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            controller: scroll,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: SelectableText(prompt, style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.4)),
+          ),
+        ),
+      ]),
+    ),
+  );
 }
 
 // ── Web sources bubble ───────────────────────────────────────────────────────

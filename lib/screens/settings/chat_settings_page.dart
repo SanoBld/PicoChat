@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
 import '../../l10n/l10n.dart';
+import '../../services/model_manager.dart';
 import '../../services/prefs.dart';
 import '../../services/reset.dart';
 import '../../widgets/m3_components.dart';
@@ -41,6 +42,10 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
     streamResponsesNotifier.value = true;
     autoTitleNotifier.value = true;
     sendOnEnterNotifier.value = true;
+    devModeNotifier.value = false;
+    assistModelNotifier.value = '';
+    await savePref('pc_dev', false);
+    await savePref('pc_assist_model', '');
     await savePref('pc_system_prompt', kDefaultSystemPrompt);
     await savePref('pc_temperature', 0.7);
     await savePref('pc_max_tokens', 1024);
@@ -109,6 +114,38 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               onChanged: (v) {
                 contextSizeNotifier.value = int.parse(v);
                 savePref('pc_context_size', int.parse(v));
+                setState(() {});
+              },
+            ),
+          ]),
+          const SizedBox(height: 20),
+          SettingsSection(label: tr('cs_assistant'), children: [
+            SettingChoiceRow(
+              icon: Icons.assistant_rounded,
+              title: tr('cs_assist_model'),
+              description: tr('cs_assist_model_sub'),
+              options: [
+                ('', tr('cs_assist_same'), null),
+                for (final m in ModelManager.instance.installed) (m.id, m.fileName, null),
+              ],
+              value: ModelManager.instance.byId(assistModelNotifier.value) == null ? '' : assistModelNotifier.value,
+              onChanged: (v) {
+                assistModelNotifier.value = v;
+                savePref('pc_assist_model', v);
+                setState(() {});
+              },
+            ),
+          ]),
+          const SizedBox(height: 20),
+          SettingsSection(label: tr('cs_developer'), children: [
+            SettingSwitchRow(
+              icon: Icons.terminal_rounded,
+              title: tr('cs_dev'),
+              subtitle: tr('cs_dev_sub'),
+              value: devModeNotifier.value,
+              onChanged: (v) {
+                devModeNotifier.value = v;
+                savePref('pc_dev', v);
                 setState(() {});
               },
             ),

@@ -46,6 +46,15 @@ final showStepsNotifier        = ValueNotifier<bool>(true);                   //
 final stepsOpenNotifier        = ValueNotifier<bool>(true);                   // pc_steps_open
 final ultraModeNotifier        = ValueNotifier<bool>(false);                  // pc_ultra
 final cityManualNotifier       = ValueNotifier<String>('');                   // pc_city
+final devModeNotifier          = ValueNotifier<bool>(false);                  // pc_dev: tokens/s + prompt viewer
+final assistModelNotifier      = ValueNotifier<String>('');                   // pc_assist_model: '' = same as the app
+final accContactsNotifier      = ValueNotifier<bool>(false);                  // pc_acc_contacts
+final accSmsNotifier           = ValueNotifier<bool>(false);                  // pc_acc_sms
+final accNotifNotifier         = ValueNotifier<bool>(false);                  // pc_acc_notif
+final accCalendarNotifier      = ValueNotifier<bool>(false);                  // pc_acc_cal
+final notifProgressNotifier    = ValueNotifier<bool>(true);                   // pc_n_progress: progress notification
+final notifDoneNotifier        = ValueNotifier<bool>(true);                   // pc_n_done: finished / failed notification
+final notifBackgroundNotifier  = ValueNotifier<bool>(true);                   // pc_n_bg: keep downloading in background
 final webAutoNotifier          = ValueNotifier<bool>(true);                   // pc_web_auto
 final locationEnabledNotifier  = ValueNotifier<bool>(false);                  // pc_location
 final contextTimeNotifier      = ValueNotifier<bool>(true);                   // pc_ctx_time

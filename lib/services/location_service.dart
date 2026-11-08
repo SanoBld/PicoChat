@@ -15,6 +15,8 @@ class LocationService extends ChangeNotifier {
 
   String? label; // "Mulhouse, France"
   String? city;
+  String? address; // street address of the device position
+  double? lat, lon;
   bool busy = false;
 
   Future<void> refresh() async {
@@ -45,17 +47,21 @@ class LocationService extends ChangeNotifier {
       );
       final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
         'format': 'jsonv2',
-        'zoom': '10',
+        'zoom': '18',
         'lat': '${pos.latitude}',
         'lon': '${pos.longitude}',
         'accept-language': localeNotifier.value,
       });
       final r = await http.get(uri, headers: {'User-Agent': 'PicoChat'}).timeout(const Duration(seconds: 8));
-      final a = (jsonDecode(r.body) as Map<String, dynamic>)['address'] as Map<String, dynamic>?;
+      final body = jsonDecode(r.body) as Map<String, dynamic>;
+      final a = body['address'] as Map<String, dynamic>?;
       if (a == null) return false;
       final c = (a['city'] ?? a['town'] ?? a['village'] ?? a['municipality'] ?? a['county']) as String?;
       final country = a['country'] as String?;
       if (c == null || c.isEmpty) return false;
+      lat = pos.latitude;
+      lon = pos.longitude;
+      address = body['display_name'] as String?;
       city = c;
       label = [c, if (country != null && country.isNotEmpty) country].join(', ');
       return true;
@@ -71,6 +77,9 @@ class LocationService extends ChangeNotifier {
       final r = await http.get(Uri.parse('https://ipwho.is/')).timeout(const Duration(seconds: 8));
       final j = jsonDecode(r.body) as Map<String, dynamic>;
       if (j['success'] == true) {
+        lat = (j['latitude'] as num?)?.toDouble();
+        lon = (j['longitude'] as num?)?.toDouble();
+        address = null;
         city = (j['city'] as String?)?.trim();
         final country = (j['country'] as String?)?.trim();
         final parts = [if (city != null && city!.isNotEmpty) city!, if (country != null && country.isNotEmpty) country];

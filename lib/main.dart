@@ -20,6 +20,7 @@ import 'services/chat_store.dart';
 import 'services/inference_engine.dart';
 import 'services/llama_engine.dart';
 import 'services/model_manager.dart';
+import 'services/notif_service.dart';
 import 'supported_locales.dart';
 import 'theme/m3_interaction.dart';
 import 'theme/m3_motion.dart';
@@ -112,12 +113,22 @@ Future<SharedPreferences> _loadState() async {
   memoryEnabledNotifier.value = p.getBool('pc_memory') ?? true;
   webMaxSourcesNotifier.value = p.getInt('pc_web_max') ?? 8;
   autoSpeakNotifier.value = p.getBool('pc_auto_speak') ?? false;
+  devModeNotifier.value = p.getBool('pc_dev') ?? false;
+  assistModelNotifier.value = p.getString('pc_assist_model') ?? '';
+  accContactsNotifier.value = p.getBool('pc_acc_contacts') ?? false;
+  accSmsNotifier.value = p.getBool('pc_acc_sms') ?? false;
+  accNotifNotifier.value = p.getBool('pc_acc_notif') ?? false;
+  accCalendarNotifier.value = p.getBool('pc_acc_cal') ?? false;
+  notifProgressNotifier.value = p.getBool('pc_n_progress') ?? true;
+  notifDoneNotifier.value = p.getBool('pc_n_done') ?? true;
+  notifBackgroundNotifier.value = p.getBool('pc_n_bg') ?? true;
 
   activeModelNotifier.value = p.getString('pc_active_model') ?? '';
   hfTokenNotifier.value = p.getString('pc_hf_token') ?? '';
   hfEndpointNotifier.value = p.getString('pc_hf_endpoint') ?? kDefaultHfEndpoint;
 
   await Future.wait([ChatStore.instance.init(), ModelManager.instance.init(), MemoryStore.instance.init()]);
+  NotifService.instance.attach();
   return p;
 }
 

@@ -105,6 +105,15 @@ class ResetService {
     sidebarCollapsedNotifier.value = false;
     voiceEngineNotifier.value = 'whisper';
     voiceModelNotifier.value = 'base';
+    devModeNotifier.value = false;
+    assistModelNotifier.value = '';
+    accContactsNotifier.value = false;
+    accSmsNotifier.value = false;
+    accNotifNotifier.value = false;
+    accCalendarNotifier.value = false;
+    notifProgressNotifier.value = true;
+    notifDoneNotifier.value = true;
+    notifBackgroundNotifier.value = true;
     reasoningModeNotifier.value = 'auto';
     showStepsNotifier.value = true;
     stepsOpenNotifier.value = true;

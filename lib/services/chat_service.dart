@@ -10,7 +10,10 @@ import 'package:flutter/foundation.dart';
 
 import '../app_state.dart';
 import '../models/chat_models.dart';
+import '../models/model_models.dart';
 import 'attachments.dart';
+import 'device_data.dart';
+import 'map_service.dart';
 import 'auto_commands.dart';
 import 'cards.dart';
 import 'chat_store.dart';
@@ -42,14 +45,18 @@ class ChatService extends ChangeNotifier {
   bool isGeneratingIn(Conversation c) => _generating && _chatId == c.id;
 
   /// True when a model is installed and selected.
-  bool get canChat => ModelManager.instance.active != null;
+  /// Model chosen by the assistant card (null = the model of the app).
+  InstalledModel? modelOverride;
+  InstalledModel? get currentModel => modelOverride ?? ModelManager.instance.active;
+
+  bool get canChat => currentModel != null;
 
   Future<void> send(Conversation chat, String text,
       {List<Attachment> files = const [], bool web = false}) async {
     final clean = text.trim();
     if (clean.isEmpty || _generating || !canChat) return;
     final first = chat.messages.isEmpty;
-    chat.modelId = ModelManager.instance.active!.id;
+    chat.modelId = currentModel!.id;
     VoiceService.instance.stop();
     final msg = ChatMessage(
       role: ChatRole.user,
@@ -131,7 +138,7 @@ class ChatService extends ChangeNotifier {
       {List<Attachment> files = const [], bool web = false, String query = '', String? remembered, String? command}) async {
     final store = ChatStore.instance;
     final engine = InferenceService.engine;
-    final model = ModelManager.instance.active;
+    final model = currentModel;
     if (model == null) return;
 
     final history = List<ChatMessage>.of(chat.messages); // ends with the user message
@@ -189,12 +196,21 @@ class ChatService extends ChangeNotifier {
       if (query.isNotEmpty) {
         _searching = true;
         notifyListeners();
-        card = await CardService.build(query);
+        card = await MapService.build(query) ?? await CardService.build(query);
         _searching = false;
         if (card != null) {
           step(card.step, card.detail);
           reply.cards.add(card.card);
           ctx.writeln('--- Verified data ---\n${card.summary}\n');
+        }
+      }
+
+      // Phone data (contacts, messages, notifications, calendar): only if asked AND allowed.
+      if (query.isNotEmpty) {
+        final dv = await DeviceData.build(query);
+        if (dv != null) {
+          step(dv.step, dv.detail);
+          ctx.writeln('--- Phone data (read from the user\'s device) ---\n${dv.text}\n');
         }
       }
 
@@ -302,7 +318,14 @@ class ChatService extends ChangeNotifier {
         temperature: temperatureNotifier.value,
         maxTokens: maxTokensNotifier.value,
       );
+      final dev = devModeNotifier.value;
+      final sw = Stopwatch()..start();
+      int? firstMs;
+      var pieces = 0;
+      if (dev) reply.prompt = _promptDump(options.systemPrompt, history);
       await for (final piece in engine.generate(history, options)) {
+        pieces++;
+        firstMs ??= sw.elapsedMilliseconds;
         buffer.write(piece);
         if (streamResponsesNotifier.value) {
           reply.text = shown(buffer.toString());
@@ -312,6 +335,19 @@ class ChatService extends ChangeNotifier {
             store.messageChanged(chat);
           }
         }
+      }
+      if (dev && pieces > 0) {
+        // One streamed piece is about one token.
+        final genMs = (sw.elapsedMilliseconds - (firstMs ?? 0)).clamp(1, 1 << 30);
+        reply.stats = {
+          'tps': pieces > 1 ? (pieces - 1) * 1000 / genMs : 0.0,
+          'tokens': pieces,
+          'firstMs': firstMs ?? 0,
+          'totalMs': sw.elapsedMilliseconds,
+          'model': model.fileName,
+          'ctx': contextSizeNotifier.value,
+          'promptTok': (reply.prompt.length / 3.5).round(),
+        };
       }
       final mem = <String>[..._pendingMem];
       _pendingMem = [];
@@ -340,6 +376,19 @@ class ChatService extends ChangeNotifier {
       store.messageChanged(chat);
       notifyListeners();
     }
+  }
+
+  /// Everything sent to the model, for developer mode.
+  String _promptDump(String system, List<ChatMessage> h) {
+    final b = StringBuffer('### SYSTEM\n$system\n');
+    for (final m in h) {
+      if (m.role == ChatRole.system || m.failed || m.text.trim().isEmpty) continue;
+      b.writeln('\n### ${m.role.name.toUpperCase()}');
+      if (m.role == ChatRole.user && m.context.isNotEmpty) b.writeln(m.context);
+      b.writeln(m.text);
+      if (m.images.isNotEmpty) b.writeln('[${m.images.length} image(s)]');
+    }
+    return b.toString();
   }
 
   /// First line of the message, cut to a readable length.

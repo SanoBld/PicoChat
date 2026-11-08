@@ -14,6 +14,7 @@ class AssistActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        DeviceBridge.register(this, flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "picochat/assist_overlay")
             .setMethodCallHandler { call, result ->
                 when (call.method) {
