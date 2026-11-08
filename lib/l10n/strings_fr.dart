@@ -434,4 +434,13 @@ const Map<String, String> kStringsFr = {
   "map_hint": "Appui long sur la carte pour ajouter un point, toucher un point pour le retirer, puis choisir le type d’itinéraire.",
   "map_need_two": "Ajoutez au moins deux points.",
   "map_no_route": "Aucun itinéraire trouvé.",
+  "answer_len": "Longueur des réponses",
+  "answer_len_sub": "Court, moyen ou détaillé : l’IA adapte la taille de ses réponses.",
+  "len_auto": "Auto",
+  "len_short": "Court",
+  "len_medium": "Moyen",
+  "len_long": "Détaillé",
+  "mem_limit": "Souvenirs utilisés",
+  "mem_limit_sub": "Nombre de souvenirs envoyés à l’IA (les plus récents). Moins = plus rapide.",
+  "mem_all": "Tous",
 };

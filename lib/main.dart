@@ -98,7 +98,7 @@ Future<SharedPreferences> _loadState() async {
   searchEngineNotifier.value = p.getString('pc_search_engine') ?? 'duckduckgo';
   sidebarCollapsedNotifier.value = p.getBool('pc_sidebar_collapsed') ?? false;
   voiceEngineNotifier.value = p.getString('pc_voice_engine') ?? 'whisper';
-  voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'base';
+  voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'tiny';
   reasoningModeNotifier.value = p.getString('pc_reasoning') ?? 'auto';
   showStepsNotifier.value = p.getBool('pc_show_steps') ?? true;
   stepsOpenNotifier.value = p.getBool('pc_steps_open') ?? true;
@@ -112,6 +112,8 @@ Future<SharedPreferences> _loadState() async {
   materialShapesNotifier.value = p.getBool('pc_shapes') ?? true;
   memoryEnabledNotifier.value = p.getBool('pc_memory') ?? true;
   webMaxSourcesNotifier.value = p.getInt('pc_web_max') ?? 8;
+  answerLengthNotifier.value = p.getString('pc_answer_len') ?? 'auto';
+  memoryLimitNotifier.value = p.getInt('pc_memory_limit') ?? 30;
   autoSpeakNotifier.value = p.getBool('pc_auto_speak') ?? false;
   webAskNotifier.value = p.getBool('pc_web_ask') ?? true;
   devModeNotifier.value = p.getBool('pc_dev') ?? false;

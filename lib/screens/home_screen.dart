@@ -29,6 +29,7 @@ import '../supported_locales.dart';
 import '../services/attachments.dart';
 import '../services/backup.dart';
 import '../services/chat_service.dart';
+import '../services/file_convert.dart';
 import '../services/file_output.dart';
 import '../services/prefs.dart';
 import '../services/reset.dart';
@@ -165,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _push(Widget page) =>
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+      Navigator.of(context).push(M3SharedAxisRoute<void>(builder: (_) => page));
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                Expanded(child: chatView),
+                Expanded(child: M3Switcher(child: chatView)),
               ]),
               if (collapsed) ...[
                 Positioned(
@@ -264,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ])
-          : chatView,
+          : M3Switcher(child: chatView),
     );
   }
 }

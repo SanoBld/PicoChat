@@ -434,4 +434,13 @@ const Map<String, String> kStringsDe = {
   "map_hint": "Lange auf die Karte drücken für einen Punkt, Punkt antippen zum Entfernen, dann Routenart wählen.",
   "map_need_two": "Mindestens zwei Punkte hinzufügen.",
   "map_no_route": "Keine Route gefunden.",
+  "answer_len": "Answer length",
+  "answer_len_sub": "Short, medium or detailed: the AI adapts the size of its answers.",
+  "len_auto": "Auto",
+  "len_short": "Short",
+  "len_medium": "Medium",
+  "len_long": "Detailed",
+  "mem_limit": "Memories used",
+  "mem_limit_sub": "How many memories are sent to the AI (most recent first). Fewer = faster.",
+  "mem_all": "All",
 };

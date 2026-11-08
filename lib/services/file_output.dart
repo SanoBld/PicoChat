@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'file_convert.dart';
 
 class GeneratedFile {
   final String name;
@@ -21,7 +22,17 @@ class FileOutput {
 
   static String hide(String text) => text.replaceAll(_re, '').trim();
 
-  static bool requested(String userText) => _ask.hasMatch(userText);
+  // "make me a CV / a budget table / a report": a file even without the word "file".
+  static final _make = RegExp(
+      r'\b(cr[ée]+(?:e|er|ez)?|fais|faire|fait|g[ée]n[èe]re[rz]?|[ée]cris|r[ée]dige[rz]?|pr[ée]pare[rz]?|make|create|generate|write|draft|prepare|erstelle|schreibe|crea|genera|escribe)\b'
+      r'[^.\n]{0,45}\b(tableau|table|cv|r[ée]sum[ée]|lettre|letter|rapport|report|planning|budget|document|facture|invoice|contrat|contract|devis|tabelle|bericht|brief|informe|carta|hoja)\b',
+      caseSensitive: false);
+  static final _edit = RegExp(
+      r'\b(modifie|change|ajoute|corrige|mets|remplace|supprime|update|edit|modify|add|fix|replace|remove|[äa]ndere|cambia|a[ñn]ade)\b',
+      caseSensitive: false);
+
+  static bool requested(String userText, {bool prevHadFile = false}) =>
+      _ask.hasMatch(userText) || _make.hasMatch(userText) || (prevHadFile && _edit.hasMatch(userText));
 
   /// Turns file blocks into normal code blocks (used when no file was asked for).
   static String strip(String text) =>
@@ -34,7 +45,7 @@ class FileOutput {
 
   // Returns true when saved.
   static Future<bool> save(GeneratedFile f) async {
-    final bytes = Uint8List.fromList(utf8.encode(f.content));
+    final bytes = await FileConvert.build(f.name, f.content) ?? Uint8List.fromList(utf8.encode(f.content));
     final path = await FilePicker.platform.saveFile(fileName: f.name, bytes: bytes);
     if (path == null) return false;
     // Desktop: the picker only gives a path, so write the file ourselves.

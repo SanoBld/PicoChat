@@ -344,9 +344,15 @@ class _StepsTimelineState extends State<StepsTimeline> {
   Widget build(BuildContext context) {
     final s = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
+    // "Analyse", "write", "load model" are not worth showing: only real work
+    // (reasoning, web search/reading, files, commands).
+    const trivial = {'step_analyze', 'step_write', 'step_load'};
+    final steps = [for (final st in widget.steps) if (!trivial.contains(st['title'])) st];
+    if (steps.isEmpty) return const SizedBox.shrink();
     final open = _open ?? (widget.running && stepsOpenNotifier.value);
-    final n = widget.steps.length;
-    return Padding(
+    final n = steps.length;
+    return FadeSlideIn(
+      child: Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
         width: double.infinity,
@@ -356,7 +362,7 @@ class _StepsTimelineState extends State<StepsTimeline> {
           InkWell(
             onTap: () => setState(() => _open = !open),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+              padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
               child: Row(children: [
                 widget.running
                     ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5, color: s.primary))
@@ -381,9 +387,9 @@ class _StepsTimelineState extends State<StepsTimeline> {
             alignment: Alignment.topCenter,
             child: open
                 ? Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
                     child: Column(children: [
-                      for (final (i, st) in widget.steps.indexed)
+                      for (final (i, st) in steps.indexed)
                         _StepRow(step: st, last: i == n - 1, running: widget.running && i == n - 1),
                     ]),
                   )
@@ -391,7 +397,7 @@ class _StepsTimelineState extends State<StepsTimeline> {
           ),
         ]),
       ),
-    );
+    ));
   }
 }
 
@@ -408,12 +414,47 @@ class _StepRow extends StatefulWidget {
 class _StepRowState extends State<_StepRow> {
   bool _full = false;
 
+  // Searches / sources: small chips side by side. Anything else: 2 lines, tap for more.
+  Widget _detail(BuildContext context, String detail, bool long, TextTheme t, ColorScheme s) {
+    final title = widget.step['title'] ?? '';
+    if (title == 'step_search' || title == 'step_plan') {
+      final qs = detail.split('\n').where((e) => e.trim().isNotEmpty).toList();
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Wrap(spacing: 5, runSpacing: 4, children: [
+          for (final q in qs)
+            Container(
+              constraints: const BoxConstraints(maxWidth: 240),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: s.secondaryContainer, borderRadius: BorderRadius.circular(8)),
+              child: Text(q, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.labelSmall?.copyWith(color: s.onSecondaryContainer)),
+            ),
+        ]),
+      );
+    }
+    return MouseRegion(
+      cursor: long ? SystemMouseCursors.click : MouseCursor.defer,
+      child: GestureDetector(
+        onTap: long ? () => setState(() => _full = !_full) : null,
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topLeft,
+          child: Text(detail,
+              maxLines: _full ? null : 2,
+              overflow: _full ? TextOverflow.visible : TextOverflow.ellipsis,
+              style: t.bodySmall?.copyWith(color: s.onSurfaceVariant, height: 1.25)),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
     final detail = widget.step['detail'] ?? '';
-    final long = detail.length > 140;
+    final long = detail.length > 90;
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         SizedBox(
@@ -428,24 +469,10 @@ class _StepRowState extends State<_StepRow> {
         const SizedBox(width: 10),
         Expanded(
           child: Padding(
-            padding: EdgeInsets.only(bottom: widget.last ? 0 : 12, top: 2),
+            padding: EdgeInsets.only(bottom: widget.last ? 0 : 8, top: 1),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(tr(widget.step['title'] ?? ''), style: t.labelLarge?.copyWith(fontWeight: FontWeight.w800)),
-              if (detail.isNotEmpty)
-                MouseRegion(
-                  cursor: long ? SystemMouseCursors.click : MouseCursor.defer,
-                  child: GestureDetector(
-                    onTap: long ? () => setState(() => _full = !_full) : null,
-                    child: AnimatedSize(
-                      duration: const Duration(milliseconds: 200),
-                      alignment: Alignment.topLeft,
-                      child: Text(detail,
-                          maxLines: _full ? null : 3,
-                          overflow: _full ? TextOverflow.visible : TextOverflow.ellipsis,
-                          style: t.bodySmall?.copyWith(color: s.onSurfaceVariant)),
-                    ),
-                  ),
-                ),
+              if (detail.isNotEmpty) _detail(context, detail, long, t, s),
             ]),
           ),
         ),

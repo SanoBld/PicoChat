@@ -178,7 +178,9 @@ class ChatService extends ChangeNotifier {
 
     final lastUser =
         history.lastWhere((m) => m.role == ChatRole.user, orElse: () => ChatMessage(role: ChatRole.user, text: '')).text;
-    final wantsFile = FileOutput.requested(lastUser);
+    final prevAssistant =
+        history.lastWhere((m) => m.role == ChatRole.assistant, orElse: () => ChatMessage(role: ChatRole.assistant, text: '')).text;
+    final wantsFile = FileOutput.requested(lastUser, prevHadFile: prevAssistant.contains('```file:'));
     String shown(String t) {
       final v = MemoryStore.visible(
           t.replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '').replaceAll(RegExp(r'<think>[\s\S]*$'), ''));
@@ -347,7 +349,11 @@ class ChatService extends ChangeNotifier {
       final options = GenerationOptions(
         systemPrompt: CorePrompt.build(fileRequested: wantsFile),
         temperature: temperatureNotifier.value,
-        maxTokens: maxTokensNotifier.value,
+        maxTokens: switch (answerLengthNotifier.value) {
+          'short' => math.min(maxTokensNotifier.value, 400),
+          'medium' => math.min(maxTokensNotifier.value, 900),
+          _ => maxTokensNotifier.value,
+        },
       );
       final dev = devModeNotifier.value;
       final sw = Stopwatch()..start();

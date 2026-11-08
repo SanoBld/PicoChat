@@ -117,6 +117,9 @@ class RecommendedModel {
   final int minRamGb; // RAM needed to run it comfortably
   final bool vision; // can read images (a projector file is offered)
   final List<String> tags; // l10n keys of the feature chips
+  final String maker; // who made it
+  final int ctxK; // context window, in thousands of tokens
+  final Map<String, String> about; // long description per language (fr / en)
   const RecommendedModel({
     required this.repo,
     required this.title,
@@ -126,17 +129,22 @@ class RecommendedModel {
     this.minRamGb = 4,
     this.vision = false,
     this.tags = const [],
+    this.maker = '',
+    this.ctxK = 8,
+    this.about = const {},
   });
+
+  String aboutFor(String lang) => about[lang] ?? about['en'] ?? '';
 }
 
 const List<RecommendedModel> kRecommendedModels = [
-  RecommendedModel(repo: 'unsloth/Qwen3-0.6B-GGUF', title: 'Qwen3 0.6B', params: '0.6B', approxMb: 400, blurbKey: 'rec_tiny', minRamGb: 2, tags: ['tag_fast', 'tag_thinking']),
-  RecommendedModel(repo: 'unsloth/gemma-3-1b-it-GGUF', title: 'Gemma 3 1B', params: '1B', approxMb: 810, blurbKey: 'rec_fast', minRamGb: 3, tags: ['tag_fast', 'tag_multi']),
-  RecommendedModel(repo: 'ggml-org/SmolVLM2-2.2B-Instruct-GGUF', title: 'SmolVLM2 2.2B', params: '2.2B', approxMb: 1800, blurbKey: 'rec_vision_small', minRamGb: 4, vision: true, tags: ['tag_vision']),
-  RecommendedModel(repo: 'unsloth/Qwen3-1.7B-GGUF', title: 'Qwen3 1.7B', params: '1.7B', approxMb: 1110, blurbKey: 'rec_balanced', minRamGb: 4, tags: ['tag_thinking', 'tag_multi']),
-  RecommendedModel(repo: 'bartowski/Llama-3.2-3B-Instruct-GGUF', title: 'Llama 3.2 3B', params: '3B', approxMb: 2020, blurbKey: 'rec_reliable', minRamGb: 6, tags: ['tag_multi']),
-  RecommendedModel(repo: 'unsloth/Qwen3-4B-Instruct-2507-GGUF', title: 'Qwen3 4B 2507', params: '4B', approxMb: 2500, blurbKey: 'rec_smart', minRamGb: 6, tags: ['tag_multi', 'tag_code']),
-  RecommendedModel(repo: 'ggml-org/gemma-3-4b-it-GGUF', title: 'Gemma 3 4B Vision', params: '4B', approxMb: 2500, blurbKey: 'rec_vision', minRamGb: 6, vision: true, tags: ['tag_vision', 'tag_multi']),
-  RecommendedModel(repo: 'ggml-org/gemma-4-E2B-it-GGUF', title: 'Gemma 4 E2B', params: '2B', approxMb: 3430, blurbKey: 'rec_best', minRamGb: 8, tags: ['tag_multi']),
-  RecommendedModel(repo: 'unsloth/Qwen3-8B-GGUF', title: 'Qwen3 8B', params: '8B', approxMb: 5030, blurbKey: 'rec_pc', minRamGb: 12, tags: ['tag_thinking', 'tag_code']),
+  RecommendedModel(repo: 'unsloth/Qwen3-0.6B-GGUF', title: 'Qwen3 0.6B', params: '0.6B', approxMb: 400, blurbKey: 'rec_tiny', minRamGb: 2, maker: 'Alibaba', ctxK: 32, about: {'fr': "Très petit et très rapide : idéal pour les vieux téléphones ou les tâches simples (reformuler, résumer, répondre court). Mode réflexion disponible.", 'en': "Tiny and very fast: ideal for older phones and simple tasks (rewrite, summarize, short answers). Thinking mode available."}, tags: ['tag_fast', 'tag_thinking']),
+  RecommendedModel(repo: 'unsloth/gemma-3-1b-it-GGUF', title: 'Gemma 3 1B', params: '1B', approxMb: 810, blurbKey: 'rec_fast', minRamGb: 3, maker: 'Google', ctxK: 32, about: {'fr': "Le petit modèle de Google : rapide, bon en français et dans de nombreuses langues. Texte uniquement.", 'en': "Google's small model: fast and good in many languages. Text only."}, tags: ['tag_fast', 'tag_multi']),
+  RecommendedModel(repo: 'ggml-org/SmolVLM2-2.2B-Instruct-GGUF', title: 'SmolVLM2 2.2B', params: '2.2B', approxMb: 1800, blurbKey: 'rec_vision_small', minRamGb: 4, vision: true, maker: 'Hugging Face', ctxK: 8, about: {'fr': "Comprend les images : photos, captures d'écran, documents. Léger pour un modèle vision.", 'en': "Understands images: photos, screenshots, documents. Light for a vision model."}, tags: ['tag_vision']),
+  RecommendedModel(repo: 'unsloth/Qwen3-1.7B-GGUF', title: 'Qwen3 1.7B', params: '1.7B', approxMb: 1110, blurbKey: 'rec_balanced', minRamGb: 4, maker: 'Alibaba', ctxK: 32, about: {'fr': "Bon équilibre vitesse / qualité. Raisonne mieux que les modèles de 1B et reste fluide sur mobile.", 'en': "Good speed / quality balance. Reasons better than 1B models and stays smooth on mobile."}, tags: ['tag_thinking', 'tag_multi']),
+  RecommendedModel(repo: 'bartowski/Llama-3.2-3B-Instruct-GGUF', title: 'Llama 3.2 3B', params: '3B', approxMb: 2020, blurbKey: 'rec_reliable', minRamGb: 6, maker: 'Meta', ctxK: 128, about: {'fr': "Fiable pour la conversation de tous les jours, avec un très grand contexte (longs documents).", 'en': "Reliable for everyday chat, with a very large context (long documents)."}, tags: ['tag_multi']),
+  RecommendedModel(repo: 'unsloth/Qwen3-4B-Instruct-2507-GGUF', title: 'Qwen3 4B 2507', params: '4B', approxMb: 2500, blurbKey: 'rec_smart', minRamGb: 6, maker: 'Alibaba', ctxK: 32, about: {'fr': "Très intelligent pour sa taille, solide en code et en raisonnement. Le meilleur choix pour un téléphone récent.", 'en': "Very smart for its size, strong at code and reasoning. Best pick for a recent phone."}, tags: ['tag_multi', 'tag_code']),
+  RecommendedModel(repo: 'ggml-org/gemma-3-4b-it-GGUF', title: 'Gemma 3 4B Vision', params: '4B', approxMb: 2500, blurbKey: 'rec_vision', minRamGb: 6, vision: true, maker: 'Google', ctxK: 128, about: {'fr': "Voit les images et comprend de nombreuses langues. Bon pour décrire une photo ou lire un document.", 'en': "Sees images and understands many languages. Good for describing a photo or reading a document."}, tags: ['tag_vision', 'tag_multi']),
+  RecommendedModel(repo: 'ggml-org/gemma-4-E2B-it-GGUF', title: 'Gemma 4 E2B', params: '2B', approxMb: 3430, blurbKey: 'rec_best', minRamGb: 8, maker: 'Google', ctxK: 128, about: {'fr': "Dernière génération de Google : très bonne qualité pour sa taille, multilingue.", 'en': "Google's latest generation: very good quality for its size, multilingual."}, tags: ['tag_multi']),
+  RecommendedModel(repo: 'unsloth/Qwen3-8B-GGUF', title: 'Qwen3 8B', params: '8B', approxMb: 5030, blurbKey: 'rec_pc', minRamGb: 12, maker: 'Alibaba', ctxK: 32, about: {'fr': "Le plus puissant de la liste : réponses détaillées, code et raisonnement avancés. Pour PC ou téléphones très costauds.", 'en': "The most powerful in the list: detailed answers, advanced code and reasoning. For PCs or very strong phones."}, tags: ['tag_thinking', 'tag_code']),
 ];

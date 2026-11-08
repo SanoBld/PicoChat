@@ -280,7 +280,7 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
         _ForYouCard(onOpen: (r) => _showDetail(context, r)),
         const SizedBox(height: 12),
         SizedBox(
-          height: 236,
+          height: 262,
           child: ListView.separated(
             // A new key per category replays the entrance of the cards.
             key: ValueKey('featured_$_cat'),
@@ -458,13 +458,19 @@ class _FeaturedCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(model.title, maxLines: 1, overflow: TextOverflow.ellipsis,
               style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          if (model.maker.isNotEmpty)
+            Text(model.maker, style: text.labelSmall?.copyWith(color: tint.accent, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
           SizedBox(
             height: 40,
             child: Text(tr(model.blurbKey), maxLines: 2, overflow: TextOverflow.ellipsis,
                 style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          Wrap(spacing: 6, runSpacing: 4, children: [
+            for (final t in model.tags.take(3)) _MiniTag(tr(t), tint.accent),
+          ]),
+          const SizedBox(height: 10),
           Row(children: [
             Expanded(
               child: Text('~${formatBytes(model.approxMb * 1024 * 1024)}',
@@ -777,21 +783,67 @@ class _DetailSheetState extends State<_DetailSheet> {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final r = widget.model;
+    final tint = _tintFor(r.repo, scheme);
+    final fr = localeNotifier.value == 'fr';
+    final stats = <(IconData, String, String)>[
+      (Icons.memory_rounded, fr ? 'Taille' : 'Size', r.params),
+      (Icons.sd_storage_rounded, fr ? 'Fichier' : 'File', formatBytes(r.approxMb * 1024 * 1024)),
+      (Icons.developer_board_rounded, 'RAM', '${r.minRamGb} ${fr ? 'Go' : 'GB'}'),
+      (Icons.notes_rounded, fr ? 'Contexte' : 'Context', '${r.ctxK}k'),
+    ];
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(r.title, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Text(tr(r.blurbKey), style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
-          const SizedBox(height: 12),
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            Chip(label: Text(r.params)),
-            for (final t in r.tags) Chip(label: Text(tr(t))),
-          ]),
-          const SizedBox(height: 12),
-          Text(tr('detail_needs', {'gb': '${r.minRamGb}', 'size': formatBytes(r.approxMb * 1024 * 1024)}),
-              style: text.bodyMedium),
+          FadeSlideIn(
+            child: Row(children: [
+              M3CookieBadge(
+                size: 56,
+                color: tint.accent,
+                child: Text(_initial(r.title), style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: tint.onAccent)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(r.title, style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+                  if (r.maker.isNotEmpty)
+                    Text(r.maker, style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                ]),
+              ),
+              if (r.vision) Icon(Icons.visibility_rounded, color: tint.accent),
+            ]),
+          ),
+          const SizedBox(height: 14),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 60),
+            child: Text(r.aboutFor(localeNotifier.value).isEmpty ? tr(r.blurbKey) : r.aboutFor(localeNotifier.value),
+                style: text.bodyMedium?.copyWith(height: 1.4)),
+          ),
+          const SizedBox(height: 14),
+          FadeSlideIn(
+            delay: const Duration(milliseconds: 120),
+            child: Row(children: [
+              for (final (i, st) in stats.indexed) ...[
+                if (i > 0) const SizedBox(width: 8),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+                    decoration: BoxDecoration(color: tint.container, borderRadius: BorderRadius.circular(18)),
+                    child: Column(children: [
+                      Icon(st.$1, size: 18, color: tint.accent),
+                      const SizedBox(height: 4),
+                      Text(st.$3, style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      Text(st.$2, style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+                    ]),
+                  ),
+                ),
+              ],
+            ]),
+          ),
+          if (r.tags.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 6, runSpacing: 6, children: [for (final t in r.tags) _MiniTag(tr(t), tint.accent)]),
+          ],
           FutureBuilder<double?>(
             future: DeviceSpecs.ramGb(),
             builder: (_, snap) {
@@ -799,24 +851,37 @@ class _DetailSheetState extends State<_DetailSheet> {
               if (ram == null) return const SizedBox.shrink();
               final fits = ram >= r.minRamGb;
               final tight = !fits && ram >= r.minRamGb * 0.7;
-              return Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  tr(fits ? 'store_fits' : (tight ? 'store_tight' : 'store_toobig')),
-                  style: text.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700, color: fits ? scheme.primary : (tight ? scheme.tertiary : scheme.error)),
+              final c = fits ? scheme.primary : (tight ? scheme.tertiary : scheme.error);
+              return FadeSlideIn(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(color: c.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(18)),
+                  child: Row(children: [
+                    Icon(fits ? Icons.check_circle_rounded : Icons.warning_amber_rounded, size: 20, color: c),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(tr(fits ? 'store_fits' : (tight ? 'store_tight' : 'store_toobig')),
+                          style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: c)),
+                    ),
+                  ]),
                 ),
               );
             },
           ),
           if (r.vision)
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(tr('detail_vision_opt')),
-              value: _vision,
-              onChanged: (v) => setState(() => _vision = v),
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(18)),
+              child: SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                secondary: Icon(Icons.image_rounded, color: tint.accent),
+                title: Text(tr('detail_vision_opt')),
+                value: _vision,
+                onChanged: (v) => setState(() => _vision = v),
+              ),
             ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(children: [
             Expanded(
               child: M3LabelButton(
@@ -836,6 +901,19 @@ class _DetailSheetState extends State<_DetailSheet> {
       ),
     );
   }
+}
+
+class _MiniTag extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _MiniTag(this.label, this.color);
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(8)),
+        child: Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w700)),
+      );
 }
 
 /// "Recommended for your device": the biggest suggested model that fits the RAM.

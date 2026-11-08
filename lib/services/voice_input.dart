@@ -50,7 +50,8 @@ class VoiceInput {
     _live = '';
     transcript.value = '';
     levels.value = List.filled(28, 0.0);
-    if (voiceEngineNotifier.value == 'whisper') {
+    // The bundled Whisper model is English only: other languages use the system recognizer.
+    if (voiceEngineNotifier.value == 'whisper' && localeNotifier.value == 'en') {
       try {
         if (await _startWhisper()) return true;
       } catch (e) {
@@ -61,11 +62,8 @@ class VoiceInput {
     return _startSystem();
   }
 
-  WhisperModel _model() => switch (voiceModelNotifier.value) {
-        'tiny' => WhisperModel.tiny,
-        'small' => WhisperModel.small,
-        _ => WhisperModel.base,
-      };
+  // Only ggml-tiny (English, bundled in assets/whisper/) ships with the app.
+  WhisperModel _model() => WhisperModel.tiny;
 
   void _level(Uint8List b) {
     final n = b.lengthInBytes ~/ 2;
@@ -91,9 +89,13 @@ class VoiceInput {
       _pipe?.add(bytes);
       _level(bytes);
     });
-    await WhisperBundle.ensure(_model()); // copy the bundled model, no download
-    _wc = WhisperController();
-    _session = await _wc!.transcribeLive(model: _model(), pcm16Stream: _pipe!.stream, lang: localeNotifier.value);
+    // Model loading too slow or missing: use the system recognizer instead.
+    await (() async {
+      await WhisperBundle.ensure(_model()); // copy the bundled model, no download
+      _wc = WhisperController();
+      _session = await _wc!.transcribeLive(model: _model(), pcm16Stream: _pipe!.stream, lang: localeNotifier.value);
+    })()
+        .timeout(const Duration(seconds: 30));
     _partialSub = (_session.partials as Stream<String>).listen((t) {
       loading.value = false;
       _live = t.trim();

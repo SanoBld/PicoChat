@@ -63,6 +63,8 @@ final contextTimeNotifier      = ValueNotifier<bool>(true);                   //
 final webSearchNotifier        = ValueNotifier<bool>(false);                  // pc_web_search
 final materialShapesNotifier   = ValueNotifier<bool>(true);                   // pc_shapes
 final memoryEnabledNotifier    = ValueNotifier<bool>(true);                   // pc_memory
+final answerLengthNotifier     = ValueNotifier<String>('auto');               // pc_answer_len: auto | short | medium | long
+final memoryLimitNotifier      = ValueNotifier<int>(30);                      // pc_memory_limit (0 = all facts)
 final webMaxSourcesNotifier    = ValueNotifier<int>(8);                       // pc_web_max (0 = no limit)
 final autoSpeakNotifier        = ValueNotifier<bool>(false);                  // pc_auto_speak
 

@@ -108,6 +108,35 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
               },
             ),
             SettingChoiceRow(
+              icon: Icons.format_align_left_rounded,
+              title: tr('answer_len'),
+              description: tr('answer_len_sub'),
+              options: [
+                ('auto', tr('len_auto'), null),
+                ('short', tr('len_short'), null),
+                ('medium', tr('len_medium'), null),
+                ('long', tr('len_long'), null),
+              ],
+              value: answerLengthNotifier.value,
+              onChanged: (v) {
+                answerLengthNotifier.value = v;
+                savePref('pc_answer_len', v);
+                setState(() {});
+              },
+            ),
+            SettingChoiceRow(
+              icon: Icons.psychology_rounded,
+              title: tr('mem_limit'),
+              description: tr('mem_limit_sub'),
+              options: [('5', '5', null), ('15', '15', null), ('30', '30', null), ('0', tr('mem_all'), null)],
+              value: '${memoryLimitNotifier.value}',
+              onChanged: (v) {
+                memoryLimitNotifier.value = int.parse(v);
+                savePref('pc_memory_limit', int.parse(v));
+                setState(() {});
+              },
+            ),
+            SettingChoiceRow(
               icon: Icons.memory_rounded,
               title: tr('cs_context'),
               description: tr('cs_context_sub'),

@@ -259,3 +259,40 @@ class _PulseScaleState extends State<PulseScale> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) => ScaleTransition(scale: _scale, child: widget.child);
 }
+
+
+// ── Text being written: the end fades in softly (reverse fade) ───────────────
+class StreamFade extends StatelessWidget {
+  const StreamFade({super.key, required this.active, required this.child, this.fadeHeight = 44});
+  final bool active;
+  final Widget child;
+  final double fadeHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    if (M3Motion.reduced(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(end: active ? 1.0 : 0.0),
+      duration: const Duration(milliseconds: 450),
+      curve: Curves.easeOut,
+      child: child,
+      builder: (_, v, ch) {
+        if (v == 0) return ch!;
+        return ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (r) {
+            final h = r.height <= 0 ? 1.0 : r.height;
+            final f = (fadeHeight / h).clamp(0.0, 1.0);
+            return LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.white, Colors.white, Colors.white.withValues(alpha: 1 - 0.85 * v)],
+              stops: [0, 1 - f, 1],
+            ).createShader(r);
+          },
+          child: ch,
+        );
+      },
+    );
+  }
+}

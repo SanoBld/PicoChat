@@ -104,7 +104,7 @@ class ResetService {
     searchEngineNotifier.value = 'duckduckgo';
     sidebarCollapsedNotifier.value = false;
     voiceEngineNotifier.value = 'whisper';
-    voiceModelNotifier.value = 'base';
+    voiceModelNotifier.value = 'tiny';
     devModeNotifier.value = false;
     webAskNotifier.value = true;
     assistModelNotifier.value = '';
@@ -121,6 +121,8 @@ class ResetService {
     cityManualNotifier.value = '';
     memoryEnabledNotifier.value = true;
     webMaxSourcesNotifier.value = 8;
+    answerLengthNotifier.value = 'auto';
+    memoryLimitNotifier.value = 30;
     autoSpeakNotifier.value = false;
     activeModelNotifier.value = '';
     hfTokenNotifier.value = '';

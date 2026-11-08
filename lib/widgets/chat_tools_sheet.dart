@@ -136,6 +136,31 @@ class _ToolsSheetState extends State<_ToolsSheet> {
             onChanged: (v) => setState(() => contextSizeNotifier.value = _ctxs[v.round()]),
             onChangeEnd: (v) => savePref('pc_context_size', _ctxs[v.round()]),
           ),
+          _title(text, tr('answer_len')),
+          PcSegments<String>(
+            height: 46,
+            value: answerLengthNotifier.value,
+            items: [
+              ('auto', tr('len_auto'), null),
+              ('short', tr('len_short'), null),
+              ('medium', tr('len_medium'), null),
+              ('long', tr('len_long'), null),
+            ],
+            onChanged: (v) {
+              setState(() => answerLengthNotifier.value = v);
+              savePref('pc_answer_len', v);
+            },
+          ),
+          _title(text, tr('mem_limit')),
+          PcSegments<int>(
+            height: 46,
+            value: memoryLimitNotifier.value,
+            items: [(5, '5', null), (15, '15', null), (30, '30', null), (0, tr('mem_all'), null)],
+            onChanged: (v) {
+              setState(() => memoryLimitNotifier.value = v);
+              savePref('pc_memory_limit', v);
+            },
+          ),
           _title(text, tr('tools_web_max')),
           PcSegments<int>(
             height: 46,

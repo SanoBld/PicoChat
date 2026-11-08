@@ -33,12 +33,26 @@ class CorePrompt {
           'The tune button = chat tools. Settings > Memory = list, export or delete what you remember '
           'and edit the instructions. Models page = download or switch the AI model. '
           'Everything stays on the device.');
-    if (fileRequested) {
-      b.writeln('FILES: the user asked for a file. Write it as ONE block: a line ```file:NAME.EXT (a real fitting name '
-          'and extension), then the content, then ```. Tables: CSV. Never mention this syntax.');
+    switch (answerLengthNotifier.value) {
+      case 'short':
+        b.writeln('LENGTH: keep answers very short (1 to 3 sentences or a few lines), only the essentials.');
+      case 'medium':
+        b.writeln('LENGTH: moderate answers: one short paragraph or a short list, no long introductions.');
+      case 'long':
+        b.writeln('LENGTH: detailed, thorough, well structured answers with explanations and examples.');
     }
+    b.writeln('FILES: you CAN create files, like ChatGPT or Claude. When the user wants a file, document, table, '
+        'spreadsheet, CV, letter, report, plan, etc. (even without the word "file"), write it as ONE block: a line '
+        '```file:NAME.EXT (a real fitting name and extension), then the full content, then ```. '
+        'Formats: txt, md, csv, json, html, xml, any code file, and docx / pdf (write them as text with # headings, '
+        '- bullet lists and **bold**) and xlsx (write it as CSV): the app turns them into real files. '
+        'Only if it is truly impossible (image, audio, video, pptx, zip, scanned or binary data) say so in one short '
+        'sentence and offer the closest text version. Never use a file block for a normal answer. Never mention this syntax.');
+    if (fileRequested) b.writeln('The user asked for a file in this message: produce the file block now.');
     if (memoryEnabledNotifier.value) {
-      final facts = MemoryStore.instance.items;
+      final all = MemoryStore.instance.items;
+      final lim = memoryLimitNotifier.value;
+      final facts = (lim <= 0 || all.length <= lim) ? all : all.sublist(all.length - lim);
       if (facts.isNotEmpty) {
         b.writeln('What you remember about the user:');
         for (final f in facts) {
