@@ -24,7 +24,7 @@ class _SettingsPageState extends State<_SettingsPage> {
 
   void _rebuild() => setState(() {});
 
-  void _open(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  void _open(Widget page) => Navigator.of(context).push(M3SharedAxisRoute<void>(builder: (_) => page));
 
   @override
   Widget build(BuildContext context) {

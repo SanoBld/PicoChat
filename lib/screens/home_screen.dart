@@ -165,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _push(Widget page) =>
-      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+      Navigator.of(context).push(M3SharedAxisRoute<void>(builder: (_) => page));
 
   @override
   Widget build(BuildContext context) {
@@ -234,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-                Expanded(child: chatView),
+                Expanded(child: M3Switcher(child: chatView)),
               ]),
               if (collapsed) ...[
                 Positioned(
@@ -264,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ])
-          : chatView,
+          : M3Switcher(child: chatView),
     );
   }
 }

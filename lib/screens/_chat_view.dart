@@ -22,16 +22,21 @@ class _ChatView extends StatefulWidget {
   State<_ChatView> createState() => _ChatViewState();
 }
 
-class _ChatViewState extends State<_ChatView> {
+class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
   final _ctrl = TextEditingController();
   final _scroll = ScrollController();
   final _focus = FocusNode();
   bool _hasText = false;
   List<Attachment> _files = [];
+  bool _stick = true; // the list follows the end (user did not scroll up)
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _focus.addListener(() {
+      if (_focus.hasFocus) _followEnd();
+    });
     ChatStore.instance.addListener(_onChange);
     ChatService.instance.addListener(_onChange);
     ModelManager.instance.addListener(_onChange);
@@ -47,6 +52,7 @@ class _ChatViewState extends State<_ChatView> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     ChatStore.instance.removeListener(_onChange);
     ChatService.instance.removeListener(_onChange);
     ModelManager.instance.removeListener(_onChange);
@@ -66,11 +72,30 @@ class _ChatViewState extends State<_ChatView> {
     if (ChatService.instance.isGeneratingIn(widget.chat)) _scrollToEnd();
   }
 
+  // Keyboard opens/closes: the viewport changes size, stay on the prompt.
+  @override
+  void didChangeMetrics() => _followEnd();
+
+  void _followEnd() {
+    if (!_stick && !ChatService.instance.isGeneratingIn(widget.chat)) return;
+    // Two passes: once now, once after the keyboard animation has moved the layout.
+    for (final ms in const [0, 120, 320]) {
+      Future<void>.delayed(Duration(milliseconds: ms), () {
+        if (!mounted || !_scroll.hasClients) return;
+        final p = _scroll.position;
+        if ((p.maxScrollExtent - p.pixels).abs() > 1) {
+          _scroll.animateTo(p.maxScrollExtent, duration: const Duration(milliseconds: 160), curve: Curves.easeOutCubic);
+        }
+      });
+    }
+  }
+
   void _scrollToEnd({bool force = false}) {
+    if (force) _stick = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scroll.hasClients) return;
       final p = _scroll.position;
-      if (force || p.maxScrollExtent - p.pixels < 200) {
+      if (force || _stick || p.maxScrollExtent - p.pixels < 200) {
         _scroll.jumpTo(p.maxScrollExtent);
       }
     });
@@ -294,7 +319,14 @@ class _ChatViewState extends State<_ChatView> {
           child: messages.isEmpty
               ? _EmptyChat(onSuggest: _send, onOpenModels: widget.onOpenModels)
               : SelectionArea(
-                  child: ListView.builder(
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (n) {
+                      if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
+                        _stick = n.metrics.maxScrollExtent - n.metrics.pixels < 80;
+                      }
+                      return false;
+                    },
+                    child: ListView.builder(
                     controller: _scroll,
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                     itemCount: messages.length,
@@ -320,7 +352,7 @@ class _ChatViewState extends State<_ChatView> {
                         ),
                       );
                     },
-                  ),
+                  )),
                 ),
         ),
         _composer(scheme, text, busy),
@@ -338,7 +370,7 @@ class _ChatViewState extends State<_ChatView> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
           child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 6, 8, 6),
+            padding: const EdgeInsets.fromLTRB(16, 8, 8, 6),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(28),
@@ -350,30 +382,45 @@ class _ChatViewState extends State<_ChatView> {
                 Offstage(
                   offstage: dictating,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-              if (locationEnabledNotifier.value && LocationService.instance.label != null)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Material(
-                      color: scheme.secondaryContainer,
-                      shape: const StadiumBorder(),
-                      child: InkWell(
-                        customBorder: const StadiumBorder(),
-                        onTap: LocationService.instance.refresh,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(6, 5, 12, 5),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            M3CookieBadge(size: 22, color: scheme.secondary, child: Icon(Icons.location_on_rounded, size: 13, color: scheme.onSecondary)),
-                            const SizedBox(width: 8),
-                            Text(LocationService.instance.label!,
-                                style: text.labelMedium?.copyWith(fontWeight: FontWeight.w700, color: scheme.onSecondaryContainer)),
-                          ]),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topLeft,
+                child: (locationEnabledNotifier.value && LocationService.instance.label != null)
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: FadeSlideIn(
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 4, bottom: 6),
+                            child: Material(
+                              color: scheme.secondaryContainer,
+                              shape: const StadiumBorder(),
+                              child: InkWell(
+                                customBorder: const StadiumBorder(),
+                                onTap: LocationService.instance.refresh,
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(5, 4, 12, 4),
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                    M3CookieBadge(size: 22, color: scheme.secondary, child: Icon(Icons.location_on_rounded, size: 12, color: scheme.onSecondary)),
+                                    const SizedBox(width: 7),
+                                    Flexible(
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(maxWidth: 240),
+                                        child: Text(LocationService.instance.label!,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: text.labelMedium?.copyWith(fontWeight: FontWeight.w700, color: scheme.onSecondaryContainer)),
+                                      ),
+                                    ),
+                                  ]),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
               if (_files.isNotEmpty)
                 Align(
                   alignment: Alignment.centerLeft,
@@ -435,29 +482,10 @@ class _ChatViewState extends State<_ChatView> {
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
                       disabledBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                      contentPadding: const EdgeInsets.fromLTRB(4, 8, 8, 8),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              AnimatedSwitcher(
-                duration: M3Motion.effectsDefaultDuration,
-                switchInCurve: M3Motion.spatialFast,
-                transitionBuilder: (c, a) => ScaleTransition(scale: a, child: FadeTransition(opacity: a, child: c)),
-                child: busy
-                    ? IconButton.filled(
-                        key: const ValueKey('stop'),
-                        tooltip: tr('stop'),
-                        icon: const Icon(Icons.stop_rounded),
-                        onPressed: ChatService.instance.requestStop,
-                      )
-                    : IconButton.filled(
-                        key: const ValueKey('send'),
-                        tooltip: tr('send'),
-                        icon: const Icon(Icons.arrow_upward_rounded),
-                        onPressed: canSend ? _send : null,
-                      ),
               ),
               ]),
               Row(children: [
@@ -496,6 +524,27 @@ class _ChatViewState extends State<_ChatView> {
                   icon: const Icon(Icons.tune_rounded),
                   onPressed: () => showChatToolsSheet(context),
                 ),
+                const Spacer(),
+              AnimatedSwitcher(
+                duration: M3Motion.effectsDefaultDuration,
+                switchInCurve: M3Motion.spatialFast,
+                transitionBuilder: (c, a) => ScaleTransition(scale: a, child: FadeTransition(opacity: a, child: c)),
+                child: busy
+                    ? IconButton.filled(
+                        style: IconButton.styleFrom(fixedSize: const Size(44, 44), minimumSize: const Size(44, 44)),
+                        key: const ValueKey('stop'),
+                        tooltip: tr('stop'),
+                        icon: const Icon(Icons.stop_rounded),
+                        onPressed: ChatService.instance.requestStop,
+                      )
+                    : IconButton.filled(
+                        style: IconButton.styleFrom(fixedSize: const Size(44, 44), minimumSize: const Size(44, 44)),
+                        key: const ValueKey('send'),
+                        tooltip: tr('send'),
+                        icon: const Icon(Icons.arrow_upward_rounded),
+                        onPressed: canSend ? _send : null,
+                      ),
+              ),
               ]),
             ])),
           ])),
@@ -664,12 +713,15 @@ class _MessageView extends StatelessWidget {
               for (final f in FileOutput.extract(message.text))
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
-                  child: _FileCard(
-                    file: f,
-                    onTap: () async {
-                      final ok = await FileOutput.save(f);
-                      if (ok && context.mounted) _toast(context, tr('file_saved'));
-                    },
+                  child: FadeSlideIn(
+                    child: _FileCard(
+                      file: f,
+                      onTap: () => _showFilePreview(context, f),
+                      onDownload: () async {
+                        final ok = await FileOutput.save(f);
+                        if (ok && context.mounted) _toast(context, tr('file_saved'));
+                      },
+                    ),
                   ),
                 ),
             // While the answer is written, dots keep moving below the text.
@@ -731,8 +783,20 @@ class _MessageView extends StatelessWidget {
                   onPressed: () => _showSources(context, message.sources),
                 ),
               ),
-            if (showActions || (hover && !generating && message.text.isNotEmpty))
-              Row(children: [
+            AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.topLeft,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                switchInCurve: Curves.easeOutCubic,
+                transitionBuilder: (c, a) => FadeTransition(
+                  opacity: a,
+                  child: SlideTransition(position: Tween(begin: const Offset(0, 0.4), end: Offset.zero).animate(a), child: c),
+                ),
+                child: !(showActions || (hover && !generating && message.text.isNotEmpty))
+                    ? const SizedBox(key: ValueKey('noact'), width: double.infinity)
+                    : Row(key: const ValueKey('act'), children: [
                 IconButton(
                   tooltip: tr('copy'),
                   visualDensity: VisualDensity.compact,
@@ -759,6 +823,8 @@ class _MessageView extends StatelessWidget {
                   onPressed: onRegenerate,
                 ),
               ]),
+              ),
+            ),
           ]),
         ),
       ]),
@@ -890,8 +956,9 @@ void _showSources(BuildContext context, List<Map<String, String>> src) {
 
 class _FileCard extends StatelessWidget {
   final GeneratedFile file;
-  final VoidCallback onTap;
-  const _FileCard({required this.file, required this.onTap});
+  final VoidCallback onTap; // preview
+  final VoidCallback onDownload;
+  const _FileCard({required this.file, required this.onTap, required this.onDownload});
 
   IconData _icon() {
     final e = file.name.contains('.') ? file.name.split('.').last.toLowerCase() : '';
@@ -907,7 +974,7 @@ class _FileCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     if (!materialShapesNotifier.value) {
-      return ActionChip(avatar: const Icon(Icons.download_rounded, size: 18), label: Text(file.name), onPressed: onTap);
+      return ActionChip(avatar: const Icon(Icons.visibility_rounded, size: 18), label: Text(file.name), onPressed: onTap);
     }
     return Material(
       color: scheme.secondaryContainer,
@@ -930,8 +997,12 @@ class _FileCard extends StatelessWidget {
                     style: text.bodySmall?.copyWith(color: scheme.onSecondaryContainer.withValues(alpha: 0.7))),
               ]),
             ),
-            const SizedBox(width: 12),
-            Icon(Icons.download_rounded, color: scheme.onSecondaryContainer),
+            const SizedBox(width: 4),
+            IconButton(
+              tooltip: tr('download'),
+              icon: Icon(Icons.download_rounded, color: scheme.onSecondaryContainer),
+              onPressed: onDownload,
+            ),
           ]),
         ),
       ),
@@ -964,4 +1035,122 @@ class _HoverScopeState extends State<_HoverScope> {
         onExit: (_) => setState(() => _hover = false),
         child: widget.builder(context, _hover),
       );
+}
+
+
+// ── File preview ─────────────────────────────────────────────────────────────
+
+List<List<String>> _parseCsv(String src) {
+  final sep = src.split('\n').first.contains(';') && !src.split('\n').first.contains(',') ? ';' : (src.split('\n').first.contains('\t') ? '\t' : ',');
+  final rows = <List<String>>[];
+  var row = <String>[];
+  var cell = StringBuffer();
+  var q = false;
+  for (var i = 0; i < src.length; i++) {
+    final c = src[i];
+    if (q) {
+      if (c == '"') {
+        if (i + 1 < src.length && src[i + 1] == '"') {
+          cell.write('"');
+          i++;
+        } else {
+          q = false;
+        }
+      } else {
+        cell.write(c);
+      }
+    } else if (c == '"') {
+      q = true;
+    } else if (c == sep) {
+      row.add(cell.toString());
+      cell = StringBuffer();
+    } else if (c == '\n') {
+      row.add(cell.toString().replaceAll('\r', ''));
+      cell = StringBuffer();
+      if (row.any((e) => e.isNotEmpty)) rows.add(row);
+      row = <String>[];
+    } else {
+      cell.write(c);
+    }
+  }
+  row.add(cell.toString());
+  if (row.any((e) => e.isNotEmpty)) rows.add(row);
+  return rows;
+}
+
+void _showFilePreview(BuildContext context, GeneratedFile f) {
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (ctx) {
+      final scheme = Theme.of(ctx).colorScheme;
+      final text = Theme.of(ctx).textTheme;
+      final ext = f.name.contains('.') ? f.name.split('.').last.toLowerCase() : '';
+      Widget body;
+      if (const ['csv', 'tsv'].contains(ext)) {
+        final rows = _parseCsv(f.content);
+        final cols = rows.fold<int>(0, (m, r) => r.length > m ? r.length : m);
+        body = rows.isEmpty
+            ? const SizedBox.shrink()
+            : SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowHeight: 40,
+                  dataRowMinHeight: 36,
+                  dataRowMaxHeight: 48,
+                  columnSpacing: 20,
+                  columns: [for (var i = 0; i < cols; i++) DataColumn(label: Text(i < rows.first.length ? rows.first[i] : '', style: const TextStyle(fontWeight: FontWeight.w800)))],
+                  rows: [
+                    for (final r in rows.skip(1).take(300))
+                      DataRow(cells: [for (var i = 0; i < cols; i++) DataCell(Text(i < r.length ? r[i] : ''))]),
+                  ],
+                ),
+              );
+      } else if (ext == 'md') {
+        body = MarkdownLite(text: f.content, style: text.bodyLarge, linkColor: scheme.primary);
+      } else {
+        body = Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(18)),
+          child: SelectableText(f.content, style: const TextStyle(fontFamily: 'monospace', fontSize: 12.5, height: 1.4)),
+        );
+      }
+      return DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        builder: (_, scroll) => Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 8, 8),
+            child: Row(children: [
+              Expanded(child: Text(f.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              IconButton(
+                tooltip: tr('copy'),
+                icon: const Icon(Icons.copy_rounded),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: f.content));
+                  _toast(ctx, tr('copied'));
+                },
+              ),
+              IconButton.filledTonal(
+                tooltip: tr('download'),
+                icon: const Icon(Icons.download_rounded),
+                onPressed: () async {
+                  final ok = await FileOutput.save(f);
+                  if (ok && ctx.mounted) _toast(ctx, tr('file_saved'));
+                },
+              ),
+            ]),
+          ),
+          Expanded(
+            child: FadeSlideIn(
+              child: SingleChildScrollView(controller: scroll, padding: const EdgeInsets.fromLTRB(20, 0, 20, 24), child: body),
+            ),
+          ),
+        ]),
+      );
+    },
+  );
 }
