@@ -71,8 +71,7 @@ class LlamaDartEngine implements InferenceEngine {
 
     await for (final chunk in stream) {
       if (_stopped) break;
-      final Object? raw = chunk.text;
-      final piece = raw?.toString() ?? '';
+      final piece = chunk.text;
       if (piece.isNotEmpty) yield piece;
     }
   }
