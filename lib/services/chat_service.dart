@@ -34,6 +34,8 @@ class ChatService extends ChangeNotifier {
   int _loadedCtx = 0;
   String? _chatId;
 
+  List<String> _pendingMem = []; // memory changes made by the app for the current message
+
   bool get isGenerating => _generating;
   bool get isLoadingModel => _loadingModel;
   bool get isSearching => _searching;
@@ -63,6 +65,11 @@ class ChatService extends ChangeNotifier {
     if (memoryEnabledNotifier.value) {
       remembered = MemoryStore.intentFact(clean);
       if (remembered != null) await MemoryStore.instance.add(remembered);
+    }
+    _pendingMem = [if (remembered != null) '+ $remembered'];
+    if (memoryEnabledNotifier.value) {
+      final f = MemoryStore.forgetIntent(clean);
+      if (f != null) _pendingMem.addAll([for (final r in await MemoryStore.instance.forget(f)) '− $r']);
     }
     final command = await AutoCommands.apply(clean);
     await _answer(chat, files: files, web: web, query: clean, remembered: remembered, command: command);
@@ -306,11 +313,12 @@ class ChatService extends ChangeNotifier {
           }
         }
       }
-      if (remembered != null) {
-        reply.memories = [remembered];
-      } else if (memoryEnabledNotifier.value) {
-        reply.memories = await MemoryStore.instance.harvest(buffer.toString());
+      final mem = <String>[..._pendingMem];
+      _pendingMem = [];
+      if (memoryEnabledNotifier.value) {
+        mem.addAll(await MemoryStore.instance.harvest(buffer.toString(), userText: lastUser, hadFiles: files.isNotEmpty));
       }
+      reply.memories = mem;
       reply.text = shown(buffer.toString());
       reply.stopped = _stopRequested;
       if (autoSpeakNotifier.value && !_stopRequested && reply.text.isNotEmpty) {

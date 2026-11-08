@@ -11,6 +11,7 @@ import 'package:speech_to_text/speech_to_text.dart';
 import 'package:whisper_ggml/whisper_ggml.dart';
 
 import '../app_state.dart';
+import 'whisper_bundle.dart';
 
 class VoiceInput {
   VoiceInput._();
@@ -90,6 +91,7 @@ class VoiceInput {
       _pipe?.add(bytes);
       _level(bytes);
     });
+    await WhisperBundle.ensure(_model()); // copy the bundled model, no download
     _wc = WhisperController();
     _session = await _wc!.transcribeLive(model: _model(), pcm16Stream: _pipe!.stream, lang: localeNotifier.value);
     _partialSub = (_session.partials as Stream<String>).listen((t) {

@@ -19,6 +19,9 @@ class ChatStore extends ChangeNotifier {
   File? _file;
   Timer? _saveTimer;
 
+  /// False for the assistant overlay (its own engine must not overwrite the file).
+  bool persist = true;
+
   /// Newest first.
   List<Conversation> get chats => List.unmodifiable(_chats);
 
@@ -126,7 +129,7 @@ class ChatStore extends ChangeNotifier {
   Future<void> flush() async {
     _saveTimer?.cancel();
     final f = _file;
-    if (f == null) return;
+    if (f == null || !persist) return;
     try {
       final json = jsonEncode(_chats.map((c) => c.toJson()).toList());
       // Temp file first, so a crash never leaves a half-written file.

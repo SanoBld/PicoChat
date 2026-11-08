@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app_state.dart';
+import 'screens/assist_overlay.dart';
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
 import 'services/chat_store.dart';
@@ -57,6 +58,13 @@ Future<void> _mainImpl() async {
     });
   }
 
+  final p = await _loadState();
+  if (locationEnabledNotifier.value) LocationService.instance.refresh();
+  runApp(PicoChatApp(onboarded: p.getBool('pc_onboarded') ?? false));
+}
+
+/// Loads the saved settings, chats, models and memory (shared with the assistant overlay).
+Future<SharedPreferences> _loadState() async {
   final p = await SharedPreferences.getInstance();
 
   // First launch: follow the phone language when we support it.
@@ -110,9 +118,18 @@ Future<void> _mainImpl() async {
   hfEndpointNotifier.value = p.getString('pc_hf_endpoint') ?? kDefaultHfEndpoint;
 
   await Future.wait([ChatStore.instance.init(), ModelManager.instance.init(), MemoryStore.instance.init()]);
+  return p;
+}
 
+/// Entry point of the Android assistant overlay (started by AssistActivity).
+@pragma('vm:entry-point')
+Future<void> assistMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  if (!kIsWeb) InferenceService.engine = LlamaDartEngine();
+  await _loadState();
+  ChatStore.instance.persist = false; // the overlay must not overwrite the saved chats
   if (locationEnabledNotifier.value) LocationService.instance.refresh();
-  runApp(PicoChatApp(onboarded: p.getBool('pc_onboarded') ?? false));
+  runApp(const AssistApp());
 }
 
 class PicoChatApp extends StatelessWidget {

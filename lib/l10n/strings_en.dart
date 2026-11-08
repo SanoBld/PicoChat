@@ -363,4 +363,9 @@ const Map<String, String> kStringsEn = {
   "detail_choose_quant": "Choose quantization",
   "rec_vision": "Reads images, strong all-rounder (6 GB+ RAM)",
   "rec_vision_small": "Small vision model: describes photos and screenshots",
+  "see_more": "See more",
+  "assist_listening": "Listening…",
+  "assist_thinking": "Thinking…",
+  "assist_open": "Open PicoChat",
+  "assist_send": "Send",
 };

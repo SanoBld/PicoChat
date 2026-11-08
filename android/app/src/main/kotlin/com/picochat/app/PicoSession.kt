@@ -6,16 +6,12 @@ import android.os.Bundle
 import android.service.voice.VoiceInteractionSession
 
 // Called when the person triggers the assistant (power button hold, swipe, "Hey ...").
-// It opens PicoChat on a fresh chat and closes the overlay.
+// It opens the small assistant card over the current app.
 class PicoSession(context: Context) : VoiceInteractionSession(context) {
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
-        val intent = Intent(context, MainActivity::class.java).apply {
-            action = Intent.ACTION_ASSIST
-            putExtra("picochat_assist", true)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        }
-        startAssistantActivity(intent)
+        MainActivity.unloadModel()
+        startAssistantActivity(Intent(context, AssistActivity::class.java))
         hide()
     }
 }

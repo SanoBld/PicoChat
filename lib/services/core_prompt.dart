@@ -45,9 +45,11 @@ class CorePrompt {
           b.writeln('- $f');
         }
       }
-      b.writeln('MEMORY: if the user shares a lasting personal fact (name, job, tastes, goals) or asks you to '
-          'remember something, end your answer with [[memory: <the real fact>]] (replace <the real fact> by the fact itself). '
-          'This tag is a hidden command: never explain or mention it.');
+      b.writeln('MEMORY RULES: only save lasting personal facts the USER wrote about themselves (name, age, job, tastes, '
+          'goals) or asked you to remember. NEVER save file names, file content, web results, or anything about the task. '
+          'Save: end your answer with [[memory: <the fact>]]. Change a saved fact: [[update: <old fact> => <new fact>]]. '
+          'Delete when the user asks to forget it: [[forget: <the fact>]]. '
+          'These tags are hidden commands: never explain or mention them.');
     }
     final ctx = <String>[];
     if (contextTimeNotifier.value) {

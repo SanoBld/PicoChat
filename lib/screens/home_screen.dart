@@ -85,9 +85,25 @@ bool get _isDesktopPlatform =>
         defaultTargetPlatform == TargetPlatform.macOS);
 
 void _toast(BuildContext context, String message) {
+  final scheme = Theme.of(context).colorScheme;
+  final wide = MediaQuery.sizeOf(context).width > 600;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+    ..showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      elevation: 0,
+      duration: const Duration(milliseconds: 2600),
+      backgroundColor: scheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      // A floating bar is either full width with margin, or a fixed width on big screens.
+      width: wide ? 420 : null,
+      margin: wide ? null : const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      content: Row(children: [
+        Icon(Icons.info_outline_rounded, size: 20, color: scheme.primary),
+        const SizedBox(width: 12),
+        Expanded(child: Text(message, style: TextStyle(color: scheme.onSurface))),
+      ]),
+    ));
 }
 
 /// Translated message for a download / Hugging Face error kind.
@@ -114,19 +130,15 @@ class _HomeScreenState extends State<HomeScreen> {
     _initAssist();
   }
 
-  // Android assistant: the system opens PicoChat from the "assist" gesture / button.
+  // Android assistant: the small overlay runs its own engine, so this one frees
+  // the model first (two copies of a model would not fit in the RAM).
   static const _assist = MethodChannel('picochat/assist');
 
   void _initAssist() {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
-    // Called by Kotlin when the app is already running.
     _assist.setMethodCallHandler((call) async {
-      if (call.method == 'assist' && mounted) setState(() => _chat = ChatStore.instance.create());
+      if (call.method == 'unload') await InferenceService.engine.unload();
     });
-    // Called once at start-up: was the app started by the assist gesture?
-    _assist.invokeMethod<bool>('consume').then((v) {
-      if (v == true && mounted) setState(() => _chat = ChatStore.instance.create());
-    }).catchError((_) {});
   }
 
   @override

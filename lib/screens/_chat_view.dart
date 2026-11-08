@@ -228,12 +228,47 @@ class _ChatViewState extends State<_ChatView> {
           style: text.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
         actions: [
-          TextButton.icon(
-            onPressed: widget.onOpenModels,
-            icon: const Icon(Icons.memory_rounded, size: 18),
-            label: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 150),
-              child: Text(active?.displayName ?? tr('select_model'), maxLines: 1, overflow: TextOverflow.ellipsis),
+          // Small menu: installed models + "See more" (opens the store).
+          PopupMenuButton<String>(
+            tooltip: tr('select_model'),
+            onSelected: (id) {
+              if (id == '__more') {
+                widget.onOpenModels();
+              } else {
+                ModelManager.instance.setActive(id);
+              }
+            },
+            itemBuilder: (_) => [
+              for (final m in ModelManager.instance.installed.take(6))
+                CheckedPopupMenuItem<String>(
+                  value: m.id,
+                  checked: m.id == active?.id,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 220),
+                    child: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ),
+              if (ModelManager.instance.installed.isNotEmpty) const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: '__more',
+                child: Row(children: [
+                  const Icon(Icons.storefront_rounded, size: 18),
+                  const SizedBox(width: 10),
+                  Text(tr('see_more')),
+                ]),
+              ),
+            ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.memory_rounded, size: 18),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 150),
+                  child: Text(active?.displayName ?? tr('select_model'), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                const Icon(Icons.arrow_drop_down_rounded, size: 20),
+              ]),
             ),
           ),
           if (widget.onMenu != null)
@@ -653,10 +688,16 @@ class _MessageView extends StatelessWidget {
             if (message.memories.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: ActionChip(
-                  avatar: const Icon(Icons.psychology_rounded, size: 18),
-                  label: Text(tr('memory_saved')),
-                  onPressed: () => _toast(context, message.memories.join('\n')),
+                // Hover (mouse) or long press (touch) shows what changed in memory.
+                child: Tooltip(
+                  message: message.memories.join('\n'),
+                  waitDuration: const Duration(milliseconds: 250),
+                  showDuration: const Duration(seconds: 6),
+                  triggerMode: TooltipTriggerMode.longPress,
+                  child: Chip(
+                    avatar: const Icon(Icons.psychology_rounded, size: 18),
+                    label: Text(tr('memory_saved')),
+                  ),
                 ),
               ),
             if (message.sources.isNotEmpty)

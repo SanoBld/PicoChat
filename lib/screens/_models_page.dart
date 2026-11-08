@@ -673,6 +673,11 @@ class _DownloadsTab extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final mgr = ModelManager.instance;
+    // Rebuild on every progress update of the manager.
+    return ListenableBuilder(listenable: mgr, builder: (_, _) => _list(context, scheme, text, mgr));
+  }
+
+  Widget _list(BuildContext context, ColorScheme scheme, TextTheme text, ModelManager mgr) {
     final tasks = mgr.tasks;
     if (tasks.isEmpty) return M3EmptyState(icon: Icons.download_done_rounded, message: tr('no_downloads'));
     return ListView.builder(
