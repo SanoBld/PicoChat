@@ -2,14 +2,10 @@
 // ══════════════════════════════════════════════════════════════════════════
 //  The seam between the chat UI and the code that runs a model.
 //
-//  This base project ships a PlaceholderEngine (no AI: it streams a notice)
-//  so the whole app can be built and tested. For real answers, implement
-//  [InferenceEngine] on top of an on-device GGUF runtime (llama.cpp via FFI
-//  or a Flutter plugin) and set, in main.dart:
+//  The app uses LlamaDartEngine (lib/services/llama_engine.dart, llama.cpp)
+//  on every native platform. PlaceholderEngine (no AI: it streams a notice)
+//  is only kept for the web build, which cannot open model files.
 //
-//      InferenceService.engine = MyLlamaEngine();
-//
-//  Nothing else in the app has to change.
 // ══════════════════════════════════════════════════════════════════════════
 
 import 'dart:async';

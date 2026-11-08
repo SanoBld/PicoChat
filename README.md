@@ -10,11 +10,9 @@ adaptive sidebar/drawer layout).
 ## Status
 
 This is the **base project**: UI, settings, intro, Hugging Face search and
-resumable downloads, chat history and CI/CD are done. The AI engine is a
-`PlaceholderEngine` (streams a demo notice) so everything can be tested.
-To get real answers, implement `InferenceEngine`
-(`lib/services/inference_engine.dart`) on top of a GGUF runtime such as
-llama.cpp and set `InferenceService.engine` in `main.dart`.
+resumable downloads, chat history and CI/CD are done. Answers come from a real
+on-device engine: llama.cpp through the [`llamadart`](https://pub.dev/packages/llamadart)
+package (`lib/services/llama_engine.dart`). The web build keeps a demo engine.
 
 ## Layout
 
@@ -25,7 +23,7 @@ lib/
   theme/       m3_interaction, m3_motion, m3_shapes
   widgets/     m3_components, skeleton, markdown_lite, title bar, ...
   models/      chat_models, model_models
-  services/    hf_service, model_manager, chat_store, chat_service, inference_engine
+  services/    hf_service, model_manager, chat_store, chat_service, inference_engine, llama_engine
   screens/     intro_screen, home_screen (+ sidebar, chat, models, settings, about)
     settings/  appearance, chat, hugging face, language, storage, privacy
 android/ ios/ macos/ linux/ windows/ web/   platform projects

@@ -14,6 +14,8 @@ import 'app_state.dart';
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
 import 'services/chat_store.dart';
+import 'services/inference_engine.dart';
+import 'services/llama_engine.dart';
 import 'services/model_manager.dart';
 import 'supported_locales.dart';
 import 'theme/m3_interaction.dart';
@@ -30,6 +32,10 @@ void main() {
 Future<void> _mainImpl() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterError.onError = (d) => debugPrint('Flutter error: ${d.exception}');
+
+  // Real llama.cpp engine on every native platform. The web build keeps the
+  // demo engine, because it cannot open model files from disk.
+  if (!kIsWeb) InferenceService.engine = LlamaDartEngine();
   PlatformDispatcher.instance.onError = (e, s) {
     debugPrint('Platform error: $e');
     return true;
