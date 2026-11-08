@@ -59,6 +59,17 @@ jobs:
           channel: 'stable'
           cache: true
 
+      # whisper_ggml (offline voice) compiles native code with NDK 29: accept the
+      # SDK licenses and install it before Gradle runs, otherwise the build stops
+      # with "LicenceNotAcceptedException".
+      - name: Accept Android licenses and install NDK 29
+        shell: bash
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKM="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null || true
+          "$SDKM" "ndk;29.0.13113456" "platforms;android-36" "build-tools;36.0.0" > /dev/null || true
+
       # services.gradle.org redirects to GitHub releases, which sometimes answers
       # 504 for minutes. Try the official URL, then public mirrors, and point the
       # wrapper at the first valid zip. If none works the wrapper keeps its URL.
