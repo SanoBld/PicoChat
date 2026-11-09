@@ -45,7 +45,7 @@ class MarkdownLite extends StatelessWidget {
 
   // Parses one line into inline spans (bold / italic / strike / code / links).
   // [nested]: inside bold/italic: no base style, so the outer style is kept.
-  InlineSpan _parseInline(String line, {bool nested = false, BuildContext? ctx}) {
+  InlineSpan _parseInline(String line, {bool nested = false}) {
     line = line.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
     final tokens = <_Token>[
       ..._linkRegex.allMatches(line).map((m) => _Token(m.start, m.end, _TokType.link, '${m.group(1)}\u0000${m.group(2)}')),
@@ -122,8 +122,8 @@ class MarkdownLite extends StatelessWidget {
   }
 
   // Set by build(): colours of the theme for inline code.
-  Color? _codeBg;
-  Color? _codeFg;
+  static Color? _codeBg;
+  static Color? _codeFg;
 
   // A line is a table row if it contains at least one '|' with content
   // around it (GitHub-flavored markdown style: "| a | b |").

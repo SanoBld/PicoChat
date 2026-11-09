@@ -304,6 +304,7 @@ class PcGesture extends StatelessWidget {
     super.key,
     this.onTap,
     this.onTapDown,
+    this.onTapUp,
     this.onTapCancel,
     this.onDoubleTap,
     this.onPanUpdate,
@@ -312,6 +313,7 @@ class PcGesture extends StatelessWidget {
   });
   final VoidCallback? onTap;
   final GestureTapDownCallback? onTapDown;
+  final GestureTapUpCallback? onTapUp;
   final GestureTapCancelCallback? onTapCancel;
   final VoidCallback? onDoubleTap;
   final GestureDragUpdateCallback? onPanUpdate;
@@ -320,12 +322,13 @@ class PcGesture extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MouseRegion(
-        cursor: (onTap != null || onDoubleTap != null || onPanUpdate != null || onTapDown != null)
+        cursor: (onTap != null || onDoubleTap != null || onPanUpdate != null || onTapDown != null || onTapUp != null)
             ? SystemMouseCursors.click
             : MouseCursor.defer,
         child: GestureDetector(
           onTap: onTap,
           onTapDown: onTapDown,
+          onTapUp: onTapUp,
           onTapCancel: onTapCancel,
           onDoubleTap: onDoubleTap,
           onPanUpdate: onPanUpdate,

@@ -30,8 +30,8 @@ class FileConvert {
   static Uint8List _zip(Map<String, String> files) {
     final a = Archive();
     files.forEach((n, c) => a.add(ArchiveFile.bytes(n, utf8.encode(c))));
-    final List<int>? out = ZipEncoder().encode(a);
-    return Uint8List.fromList(out ?? const []);
+    final List<int> out = ZipEncoder().encode(a);
+    return Uint8List.fromList(out);
   }
 
   static String _plain(String s) => s.replaceAll(RegExp(r'\*\*|`'), '');
