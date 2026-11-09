@@ -41,6 +41,7 @@ import 'settings/memory_page.dart';
 import 'settings/context_page.dart';
 import '../widgets/info_cards.dart';
 import '../services/location_service.dart';
+import '../services/memory_store.dart';
 import '../services/web_intent.dart';
 import '../widgets/chat_tools_sheet.dart';
 import '../services/chat_store.dart';

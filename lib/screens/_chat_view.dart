@@ -633,10 +633,112 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
 
 // ── Empty state ──────────────────────────────────────────────────────────────
 
+class _Sug {
+  final IconData icon;
+  final String text;
+  const _Sug(this.icon, this.text);
+}
+
 class _EmptyChat extends StatelessWidget {
   final ValueChanged<String> onSuggest;
   final VoidCallback onOpenModels;
   const _EmptyChat({required this.onSuggest, required this.onOpenModels});
+
+  // First word of the title of a recent chat, used as a topic to go deeper on.
+  String? _recentTopic() {
+    for (final c in ChatStore.instance.chats) {
+      final t = c.title.trim();
+      if (t.length >= 4 && t.length <= 60 && c.messages.length >= 2) return t;
+    }
+    return null;
+  }
+
+  // Suggestions built from the time, place, memories, recent chats and enabled tools.
+  List<_Sug> _suggestions() {
+    final now = DateTime.now();
+    final h = now.hour;
+    final weekend = now.weekday >= 6;
+    final city = (locationEnabledNotifier.value ? LocationService.instance.label : null)?.split(',').first.trim();
+    final topic = _recentTopic();
+    final hasMemory = memoryEnabledNotifier.value && MemoryStore.instance.items.isNotEmpty;
+    final seed = now.difference(DateTime(now.year)).inDays;
+
+    final ctx = <_Sug>[];
+    if (h >= 23 || h < 5) {
+      ctx.add(_Sug(Icons.bedtime_rounded, tr('s_night_story')));
+    } else if (h < 11) {
+      ctx.add(_Sug(Icons.wb_sunny_rounded, tr('s_morning_plan')));
+    } else if (h < 18) {
+      ctx.add(_Sug(weekend ? Icons.hiking_rounded : Icons.center_focus_strong_rounded, tr(weekend ? 's_weekend' : 's_afternoon_focus')));
+    } else {
+      ctx.add(_Sug(Icons.restaurant_rounded, tr('suggest_3')));
+      ctx.add(_Sug(Icons.spa_rounded, tr('s_evening_relax')));
+    }
+    if (weekend && h < 23 && h >= 5 && !ctx.any((e) => e.text == tr('s_weekend'))) ctx.add(_Sug(Icons.hiking_rounded, tr('s_weekend')));
+    if (city != null && city.isNotEmpty) {
+      ctx.add(_Sug(Icons.place_rounded, tr('s_place', {'city': city})));
+      ctx.add(_Sug(Icons.wb_cloudy_rounded, tr('s_weather', {'city': city})));
+      ctx.add(_Sug(Icons.image_rounded, tr('s_image', {'city': city})));
+    }
+    if (topic != null) ctx.add(_Sug(Icons.history_rounded, tr('s_topic', {'topic': topic})));
+    if (webSearchNotifier.value) ctx.add(_Sug(Icons.newspaper_rounded, tr('s_news')));
+    if (hasMemory) ctx.add(_Sug(Icons.psychology_rounded, tr('s_memory')));
+
+    // Always-available ideas, rotated every day so the screen does not look the same.
+    const generic = [
+      (Icons.science_rounded, 'suggest_1'),
+      (Icons.mail_rounded, 'suggest_2'),
+      (Icons.restaurant_rounded, 'suggest_3'),
+      (Icons.code_rounded, 'suggest_4'),
+    ];
+    final out = <_Sug>[];
+    void add(_Sug g) {
+      if (out.length < 4 && !out.any((e) => e.text == g.text)) out.add(g);
+    }
+
+    // At most 3 contextual ones (varied per day), the rest from the generic pool.
+    final shuffled = [...ctx];
+    if (shuffled.length > 3) {
+      final first = shuffled.removeAt(0);
+      final rest = [...shuffled]..sort((a, b) => ((a.text.hashCode ^ seed) % 97).compareTo((b.text.hashCode ^ seed) % 97));
+      shuffled
+        ..clear()
+        ..add(first)
+        ..addAll(rest);
+    }
+    for (final g in shuffled.take(3)) {
+      add(g);
+    }
+    for (var i = 0; i < generic.length; i++) {
+      final g = generic[(i + seed) % generic.length];
+      add(_Sug(g.$1, tr(g.$2)));
+    }
+    return out;
+  }
+
+  String _greeting() {
+    final h = DateTime.now().hour;
+    final key = (h >= 23 || h < 5) ? 'greet_night' : (h < 12 ? 'greet_morning' : (h < 18 ? 'greet_afternoon' : 'greet_evening'));
+    return tr(key);
+  }
+
+  Widget _pill(BuildContext context, IconData icon, String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(9, 5, 12, 5),
+      decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 15, color: scheme.primary),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
+        ),
+      ]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -644,50 +746,112 @@ class _EmptyChat extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final canChat = ChatService.instance.canChat;
     final name = displayNameNotifier.value.trim();
+    final sugs = canChat ? _suggestions() : const <_Sug>[];
+    final model = ChatService.instance.currentModel;
+    final mem = memoryEnabledNotifier.value ? MemoryStore.instance.items.length : 0;
+    final loc = locationEnabledNotifier.value ? LocationService.instance.label : null;
+    final tints = [
+      (scheme.primaryContainer, scheme.onPrimaryContainer),
+      (scheme.secondaryContainer, scheme.onSecondaryContainer),
+      (scheme.tertiaryContainer, scheme.onTertiaryContainer),
+    ];
 
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
+          constraints: const BoxConstraints(maxWidth: 580),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             FadeSlideIn(
               child: M3CookieBadge(
-                size: 88,
+                size: 72,
                 color: scheme.primary,
-                child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 44, color: scheme.onPrimary),
+                child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 36, color: scheme.onPrimary),
               ),
             ),
-            const SizedBox(height: 20),
-            Text(
-              canChat
-                  ? (name.isEmpty ? tr('empty_title') : tr('empty_title_name', {'name': name}))
-                  : tr('no_model_title'),
-              textAlign: TextAlign.center,
-              style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            const SizedBox(height: 22),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 60),
+              child: canChat
+                  ? Text.rich(
+                      TextSpan(children: [
+                        TextSpan(text: _greeting()),
+                        if (name.isNotEmpty) TextSpan(text: ', $name', style: TextStyle(color: scheme.primary)),
+                      ]),
+                      style: text.displaySmall?.copyWith(fontWeight: FontWeight.w800, height: 1.1, fontSize: 38),
+                    )
+                  : Text(tr('no_model_title'), style: text.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
             ),
             const SizedBox(height: 8),
-            Text(
-              canChat ? tr('empty_sub') : tr('no_model_sub'),
-              textAlign: TextAlign.center,
-              style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            FadeSlideIn(
+              delay: const Duration(milliseconds: 110),
+              child: Text(
+                canChat ? tr('empty_title') : tr('no_model_sub'),
+                style: text.titleMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500),
+              ),
             ),
-            const SizedBox(height: 24),
-            if (!canChat)
-              M3LabelButton(
-                kind: M3ButtonKind.filled,
-                icon: Icons.download_rounded,
-                label: tr('get_model'),
-                onTap: onOpenModels,
-              )
-            else
-              Wrap(spacing: 10, runSpacing: 10, alignment: WrapAlignment.center, children: [
-                for (final (i, k) in const ['suggest_1', 'suggest_2', 'suggest_3', 'suggest_4'].indexed)
-                  FadeSlideIn(
-                    delay: Duration(milliseconds: 150 + i * 70),
-                    child: ActionChip(label: Text(tr(k)), onPressed: () => onSuggest(tr(k))),
-                  ),
-              ]),
+            if (canChat) ...[
+              const SizedBox(height: 14),
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 150),
+                child: Wrap(spacing: 8, runSpacing: 8, children: [
+                  _pill(context, Icons.lock_rounded, tr('home_hint_local')),
+                  if (model != null) _pill(context, Icons.memory_rounded, model.fileName.replaceAll('.gguf', '')),
+                  if (webSearchNotifier.value) _pill(context, Icons.public_rounded, tr('pill_web')),
+                  if (loc != null && loc.isNotEmpty) _pill(context, Icons.place_rounded, loc),
+                  if (mem > 0) _pill(context, Icons.psychology_rounded, mem == 1 ? tr('pill_memory_one') : tr('pill_memories', {'n': '$mem'})),
+                ]),
+              ),
+              const SizedBox(height: 26),
+              FadeSlideIn(
+                delay: const Duration(milliseconds: 200),
+                child: Text(tr('home_suggestions').toUpperCase(),
+                    style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+              ),
+              const SizedBox(height: 10),
+              LayoutBuilder(builder: (context, c) {
+                final cols = c.maxWidth >= 420 ? 2 : 1;
+                final w = (c.maxWidth - (cols - 1) * 10) / cols;
+                return Wrap(spacing: 10, runSpacing: 10, children: [
+                  for (final (i, sg) in sugs.indexed)
+                    SizedBox(
+                      width: w,
+                      child: FadeSlideIn(
+                        delay: Duration(milliseconds: 240 + i * 70),
+                        child: Material(
+                          color: scheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(26),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            onTap: () => onSuggest(sg.text),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(color: tints[i % 3].$1, shape: BoxShape.circle),
+                                  child: Icon(sg.icon, size: 21, color: tints[i % 3].$2),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(sg.text,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600, height: 1.25)),
+                                ),
+                              ]),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ]);
+              }),
+            ] else ...[
+              const SizedBox(height: 22),
+              M3LabelButton(kind: M3ButtonKind.filled, icon: Icons.download_rounded, label: tr('get_model'), onTap: onOpenModels),
+            ],
           ]),
         ),
       ),
