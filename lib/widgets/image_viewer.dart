@@ -221,8 +221,8 @@ class _PcImageViewerState extends State<PcImageViewer> with SingleTickerProvider
     final end = zoomed
         ? Matrix4.identity()
         : (Matrix4.identity()
-          ..translate(-_tap.dx * (s - 1), -_tap.dy * (s - 1))
-          ..scale(s));
+          ..translateByDouble(-_tap.dx * (s - 1), -_tap.dy * (s - 1), 0.0, 1.0)
+          ..scaleByDouble(s, s, 1.0, 1.0));
     _a = Matrix4Tween(begin: _tc.value, end: end)
         .animate(CurvedAnimation(parent: _anim, curve: M3Motion.emphasizedDecelerate));
     _anim.forward(from: 0);
