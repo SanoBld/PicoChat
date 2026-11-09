@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- Chat bubble with three cut-out dots (single colour, tintable) -->
-  <path fill-rule="evenodd" d="M372 252h280c80 0 150 64 150 150v124c0 86-70 150-150 150H470l-170 124V640c-48-26-78-76-78-132V402c0-86 70-150 150-150zM382 418a46 46 0 1 0 .001 0zM512 418a46 46 0 1 0 .001 0zM642 418a46 46 0 1 0 .001 0z"/>
+  <!-- Friendly face: two eyes and a smile (single colour, tintable) -->
+  <rect x="300" y="232" width="96" height="250" rx="48"/>
+  <rect x="628" y="232" width="96" height="250" rx="48"/>
+  <path d="M236 600Q512 860 788 600" fill="none" stroke="#000" stroke-width="96" stroke-linecap="round"/>
 </svg>

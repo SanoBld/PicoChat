@@ -20,6 +20,7 @@ import '../services/prefs.dart';
 import '../services/voice_input.dart';
 import '../supported_locales.dart';
 import '../widgets/pc_motion.dart';
+import '../widgets/skeleton.dart' show M3Spinner;
 
 const _channel = MethodChannel('picochat/assist_overlay');
 
@@ -247,7 +248,7 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
       const SizedBox(height: 10),
       if (_answer.isEmpty)
         Row(children: [
-          const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5)),
+          const SizedBox(width: 18, height: 18, child: M3Spinner()),
           const SizedBox(width: 12),
           Text(tr('assist_thinking'), style: text.bodyLarge),
         ])

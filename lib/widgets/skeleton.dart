@@ -276,6 +276,59 @@ class _LoaderPainter extends CustomPainter {
 }
 
 
+// ── Morphing blob (the loader's moving shape, with a child on top) ─────────
+// Same shape cycle as [M3LoadingIndicator] but filled, with any widget in the
+// middle. Used by the assistant avatar while it works.
+class M3MorphBlob extends StatefulWidget {
+  const M3MorphBlob({super.key, required this.size, required this.color, this.child});
+  final double size;
+  final Color color;
+  final Widget? child;
+
+  @override
+  State<M3MorphBlob> createState() => _M3MorphBlobState();
+}
+
+class _M3MorphBlobState extends State<M3MorphBlob> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 3600));
+  bool _started = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (M3Motion.reduced(context)) {
+      _c.stop();
+      _started = false;
+    } else if (!_started) {
+      _c.repeat();
+      _started = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: Stack(alignment: Alignment.center, children: [
+          RepaintBoundary(
+            child: CustomPaint(
+              size: Size.square(widget.size),
+              painter: _LoaderPainter(progress: _c, container: null, shape: widget.color),
+            ),
+          ),
+          if (widget.child != null) widget.child!,
+        ]),
+      );
+}
+
+
 // ── Small loader that fits its parent ──────────────────────────────────────
 // Drop-in for CircularProgressIndicator: takes the size of the SizedBox
 // around it (32 when there is none).

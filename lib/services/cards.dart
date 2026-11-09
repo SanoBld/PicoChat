@@ -14,7 +14,8 @@ class CardResult {
   final String summary; // given to the AI as context
   final String step; // l10n key of the timeline step
   final String detail;
-  const CardResult(this.card, this.summary, this.step, this.detail);
+  final bool only; // true: the card is the whole answer, the AI writes nothing
+  const CardResult(this.card, this.summary, this.step, this.detail, {this.only = false});
 }
 
 class CardService {
@@ -37,21 +38,125 @@ class CardService {
   }
 
   // ── Calculator ─────────────────────────────────────────────────────────
-  static CardResult? _calc(String q) {
+  // Finds a calculation anywhere in the message ("ok et fais-moi 456+45"),
+  // not only when the whole message is the calculation.
+
+  // One calculation: numbers, + - * / ^ and parentheses.
+  static final _exprRe = RegExp(r'\(*-?\d+(?:\.\d+)?(?:\s*[-+*/^]\s*\(*\s*-?\d+(?:\.\d+)?\s*\)*)+');
+  static final _intentRe = RegExp(
+      r"calcul|combien|r[ée]sultat|compute|calculate|how much|what is|what's|wie viel|berechne|cu[áa]nto|\bfais\b|\bfait\b|\bdonne|=|\?");
+  // Words that do not count as "another topic" around a calculation.
+  static const _filler = {
+    'ok', 'et', 'alors', 'puis', 'calcul', 'calcule', 'calculer', 'calculez', 'combien', 'font', 'fait', 'fais', 'faire',
+    'moi', 'me', 'donne', 'dis', 'resultat', 'résultat', 'reponse', 'réponse', 'est', 'vaut', 'egal', 'égal', 'egale',
+    'égale', 'equals', 'is', 'what', 'whats', 'how', 'much', 'compute', 'calculate', 'wie', 'viel', 'ist', 'berechne',
+    'cuánto', 'cuanto', 'es', 'calcula', 'peux', 'tu', 'pouvez', 'vous', 'please', 'svp', 'stp', 'merci', 'le', 'la',
+    'les', 'de', 'du', 'des', 'un', 'une', 'quel', 'quelle', 'il', 'te', 'plait', 'plaît', 'the', 'of', 'can', 'you',
+    'encore', 'aussi', 'juste', 'voir',
+  };
+
+  /// Lower case, symbols and words turned into plain operators ("12 x 5", "3 fois 4", "2,5 + 1").
+  static String _normalize(String q) {
     var s = q.toLowerCase();
-    s = s.replaceAll(RegExp(r"calcule|calcul|combien (?:font|fait|vaut)|what is|what's|how much is|wie viel ist|cu[áa]nto es|[=?]"), ' ');
-    s = s.replaceAll('×', '*').replaceAll('÷', '/').replaceAll(',', '.');
-    s = s.replaceAllMapped(RegExp(r'(\d)\s*x\s*(\d)'), (m) => '${m.group(1)}*${m.group(2)}');
-    s = s.trim();
-    if (s.isEmpty || s.length > 80 || !RegExp(r'^[\d\s+\-*/().^]+$').hasMatch(s) || !RegExp(r'\d\s*[+\-*/^]\s*\(?-?\d').hasMatch(s)) {
+    s = s.replaceAll('×', '*').replaceAll('÷', '/').replaceAll('−', '-').replaceAll('–', '-');
+    s = s.replaceAllMapped(RegExp(r'(\d),(\d)'), (m) => '${m.group(1)}.${m.group(2)}');
+    s = s.replaceAllMapped(RegExp(r'(\d)\s*x\s*(?=[\d(])'), (m) => '${m.group(1)}*');
+    s = s.replaceAllMapped(
+        RegExp(r'(\d)\s*(plus|moins|fois|times|minus|divis[ée] par|divided by|multipli[ée] par)\s*(?=[\d(])'), (m) {
+      final w = m.group(2)!;
+      final op = w == 'plus' ? '+' : (w == 'moins' || w == 'minus') ? '-' : (w.startsWith('divis') || w.startsWith('divided')) ? '/' : '*';
+      return '${m.group(1)}$op';
+    });
+    return s;
+  }
+
+  /// "1 + 2" as the card shows it: spaced operators, × ÷ − signs.
+  static String _pretty(String expr) => expr
+      .replaceAllMapped(RegExp(r'(?<=[\d)])\s*([-+*/^])\s*'), (m) {
+        final o = m.group(1)!;
+        return ' ${o == '*' ? '×' : o == '/' ? '÷' : o == '-' ? '−' : o} ';
+      })
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
+
+  /// Computes one expression (already normalized). Null if it is not a calculation.
+  static Map<String, dynamic>? _evalExpr(String expr) {
+    final clean = expr.replaceAll(RegExp(r'\s+'), '');
+    if (clean.isEmpty ||
+        clean.length > 80 ||
+        !RegExp(r'^[\d+\-*/().^]+$').hasMatch(clean) ||
+        !RegExp(r'\d[+\-*/^]\(*-?\d').hasMatch(clean)) {
       return null;
     }
-    final p = _P(s.replaceAll(RegExp(r'\s+'), ''));
-    final v = p.expr();
-    if (!p.done || v.isNaN || v.isInfinite) return null;
-    final res = _fmt(v);
-    final pretty = s.replaceAll('*', ' × ').replaceAll('/', ' ÷ ').replaceAll('+', ' + ').replaceAll(RegExp(r'\s+'), ' ').trim();
-    return CardResult({'type': 'calc', 'expr': pretty, 'result': res}, 'Exact result computed by the app: $pretty = $res. State this result; do not recompute.', 'step_calc', '$pretty = $res');
+    try {
+      final p = _P(clean);
+      final v = p.expr();
+      if (!p.done || v.isNaN || v.isInfinite) return null;
+      return {'type': 'calc', 'expr': _pretty(expr.trim()), 'result': _fmt(v)};
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static CardResult? _calc(String q) {
+    final s = _normalize(q);
+    // The longest calculation of the message.
+    RegExpMatch? best;
+    for (final m in _exprRe.allMatches(s)) {
+      if (best == null || m.end - m.start > best.end - best.start) best = m;
+    }
+    if (best == null) return null;
+    // Not the end of a longer number ("1 000 + 5") or of a word.
+    if (RegExp(r'(\d\s*|[.,]|\p{L})$', unicode: true).hasMatch(s.substring(0, best.start))) return null;
+    final expr = best.group(0)!;
+    final card = _evalExpr(expr);
+    if (card == null) return null;
+
+    final rest = s.replaceRange(best.start, best.end, ' ');
+    final leftover = rest
+        .split(RegExp(r'[^\p{L}\p{N}]+', unicode: true))
+        .where((w) => w.length >= 2 && !_filler.contains(w))
+        .length;
+    final intent = _intentRe.hasMatch(s);
+    final compact = expr.replaceAll(RegExp(r'\s+'), '');
+    final dateLike = RegExp(r'^\d{1,4}[-/]\d{1,2}[-/]\d{1,4}$|^\d{4}[-/]\d{1,2}$|^\d{1,2}[-/]\d{4}$').hasMatch(compact);
+    final minusOnly = !RegExp(r'[+*/^]').hasMatch(compact) && !expr.contains(' ');
+    if (dateLike && !intent) return null; // 2024-11-09, 12/05
+    if (leftover > 0 && !intent && (leftover > 2 || minusOnly)) return null; // a sentence about something else
+
+    final pretty = card['expr'] as String;
+    final res = card['result'] as String;
+    final only = leftover <= 1;
+    final summary = only
+        ? 'Exact result computed by the app: $pretty = $res. State this result; do not recompute.'
+        : 'Exact result computed by the app: $pretty = $res. A calculator card with this result is already shown above '
+            'your answer: do not repeat or recompute it, answer only the rest of the request.';
+    return CardResult(card, summary, 'step_calc', '$pretty = $res', only: only);
+  }
+
+  // The AI can ask for the card itself with [[calc: 456+45]].
+  static final _calcTag = RegExp(r'\[\[calc:\s*([^\]]*?)\s*\]\]', caseSensitive: false);
+
+  /// Calculator cards asked by the AI in its answer (at most 3, no duplicates).
+  static List<Map<String, dynamic>> calcTags(String raw) {
+    final out = <Map<String, dynamic>>[];
+    for (final m in _calcTag.allMatches(raw)) {
+      final c = _evalExpr(_normalize(m.group(1) ?? ''));
+      if (c != null && !out.any((o) => o['expr'] == c['expr'])) out.add(c);
+      if (out.length == 3) break;
+    }
+    return out;
+  }
+
+  /// Removes the calc tags from the text shown, also while one is still being written.
+  static String hideCalcTags(String s) {
+    var out = s.replaceAll(_calcTag, '');
+    final open = out.lastIndexOf('[[');
+    if (open != -1) {
+      final tail = out.substring(open).toLowerCase();
+      if (!tail.contains(']]') && ('[[calc:'.startsWith(tail) || tail.startsWith('[[calc:'))) out = out.substring(0, open);
+    }
+    return out.trimRight();
   }
 
   static String _fmt(double v) {

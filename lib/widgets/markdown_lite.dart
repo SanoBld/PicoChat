@@ -11,6 +11,7 @@ import '../l10n/l10n.dart';
 import '../services/image_lookup.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'pc_motion.dart';
+import 'skeleton.dart' show M3Spinner;
 
 class MarkdownLite extends StatelessWidget {
   final String text;
@@ -442,7 +443,7 @@ class _MarkdownImageState extends State<_MarkdownImage> {
                   height: 230,
                   width: double.infinity,
                   child: Stack(fit: StackFit.expand, children: [
-                    box(SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: sc.primary))),
+                    box(SizedBox(width: 26, height: 26, child: M3Spinner(color: sc.primary))),
                     Image.network(
                       widget.url,
                       fit: BoxFit.cover,
@@ -497,7 +498,7 @@ class _WikiImageState extends State<_WikiImage> {
                 height: 230,
                 decoration: BoxDecoration(color: sc.surfaceContainerHigh, borderRadius: BorderRadius.circular(22)),
                 alignment: Alignment.center,
-                child: SizedBox(width: 26, height: 26, child: CircularProgressIndicator(strokeWidth: 2.5, color: sc.primary)),
+                child: SizedBox(width: 26, height: 26, child: M3Spinner(color: sc.primary)),
               ),
             ),
           );

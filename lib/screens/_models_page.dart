@@ -380,11 +380,11 @@ class _DiscoverTabState extends State<_DiscoverTab> with AutomaticKeepAliveClien
           child: Center(child: Text(tr('no_results'), style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant))),
         )
       else ...[
-        // Thin wavy bar under the list while a new search is running.
+        // Loader above the list while a new search is running.
         if (_loading)
           const Padding(
-            padding: EdgeInsets.fromLTRB(32, 0, 32, 10),
-            child: M3WavyProgress(indeterminate: true, height: 10),
+            padding: EdgeInsets.only(bottom: 10),
+            child: Center(child: M3LoadingIndicator(size: 36)),
           ),
         for (final (i, r) in _results!.indexed)
           Padding(

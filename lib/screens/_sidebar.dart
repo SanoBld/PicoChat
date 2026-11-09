@@ -91,7 +91,7 @@ class _SidebarState extends State<_Sidebar> {
           M3CookieBadge(
             size: 40,
             color: scheme.primary,
-            child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 22, color: scheme.onPrimary),
+            child: BrandIcon('assets/icons/app_logo.svg', Icons.sentiment_satisfied_rounded, size: 22, color: scheme.onPrimary),
           ),
           const SizedBox(width: 12),
           Text('PicoChat', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),

@@ -258,7 +258,7 @@ class _WelcomeStep extends StatelessWidget {
     return ListenableBuilder(
       listenable: localeNotifier,
       builder: (_, _) => _Step(
-        badge: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 30, color: scheme.onPrimary),
+        badge: BrandIcon('assets/icons/app_logo.svg', Icons.sentiment_satisfied_rounded, size: 30, color: scheme.onPrimary),
         title: tr('intro1_t'),
         subtitle: tr('intro1_s'),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

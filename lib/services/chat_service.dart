@@ -204,9 +204,20 @@ class ChatService extends ChangeNotifier {
         history.lastWhere((m) => m.role == ChatRole.assistant, orElse: () => ChatMessage(role: ChatRole.assistant, text: '')).text;
     final wantsFile = FileOutput.requested(lastUser, prevHadFile: prevAssistant.contains('```file:'));
     String shown(String t) {
-      final v = MemoryStore.visible(
-          t.replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '').replaceAll(RegExp(r'<think>[\s\S]*$'), ''));
+      final v = CardService.hideCalcTags(MemoryStore.visible(
+          t.replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '').replaceAll(RegExp(r'<think>[\s\S]*$'), '')));
       return wantsFile ? v : FileOutput.strip(v);
+    }
+    // The AI can ask for a calculator card with [[calc: ...]]: shown as soon as the tag is complete.
+    void calcTags(String raw) {
+      if (!raw.contains('[[calc')) return;
+      var added = false;
+      for (final c in CardService.calcTags(raw)) {
+        if (reply.cards.any((o) => o['type'] == 'calc' && o['expr'] == c['expr'])) continue;
+        reply.cards.add(c);
+        added = true;
+      }
+      if (added) push();
     }
 
     final buffer = StringBuffer();
@@ -269,7 +280,7 @@ class ChatService extends ChangeNotifier {
       }
 
       // A single calculation is answered by the built-in calculator only.
-      if (card != null && card.card['type'] == 'calc' && files.isEmpty) {
+      if (card != null && card.card['type'] == 'calc' && card.only && files.isEmpty) {
         reply.text = '';
         return;
       }
@@ -405,6 +416,7 @@ class ChatService extends ChangeNotifier {
           pieces++;
           firstMs ??= sw.elapsedMilliseconds;
           buffer.write(piece);
+          calcTags(buffer.toString());
           if (searchNow && !asked && SelfSearch.hasTag(buffer.toString())) {
             asked = true;
             engine.stop(); // the rest is not needed: the tag is the whole answer
@@ -459,6 +471,7 @@ class ChatService extends ChangeNotifier {
       }
       // The AI controls the map with hidden tags (markers, routes).
       final raw = buffer.toString();
+      calcTags(raw);
       if (MapService.hasTags(raw) && await _netOk('maptags', tr('net_what_map'))) {
         await MapService.applyTags(reply, raw);
       }
@@ -477,7 +490,15 @@ class ChatService extends ChangeNotifier {
       debugPrint('Generation failed: $e');
       reply.text = shown(buffer.toString());
       reply.failed = true;
-      if (cloud != null) reply.error = cloudErrorText(e); // wrong key, no credit, network…
+      if (cloud != null) {
+        // wrong key, no credit, network…: the card shows a translated title and sentence, the raw message on demand
+        reply.errorKind = cloudErrorKind(e).name;
+        reply.error = cloudErrorDetail(e);
+      } else {
+        reply.errorKind = 'local';
+        final d = '$e'.trim();
+        reply.error = d.length > 400 ? '${d.substring(0, 400)}…' : d;
+      }
     } finally {
       for (final s in reply.steps) {
         s['state'] = 'done';

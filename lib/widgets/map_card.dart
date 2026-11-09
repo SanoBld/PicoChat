@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 import '../l10n/l10n.dart';
 import '../services/map_service.dart';
 import 'pc_motion.dart';
+import 'skeleton.dart' show M3Spinner;
 
 class MapCard extends StatefulWidget {
   final Map<String, dynamic> d;
@@ -221,7 +222,7 @@ class _MapCardState extends State<MapCard> {
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
           child: Wrap(spacing: 6, runSpacing: 0, crossAxisAlignment: WrapCrossAlignment.center, children: [
             if (_busy)
-              const Padding(padding: EdgeInsets.all(10), child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5)))
+              const Padding(padding: EdgeInsets.all(10), child: SizedBox(width: 18, height: 18, child: M3Spinner()))
             else ...[
               IconButton(tooltip: tr('map_car'), icon: const Icon(Icons.directions_car_rounded), onPressed: () => _route('car')),
               IconButton(tooltip: tr('map_foot'), icon: const Icon(Icons.directions_walk_rounded), onPressed: () => _route('foot')),

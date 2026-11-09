@@ -37,7 +37,7 @@ class _AboutPageState extends State<_AboutPage> {
             child: M3CookieBadge(
               size: 96,
               color: scheme.primary,
-              child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 48, color: scheme.onPrimary),
+              child: BrandIcon('assets/icons/app_logo.svg', Icons.sentiment_satisfied_rounded, size: 48, color: scheme.onPrimary),
             ),
           ),
           const SizedBox(height: 16),

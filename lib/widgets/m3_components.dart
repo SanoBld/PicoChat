@@ -991,16 +991,10 @@ class _M3WavyProgressState extends State<M3WavyProgress>
     final color = widget.color ?? s.primary;
     final track = widget.trackColor ?? s.primary.withValues(alpha: 0.22);
     if (widget.indeterminate) {
-      return AnimatedBuilder(
-        animation: _c,
-        builder: (_, _) {
-          // Smooth back-and-forth between 18 % and 90 % of the bar.
-          final v = 0.18 + 0.72 * (1 - math.cos(_c.value * 2 * math.pi)) / 2;
-          return CustomPaint(
-            size: Size(double.infinity, widget.height),
-            painter: _WavyPainter(v, _c.value, color, track, widget.stroke),
-          );
-        },
+      // No more wavy line while the time is unknown: the app's morphing loader.
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: M3LoadingIndicator(size: (widget.height * 2.4).clamp(24.0, 44.0).toDouble()),
       );
     }
     return TweenAnimationBuilder<double>(

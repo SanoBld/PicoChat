@@ -228,6 +228,12 @@ class CloudApi {
   }
 }
 
+/// Kind of an error of the cloud engine (for the error card).
+CloudErrorKind cloudErrorKind(Object e) => (e is CloudException ? e : _network(e)).kind;
+
+/// Raw detail of an error of the cloud engine (shown under "Details").
+String cloudErrorDetail(Object e) => (e is CloudException ? e : _network(e)).detail.trim();
+
 /// Readable, translated message for an error of the cloud engine.
 String cloudErrorText(Object e) {
   final c = e is CloudException ? e : _network(e);

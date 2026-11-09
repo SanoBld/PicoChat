@@ -8,6 +8,7 @@ import '../l10n/l10n.dart';
 import 'm3_components.dart' show M3CookieBadge;
 import 'map_card.dart';
 import 'pc_motion.dart';
+import 'skeleton.dart' show M3Spinner;
 
 class InfoCard extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -365,7 +366,7 @@ class _StepsTimelineState extends State<StepsTimeline> {
               padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
               child: Row(children: [
                 widget.running
-                    ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2.5, color: s.primary))
+                    ? SizedBox(width: 18, height: 18, child: M3Spinner(color: s.primary))
                     : Icon(Icons.auto_awesome_rounded, size: 18, color: s.primary),
                 const SizedBox(width: 10),
                 Expanded(

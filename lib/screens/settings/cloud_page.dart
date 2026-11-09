@@ -16,6 +16,7 @@ import '../../theme/m3_shapes.dart';
 import '../../widgets/m3_components.dart';
 import 'settings_helpers.dart';
 import 'settings_rows.dart';
+import '../../widgets/skeleton.dart' show M3Spinner;
 
 IconData cloudProviderIcon(CloudProvider p) => switch (p) {
       CloudProvider.anthropic => Icons.auto_awesome_rounded,
@@ -395,7 +396,7 @@ class _CloudAccountPageState extends State<CloudAccountPage> {
               icon: Icons.cloud_sync_rounded,
               title: tr('cloud_fetch'),
               subtitle: _busy ? tr('cloud_fetching') : tr('cloud_fetch_sub'),
-              trailing: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : null,
+              trailing: _busy ? const SizedBox(width: 20, height: 20, child: M3Spinner()) : null,
               onTap: _busy ? null : _fetch,
             ),
             SettingTextRow(

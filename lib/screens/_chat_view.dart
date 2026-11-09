@@ -475,6 +475,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                             waiting: busy && isLast && m.role == ChatRole.assistant && m.text.isEmpty,
                             generating: busy && isLast && m.role == ChatRole.assistant,
                             loadingModel: service.isLoadingModel,
+                            canRetry: isLast && !busy && m.role == ChatRole.assistant && m.failed,
                             onRegenerate: () => service.regenerate(widget.chat),
                           ),
                         ),
@@ -868,13 +869,7 @@ class _EmptyChat extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 580),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            FadeSlideIn(
-              child: M3CookieBadge(
-                size: 72,
-                color: scheme.primary,
-                child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 36, color: scheme.onPrimary),
-              ),
-            ),
+            const FadeSlideIn(child: PicoAvatar(size: 72)),
             const SizedBox(height: 22),
             FadeSlideIn(
               delay: const Duration(milliseconds: 60),
@@ -977,6 +972,7 @@ class _MessageView extends StatelessWidget {
   final bool waiting;
   final bool generating;
   final bool loadingModel;
+  final bool canRetry; // failed answer that is the last message: show the Retry button
   final VoidCallback onRegenerate;
 
   const _MessageView({
@@ -985,6 +981,7 @@ class _MessageView extends StatelessWidget {
     required this.waiting,
     required this.generating,
     required this.loadingModel,
+    required this.canRetry,
     required this.onRegenerate,
   });
 
@@ -1027,35 +1024,25 @@ class _MessageView extends StatelessWidget {
     return _HoverScope(builder: (context, hover) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        PulseScale(
-          active: generating,
-          child: M3CookieBadge(
-            size: 34,
-            color: scheme.primary,
-            child: BrandIcon('assets/icons/app_logo.svg', Icons.chat_bubble_rounded, size: 18, color: scheme.onPrimary),
-          ),
-        ),
+        // The bubble changes shape while the AI works; press and hold = it spins.
+        PicoAvatar(size: 34, active: generating),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (message.steps.isNotEmpty && showStepsNotifier.value) StepsTimeline(steps: message.steps, running: generating),
             for (final cd in message.cards) InfoCard(data: cd),
             if (waiting)
-              // Loading model / searching web / first words not here yet: full-width wavy line.
+              // Loading model / searching web / first words not here yet: the bubble morphs, this label says why.
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const SizedBox(width: double.infinity, child: M3WavyProgress(value: 1, height: 14)),
-                  const SizedBox(height: 8),
-                  Text(
-                    loadingModel
-                        ? tr('loading_model')
-                        : ChatService.instance.isSearching
-                            ? tr('searching_web')
-                            : tr('thinking'),
-                    style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                  ),
-                ]),
+                child: ShimmerText(
+                  loadingModel
+                      ? tr('loading_model')
+                      : ChatService.instance.isSearching
+                          ? tr('searching_web')
+                          : tr('thinking'),
+                  style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                ),
               )
             else if (message.text.isNotEmpty)
               // The text grows smoothly line by line, its tail fades in while it is written.
@@ -1095,10 +1082,12 @@ class _MessageView extends StatelessWidget {
                 child: Text(tr('stopped'), style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
               ),
             if (message.failed)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(message.error.isNotEmpty ? message.error : tr('gen_failed'),
-                    style: text.bodySmall?.copyWith(color: scheme.error)),
+              FadeSlideIn(
+                child: ErrorCard(
+                  kind: message.errorKind,
+                  detail: message.error,
+                  onRetry: canRetry ? onRegenerate : null,
+                ),
               ),
             if (message.memories.isNotEmpty)
               Padding(

@@ -1,7 +1,7 @@
 // lib/widgets/pc_motion.dart
 // Small animation widgets shared by the chat and the model store:
 // entrance fade/slide, "thinking" dots, shimmering label, breathing avatar
-// and the wavy loading bar (indeterminate).
+// and the loader (shape that morphs) for unknown waiting times.
 
 import 'dart:math' as math;
 
@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/m3_motion.dart';
 import 'm3_components.dart';
+import 'skeleton.dart' show M3LoadingIndicator;
 
 /// Capped stagger delay for lists: item 40 does not wait 1.4 s to appear.
 Duration staggerDelay(int index, {int stepMs = 35}) =>
@@ -67,7 +68,7 @@ class _FadeSlideInState extends State<FadeSlideIn> with SingleTickerProviderStat
       );
 }
 
-// ── Wavy loading bar with an optional label ─────────────────────────────────
+// ── Loader (shape that morphs) with an optional label ─────────────────────────────────
 class WavyLoader extends StatelessWidget {
   const WavyLoader({super.key, this.width = 200, this.label});
   final double width;
@@ -80,7 +81,7 @@ class WavyLoader extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(width: width, child: const M3WavyProgress(indeterminate: true, height: 14)),
+          const M3LoadingIndicator(size: 56),
           if (label != null) ...[
             const SizedBox(height: 14),
             Text(label!, style: TextStyle(color: scheme.onSurfaceVariant)),
