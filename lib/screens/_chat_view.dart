@@ -322,7 +322,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     final service = ChatService.instance;
     final active = ModelManager.instance.active;
     final cloud = service.currentCloud;
-    final cloudModels = cloudEnabledNotifier.value ? CloudStore.instance.models : const <CloudModel>[];
+    final cloudModels = cloudEnabledNotifier.value ? CloudStore.instance.chatModels : const <CloudModel>[];
     final busy = service.isGeneratingIn(widget.chat);
     final messages = widget.chat.messages;
 
@@ -1032,11 +1032,11 @@ class _MessageView extends StatelessWidget {
               switchOutCurve: Curves.easeIn,
               transitionBuilder: (c, a) => FadeTransition(
                 opacity: a,
-                child: SizeTransition(sizeFactor: a, axisAlignment: -1, child: c),
+                child: SizeTransition(sizeFactor: a, alignment: Alignment.topCenter, child: c),
               ),
               layoutBuilder: (cur, prev) => Stack(
                 alignment: Alignment.topLeft,
-                children: [...prev, if (cur != null) cur],
+                children: [...prev, ?cur],
               ),
               child: waiting
                   // Loading model / searching web / first words not here yet: the bubble morphs, this label says why.

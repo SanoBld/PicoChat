@@ -82,20 +82,26 @@ class CloudModelInfo {
   final int contextTokens;
   final int maxOutput; // 0 = unknown
   final bool vision;
+  final bool image; // can make pictures
+  final bool imageOnly; // only makes pictures: not a chat model
   const CloudModelInfo({
     required this.id,
     String? name,
     this.contextTokens = 128000,
     this.maxOutput = 0,
     this.vision = false,
+    this.image = false,
+    this.imageOnly = false,
   }) : name = name ?? id;
 
-  CloudModelInfo copyWith({bool? vision}) => CloudModelInfo(
+  CloudModelInfo copyWith({bool? vision, bool? image, bool? imageOnly}) => CloudModelInfo(
         id: id,
         name: name,
         contextTokens: contextTokens,
         maxOutput: maxOutput,
         vision: vision ?? this.vision,
+        image: image ?? this.image,
+        imageOnly: imageOnly ?? this.imageOnly,
       );
 
   Map<String, dynamic> toJson() => {
@@ -104,6 +110,7 @@ class CloudModelInfo {
         'ctx': contextTokens,
         'out': maxOutput,
         'vision': vision,
+        if (image) 'img': imageOnly ? 2 : 1,
       };
 
   factory CloudModelInfo.fromJson(Map<String, dynamic> j) => CloudModelInfo(
@@ -112,6 +119,8 @@ class CloudModelInfo {
         contextTokens: (j['ctx'] as num?)?.toInt() ?? 128000,
         maxOutput: (j['out'] as num?)?.toInt() ?? 0,
         vision: j['vision'] == true,
+        image: ((j['img'] as num?)?.toInt() ?? 0) > 0,
+        imageOnly: ((j['img'] as num?)?.toInt() ?? 0) == 2,
       );
 }
 
@@ -498,11 +507,12 @@ String? nextPageToken(CloudProvider provider, Object? json) {
 int _int(Object? v) => v is num ? v.toInt() : 0;
 
 final _openaiChat = RegExp(r'^(gpt-|o\d|chatgpt-)');
+final _openaiImage = RegExp(r'^(gpt-image|dall-e)');
 final _openaiNot = RegExp(
     r'embedding|whisper|tts|dall-e|realtime|audio|transcribe|image|moderation|instruct|codex|davinci|babbage|search|computer-use|sora');
 final _openaiVision = RegExp(r'^(gpt-4o|gpt-4\.1|gpt-4\.5|gpt-4-turbo|gpt-5|o3|o4|chatgpt-4o)');
 final _customVision = RegExp(r'vision|-vl|vl-|llava|gpt-4o|gemma-3|pixtral|multimodal|minicpm-v');
-const _geminiNot = ['tts', 'image', 'imagen', 'veo', 'live', 'native-audio', 'embedding', 'aqa'];
+const _geminiNot = ['tts', 'imagen', 'veo', 'live', 'native-audio', 'embedding', 'aqa'];
 
 /// Chat models of one "list models" answer, most useful first.
 List<CloudModelInfo> parseModelList(CloudProvider provider, Object? json) {
@@ -537,6 +547,7 @@ List<CloudModelInfo> parseModelList(CloudProvider provider, Object? json) {
           contextTokens: _int(m['inputTokenLimit']) > 0 ? _int(m['inputTokenLimit']) : 128000,
           maxOutput: _int(m['outputTokenLimit']),
           vision: id.startsWith('gemini'),
+          image: id.contains('image'), // e.g. gemini-2.5-flash-image: chats and draws
         ));
       }
 
@@ -545,6 +556,10 @@ List<CloudModelInfo> parseModelList(CloudProvider provider, Object? json) {
       for (final m in (json['data'] as List?) ?? const []) {
         if (m is! Map || m['id'] is! String) continue;
         final id = m['id'] as String;
+        if (_openaiImage.hasMatch(id)) {
+          rows.add((_int(m['created']), CloudModelInfo(id: id, image: true, imageOnly: true)));
+          continue;
+        }
         if (!_openaiChat.hasMatch(id) || _openaiNot.hasMatch(id)) continue;
         rows.add((_int(m['created']), CloudModelInfo(id: id, vision: _openaiVision.hasMatch(id))));
       }
@@ -560,11 +575,13 @@ List<CloudModelInfo> parseModelList(CloudProvider provider, Object? json) {
             .firstWhere((v) => v > 0, orElse: () => 32000);
         final arch = m['architecture'];
         final mods = arch is Map && arch['input_modalities'] is List ? arch['input_modalities'] as List : const [];
+        final isImg = mods.contains('image_output') || RegExp(r'sd|flux|dall-e|imagen|image-gen').hasMatch(id.toLowerCase());
         out.add(CloudModelInfo(
           id: id,
           name: (m['name'] as String?) ?? id,
           contextTokens: ctx,
           vision: mods.contains('image') || _customVision.hasMatch(id.toLowerCase()),
+          image: isImg,
         ));
       }
   }
@@ -585,4 +602,91 @@ int outputBudget(CloudProvider provider, String modelId, int wanted, int modelMa
   }
   if (modelMax > 0 && n > modelMax) n = modelMax;
   return n < 1 ? 1 : n;
+}
+
+// ── Picture generation ───────────────────────────────────────────────────────
+
+/// A picture made by a cloud model: base64 data, or a link to download.
+class GeneratedPicture {
+  final String mime;
+  final String? base64;
+  final String? url;
+  const GeneratedPicture(this.mime, {this.base64, this.url});
+}
+
+/// Request that makes one picture. Claude has no picture model.
+CloudRequest buildImageRequest({
+  required CloudProvider provider,
+  required String baseUrl,
+  required String apiKey,
+  required String modelId,
+  required String prompt,
+}) {
+  final base = _base(baseUrl, provider);
+  const json = 'application/json';
+  switch (provider) {
+    case CloudProvider.gemini:
+      return CloudRequest(
+        'POST',
+        Uri.parse('$base/models/${_modelPath(modelId)}:generateContent'),
+        {'content-type': json, 'x-goog-api-key': apiKey},
+        jsonEncode({
+          'contents': [
+            {
+              'role': 'user',
+              'parts': [
+                {'text': prompt},
+              ],
+            },
+          ],
+          'generationConfig': {
+            'responseModalities': ['TEXT', 'IMAGE'],
+          },
+        }),
+      );
+    case CloudProvider.openai:
+    case CloudProvider.custom:
+      return CloudRequest(
+        'POST',
+        Uri.parse('$base/images/generations'),
+        {
+          'content-type': json,
+          if (apiKey.isNotEmpty) 'authorization': 'Bearer $apiKey',
+        },
+        jsonEncode({
+          'model': modelId,
+          'prompt': prompt,
+          'n': 1,
+          'size': '1024x1024',
+          if (modelId.startsWith('dall-e')) 'response_format': 'b64_json',
+        }),
+      );
+    case CloudProvider.anthropic:
+      throw const CloudException(CloudErrorKind.badRequest, 'This service cannot make pictures');
+  }
+}
+
+GeneratedPicture? parseImageResponse(CloudProvider provider, Object? json) {
+  if (json is! Map) return null;
+  if (provider == CloudProvider.gemini) {
+    for (final c in (json['candidates'] as List?) ?? const []) {
+      final parts = c is Map && c['content'] is Map ? (c['content'] as Map)['parts'] : null;
+      for (final part in (parts as List?) ?? const []) {
+        if (part is! Map) continue;
+        final inline = part['inlineData'] ?? part['inline_data'];
+        if (inline is Map && inline['data'] is String) {
+          return GeneratedPicture((inline['mimeType'] ?? inline['mime_type'] ?? 'image/png') as String,
+              base64: inline['data'] as String);
+        }
+      }
+    }
+    return null;
+  }
+  final data = json['data'];
+  if (data is List && data.isNotEmpty && data.first is Map) {
+    final d = data.first as Map;
+    if (d['b64_json'] is String) return GeneratedPicture('image/png', base64: d['b64_json'] as String);
+    if (d['url'] is String) return GeneratedPicture('image/png', url: d['url'] as String);
+  }
+  return null;
 }

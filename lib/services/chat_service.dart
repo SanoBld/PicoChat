@@ -4,10 +4,15 @@
 // errors and automatic titles.
 
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io' show Directory, File;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
+import '../supported_locales.dart';
 import '../widgets/net_consent.dart';
 import '../l10n/l10n.dart';
 
@@ -79,6 +84,9 @@ class ChatService extends ChangeNotifier {
 
   Future<void> send(Conversation chat, String text,
       {List<Attachment> files = const [], bool web = false}) async {
+    while (_titling) {
+      await Future<void>.delayed(const Duration(milliseconds: 80));
+    }
     final clean = text.trim();
     if (clean.isEmpty || _generating || !canChat) return;
     final first = chat.messages.isEmpty;
@@ -106,6 +114,7 @@ class ChatService extends ChangeNotifier {
     }
     final command = await AutoCommands.apply(clean);
     await _answer(chat, files: files, web: web, query: clean, remembered: remembered, command: command);
+    if (first && autoTitleNotifier.value) await _aiTitle(chat);
   }
 
   /// Deletes the last assistant answer and writes a new one.
@@ -174,6 +183,7 @@ class ChatService extends ChangeNotifier {
     // Room for files and web results: the model's own window for the cloud.
     final ctxTokens = cloud != null ? math.min(cloud.info.contextTokens, 128000) : contextSizeNotifier.value;
     final maxCtxChars = cloud != null ? 240000 : 60000;
+    final painter = cloud != null ? CloudStore.instance.painterFor(cloud) : null;
     final shareFiles = cloud == null || cloudCtxFilesNotifier.value;
     final webOk = cloud == null || cloudCtxWebNotifier.value;
 
@@ -218,6 +228,22 @@ class ChatService extends ChangeNotifier {
         added = true;
       }
       if (added) push();
+    }
+
+    // The AI can ask for a picture with [[imagine: ...]] (only models whose account makes pictures):
+    // a card with an animation appears at once, the picture replaces it when it is ready.
+    final jobs = <Future<void>>[];
+    void imagineTags(String raw) {
+      if (painter == null || !raw.contains('[[imagine')) return;
+      for (final m in MemoryStore.imagineTag.allMatches(raw)) {
+        final prompt = (m.group(1) ?? '').trim();
+        if (prompt.length < 3 || reply.cards.any((o) => o['type'] == 'genimg' && o['prompt'] == prompt)) continue;
+        if (reply.cards.where((o) => o['type'] == 'genimg').length >= 2) break;
+        final card = <String, dynamic>{'type': 'genimg', 'prompt': prompt, 'state': 'loading'};
+        reply.cards.add(card);
+        push();
+        jobs.add(_paint(card, painter, push));
+      }
     }
 
     final buffer = StringBuffer();
@@ -390,7 +416,8 @@ class ChatService extends ChangeNotifier {
 
       step('step_write');
       GenerationOptions makeOptions(bool searchNow) => GenerationOptions(
-            systemPrompt: CorePrompt.build(fileRequested: wantsFile, canSearch: searchNow, cloudName: cloud?.displayName),
+            systemPrompt: CorePrompt.build(
+                fileRequested: wantsFile, canSearch: searchNow, cloudName: cloud?.displayName, canImage: painter != null),
             temperature: temperatureNotifier.value,
             maxTokens: unl
                 ? math.max(maxTokensNotifier.value, (ctxTokens - 800).clamp(1024, 32768))
@@ -417,6 +444,7 @@ class ChatService extends ChangeNotifier {
           firstMs ??= sw.elapsedMilliseconds;
           buffer.write(piece);
           calcTags(buffer.toString());
+          imagineTags(buffer.toString());
           if (searchNow && !asked && SelfSearch.hasTag(buffer.toString())) {
             asked = true;
             engine.stop(); // the rest is not needed: the tag is the whole answer
@@ -472,6 +500,8 @@ class ChatService extends ChangeNotifier {
       // The AI controls the map with hidden tags (markers, routes).
       final raw = buffer.toString();
       calcTags(raw);
+      imagineTags(raw);
+      if (jobs.isNotEmpty) await Future.wait(jobs);
       if (MapService.hasTags(raw) && await _netOk('maptags', tr('net_what_map'))) {
         await MapService.applyTags(reply, raw);
       }
@@ -530,5 +560,75 @@ class ChatService extends ChangeNotifier {
   String _titleFrom(String text) {
     final line = text.split('\n').first.trim();
     return line.length <= 44 ? line : '${line.substring(0, 44).trimRight()}…';
+  }
+
+  bool _titling = false;
+
+  /// After the first answer, the model itself writes a short title (the first
+  /// words of the question stay as the title if this fails).
+  Future<void> _aiTitle(Conversation chat) async {
+    if (!chat.autoTitle || _titling || chat.messages.length < 2) return;
+    final u = chat.messages.firstWhere((m) => m.role == ChatRole.user, orElse: () => ChatMessage(role: ChatRole.user, text: ''));
+    final a = chat.messages.lastWhere((m) => m.role == ChatRole.assistant && !m.failed && m.text.trim().isNotEmpty,
+        orElse: () => ChatMessage(role: ChatRole.assistant, text: ''));
+    if (u.text.trim().isEmpty || a.text.trim().isEmpty) return;
+    final cloud = currentCloud;
+    final InferenceEngine engine = cloud != null ? CloudEngine.instance.bind(cloud) : InferenceService.engine;
+    if (cloud == null && (currentModel == null || engine.loadedModelId == null)) return;
+    _titling = true;
+    try {
+      String cut(String s) => s.length > 300 ? s.substring(0, 300) : s;
+      final lang = supportedLocaleFor(localeNotifier.value).englishName;
+      final msg = ChatMessage(
+        role: ChatRole.user,
+        text: 'Write a very short title (2 to 5 words, in $lang, no quotes, no emoji, no final punctuation) for this '
+            'conversation. Answer with the title only.\nUser: ${cut(u.text)}\nAssistant: ${cut(a.text)}',
+      );
+      final b = StringBuffer();
+      await for (final piece in engine.generate(
+          [msg], GenerationOptions(systemPrompt: 'You only write short conversation titles.', temperature: 0.3, maxTokens: 60))) {
+        b.write(piece);
+        if (b.length > 160) break;
+      }
+      var t = b.toString().replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '').trim();
+      t = t.split('\n').firstWhere((l) => l.trim().isNotEmpty, orElse: () => '').trim();
+      t = t.replaceFirst(RegExp(r'^(title|titre|título|titel)\s*:\s*', caseSensitive: false), '');
+      t = t.replaceAll(RegExp('["“”«»*#`]'), '').replaceAll(RegExp(r'[.!?…:;,\s]+$'), '').trim();
+      if (t.length >= 3 && t.length <= 60) ChatStore.instance.setAutoTitle(chat, t);
+    } catch (e) {
+      debugPrint('AI title failed: $e');
+    } finally {
+      _titling = false;
+    }
+  }
+
+  /// Makes one picture and saves it; the card [card] goes loading → done / error.
+  Future<void> _paint(Map<String, dynamic> card, CloudModel painter, void Function() push) async {
+    try {
+      final pic = await cloudGenerateImage(painter, card['prompt'] as String);
+      Uint8List bytes;
+      if (pic.base64 != null) {
+        bytes = base64Decode(pic.base64!);
+      } else {
+        final r = await http.get(Uri.parse(pic.url!)).timeout(const Duration(seconds: 60));
+        if (r.statusCode != 200) throw const CloudException(CloudErrorKind.empty, '');
+        bytes = r.bodyBytes;
+      }
+      if (kIsWeb) {
+        card['path'] = 'data:${pic.mime};base64,${base64Encode(bytes)}';
+      } else {
+        final dir = Directory('${(await getApplicationDocumentsDirectory()).path}/generated')..createSync(recursive: true);
+        final ext = pic.mime.contains('jpeg') ? 'jpg' : (pic.mime.contains('webp') ? 'webp' : 'png');
+        final f = File('${dir.path}/${newId()}.$ext');
+        await f.writeAsBytes(bytes);
+        card['path'] = f.path;
+      }
+      card['state'] = 'done';
+    } catch (e) {
+      debugPrint('Picture failed: $e');
+      card['state'] = 'error';
+      card['error'] = cloudErrorText(e);
+    }
+    push();
   }
 }

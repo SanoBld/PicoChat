@@ -35,6 +35,12 @@ class ChatStore extends ChangeNotifier {
         if (data is List) {
           for (final c in data.whereType<Map>()) {
             _chats.add(Conversation.fromJson(Map<String, dynamic>.from(c)));
+            // A picture that was still being made when the app closed will never arrive.
+            for (final m in _chats.last.messages) {
+              for (final cd in m.cards) {
+                if (cd['type'] == 'genimg' && cd['state'] == 'loading') cd['state'] = 'error';
+              }
+            }
           }
         }
       }

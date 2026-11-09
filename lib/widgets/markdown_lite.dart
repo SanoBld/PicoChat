@@ -440,27 +440,26 @@ class _MarkdownImageState extends State<_MarkdownImage> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           PcGesture(
             onTap: () => Navigator.of(context).push(ImageTools.route(widget.url, source: src, alt: widget.alt)),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(22),
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topLeft,
+            child: Hero(
+              tag: 'img_${widget.url}',
+              flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                return Material(
+                  color: Colors.transparent,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: toHeroContext.widget,
+                  ),
+                );
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(22),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxHeight: 380),
-                  child: Image.network(
+                  child: ImageTools.imageWidget(
                     widget.url,
                     fit: BoxFit.contain,
-                    frameBuilder: (_, child, frame, sync) => frame == null && !sync
-                        ? box(SizedBox(width: 26, height: 26, child: M3Spinner(color: sc.primary)))
-                        : TweenAnimationBuilder<double>(
-                            tween: Tween(begin: 0, end: 1),
-                            duration: const Duration(milliseconds: 400),
-                            curve: Curves.easeOut,
-                            builder: (_, v, c) => Opacity(opacity: v, child: c),
-                            child: child,
-                          ),
-                    errorBuilder: (_, _, _) => box(Icon(Icons.broken_image_outlined, color: sc.onSurfaceVariant, size: 32)),
+                    placeholder: box(SizedBox(width: 26, height: 26, child: M3Spinner(color: sc.primary))),
+                    errorWidget: box(Icon(Icons.broken_image_outlined, color: sc.onSurfaceVariant, size: 32)),
                   ),
                 ),
               ),

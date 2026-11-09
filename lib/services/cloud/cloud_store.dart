@@ -112,6 +112,26 @@ class CloudStore extends ChangeNotifier {
             for (final m in a.models) CloudModel(a, m),
       ];
 
+  /// Models that can chat (picture-only models are left out).
+  List<CloudModel> get chatModels => [for (final m in models) if (!m.info.imageOnly) m];
+
+  /// Models that can make pictures.
+  List<CloudModel> get imageModels => [for (final m in models) if (m.info.image) m];
+
+  /// Model that draws for the chat model [chat]: itself, or another model of
+  /// the same account that makes pictures. Null = this account cannot.
+  CloudModel? painterFor(CloudModel chat) {
+    if (chat.info.image) return chat;
+    for (final m in chat.account.models) {
+      if (m.image) return CloudModel(chat.account, m);
+    }
+    // Fallback: any ready account that has an image model
+    for (final m in imageModels) {
+      return m;
+    }
+    return null;
+  }
+
   CloudModel? byId(String id) {
     if (!id.startsWith(kCloudPrefix)) return null;
     final rest = id.substring(kCloudPrefix.length);

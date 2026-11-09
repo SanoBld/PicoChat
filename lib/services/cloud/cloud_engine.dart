@@ -228,6 +228,30 @@ class CloudApi {
   }
 }
 
+/// Makes one picture with [m] (a model with info.image).
+Future<GeneratedPicture> cloudGenerateImage(CloudModel m, String prompt) async {
+  final acc = m.account;
+  try {
+    final req = buildImageRequest(
+      provider: acc.provider,
+      baseUrl: acc.effectiveBaseUrl,
+      apiKey: acc.apiKey.trim(),
+      modelId: m.info.id,
+      prompt: prompt,
+    );
+    final resp = await http.post(req.url, headers: req.headers, body: req.body).timeout(const Duration(seconds: 150));
+    final body = utf8.decode(resp.bodyBytes, allowMalformed: true);
+    if (resp.statusCode != 200) throw errorFromResponse(resp.statusCode, body);
+    final pic = parseImageResponse(acc.provider, jsonDecode(body));
+    if (pic == null) throw const CloudException(CloudErrorKind.empty, '');
+    return pic;
+  } on CloudException {
+    rethrow;
+  } catch (e) {
+    throw _network(e);
+  }
+}
+
 /// Kind of an error of the cloud engine (for the error card).
 CloudErrorKind cloudErrorKind(Object e) => (e is CloudException ? e : _network(e)).kind;
 

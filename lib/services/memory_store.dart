@@ -127,11 +127,12 @@ class MemoryStore extends ChangeNotifier {
   static final tag = RegExp(r'\[{1,2}(memory|forget|update):\s*(.*?)\]{1,2}', dotAll: true);
   static final mapTag = RegExp(r'\[\[map-(?:point|route|clear)[^\]]*\]\]');
   static final searchTag = RegExp(r'\[\[search:[\s\S]*?\]\]');
-  static const _prefixes = ['[[memory:', '[[forget:', '[[update:', '[[map-', '[[image:', '[[search:'];
+  static final imagineTag = RegExp(r'\[\[imagine:\s*([\s\S]*?)\]\]');
+  static const _prefixes = ['[[memory:', '[[forget:', '[[update:', '[[map-', '[[image:', '[[search:', '[[imagine:'];
 
   // Text without tags (also hides a tag that is still being written).
   static String visible(String s) {
-    var out = s.replaceAll(tag, '').replaceAll(mapTag, '').replaceAll(searchTag, '');
+    var out = s.replaceAll(tag, '').replaceAll(mapTag, '').replaceAll(searchTag, '').replaceAll(imagineTag, '');
     final open = out.lastIndexOf('[[');
     if (open != -1) {
       final tail = out.substring(open);

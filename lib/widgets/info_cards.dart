@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 
 import '../app_state.dart';
 import '../l10n/l10n.dart';
+import 'image_viewer.dart';
 import 'm3_components.dart' show M3CookieBadge;
 import 'map_card.dart';
 import 'pc_motion.dart';
+import 'pico_face.dart';
 import 'skeleton.dart' show M3Spinner;
 
 class InfoCard extends StatelessWidget {
@@ -21,6 +23,7 @@ class InfoCard extends StatelessWidget {
       'score' => _ScoreCards(d: data),
       'calc' => _CalcCard(d: data),
       'map' => MapCard(d: data),
+      'genimg' => _GenImageCard(d: data),
       _ => const SizedBox.shrink(),
     };
     return Padding(padding: const EdgeInsets.only(bottom: 10), child: FadeSlideIn(child: w));
@@ -476,6 +479,204 @@ class _StepRowState extends State<_StepRow> {
               if (detail.isNotEmpty) _detail(context, detail, long, t, s),
             ]),
           ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ── AI Generated Image Card ──────────────────────────────────────────────────
+
+class _GenImageCard extends StatefulWidget {
+  final Map<String, dynamic> d;
+  const _GenImageCard({required this.d});
+
+  @override
+  State<_GenImageCard> createState() => _GenImageCardState();
+}
+
+class _GenImageCardState extends State<_GenImageCard> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseCtrl = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+    final state = widget.d['state'] as String? ?? 'loading';
+    final prompt = widget.d['prompt'] as String? ?? '';
+    final path = widget.d['path'] as String? ?? '';
+    final error = widget.d['error'] as String? ?? '';
+
+    if (state == 'loading') {
+      return AnimatedBuilder(
+        animation: _pulseCtrl,
+        builder: (context, _) {
+          final glow = 0.35 + 0.35 * _pulseCtrl.value;
+          return Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxWidth: 540),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            decoration: ShapeDecoration(
+              color: s.surfaceContainerLow,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+                side: BorderSide(color: s.primary.withValues(alpha: glow), width: 1.5),
+              ),
+              shadows: [
+                BoxShadow(
+                  color: s.primary.withValues(alpha: 0.12 * _pulseCtrl.value),
+                  blurRadius: 16,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Row(children: [
+              M3CookieBadge(
+                size: 52,
+                color: s.primaryContainer,
+                child: PicoFace(mood: PicoMood.curious, size: 38, color: s.onPrimaryContainer),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                  Row(children: [
+                    Text(
+                      'Pico imagine…',
+                      style: t.titleSmall?.copyWith(fontWeight: FontWeight.w800, color: s.onSurface),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: M3Spinner(color: s.primary),
+                    ),
+                  ]),
+                  if (prompt.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '“$prompt”',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.bodySmall?.copyWith(
+                        color: s.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ]),
+              ),
+            ]),
+          );
+        },
+      );
+    }
+
+    if (state == 'error') {
+      return Container(
+        width: double.infinity,
+        constraints: const BoxConstraints(maxWidth: 540),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: _deco(s.errorContainer),
+        child: Row(children: [
+          Icon(Icons.broken_image_rounded, color: s.onErrorContainer, size: 28),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(tr('img_failed'), style: t.titleSmall?.copyWith(color: s.onErrorContainer, fontWeight: FontWeight.w700)),
+              if (error.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(error, style: t.bodySmall?.copyWith(color: s.onErrorContainer.withValues(alpha: 0.85))),
+              ],
+            ]),
+          ),
+        ]),
+      );
+    }
+
+    // Done state: reveal the generated image
+    final small = t.labelSmall?.copyWith(color: s.onSurfaceVariant);
+    Widget tool(IconData icon, String tip, VoidCallback onTap) => IconButton(
+          tooltip: tip,
+          visualDensity: VisualDensity.compact,
+          iconSize: 18,
+          color: s.onSurfaceVariant,
+          icon: Icon(icon),
+          onPressed: onTap,
+        );
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 560),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        GestureDetector(
+          onTap: () => Navigator.of(context).push(ImageTools.route(path, source: 'Pico AI', alt: prompt)),
+          child: Hero(
+            tag: 'img_$path',
+            flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+              return Material(
+                color: Colors.transparent,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(22),
+                  child: toHeroContext.widget,
+                ),
+              );
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 400),
+                child: ImageTools.imageWidget(
+                  path,
+                  fit: BoxFit.contain,
+                  placeholder: Container(
+                    height: 220,
+                    width: double.infinity,
+                    color: s.surfaceContainerHigh,
+                    alignment: Alignment.center,
+                    child: SizedBox(width: 26, height: 26, child: M3Spinner(color: s.primary)),
+                  ),
+                  errorWidget: Container(
+                    height: 220,
+                    width: double.infinity,
+                    color: s.surfaceContainerHigh,
+                    alignment: Alignment.center,
+                    child: Icon(Icons.broken_image_outlined, color: s.onSurfaceVariant, size: 32),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(6, 4, 0, 0),
+          child: Row(children: [
+            Expanded(
+              child: Row(children: [
+                Icon(Icons.auto_awesome_rounded, size: 14, color: s.primary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    prompt.isNotEmpty ? prompt : 'Pico AI',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: small?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ]),
+            ),
+            tool(Icons.copy_rounded, tr('img_copy'), () => ImageTools.copy(context, path)),
+            tool(Icons.download_rounded, tr('img_save'), () => ImageTools.save(context, path)),
+            tool(Icons.fullscreen_rounded, tr('img_open_source'),
+                () => Navigator.of(context).push(ImageTools.route(path, source: 'Pico AI', alt: prompt))),
+          ]),
         ),
       ]),
     );

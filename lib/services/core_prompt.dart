@@ -11,7 +11,7 @@ class CorePrompt {
   /// [cloudName] is set when the answer comes from a cloud AI (Claude, Gemini,
   /// ChatGPT…): the prompt then says so, and only the context the person
   /// allowed in Settings > Cloud AI is included.
-  static String build({bool fileRequested = false, bool canSearch = false, String? cloudName}) {
+  static String build({bool fileRequested = false, bool canSearch = false, String? cloudName, bool canImage = false}) {
     final cloud = cloudName != null;
     final lang = supportedLocaleFor(localeNotifier.value).englishName;
     final b = StringBuffer()
@@ -67,6 +67,12 @@ class CorePrompt {
     b.writeln('IMAGES: show a picture only when it really helps (city, landmark, animal, object): write [[image: precise '
         'subject]] alone on its own line, e.g. [[image: Lyon, France]]. Or ![description](URL) ONLY with a direct image '
         'URL given by the user or found in web results; never invent a URL. At most 2 per answer. Never mention this syntax.');
+    if (canImage) {
+      b.writeln('IMAGE GENERATION: you can make pictures. When the user asks you to create, draw, generate or design an '
+          'image, write [[imagine: detailed English prompt (subject, style, light, mood, composition)]] alone on its own '
+          'line, then one short sentence. Never describe a picture instead of making it, never refuse for lack of '
+          'ability, one tag per requested image (max 2). Never mention this syntax.');
+    }
     if (fileRequested) b.writeln('The user asked for a file in this message: produce the file block now.');
     if (memoryEnabledNotifier.value && (!cloud || cloudCtxMemoryNotifier.value)) {
       final all = MemoryStore.instance.items;
@@ -101,7 +107,7 @@ class CorePrompt {
       b.writeln('DEVICE CONTEXT (use only when relevant, never invent beyond it): ${ctx.join('; ')}.');
     }
     final instr = systemPromptNotifier.value.trim();
-    if (instr.isNotEmpty && instr != kDefaultSystemPrompt) b.writeln('USER INSTRUCTIONS (always follow):\n$instr');
+    if (instr.isNotEmpty && instr != kDefaultSystemPrompt && !instr.startsWith('You are PicoChat, a helpful, concise')) b.writeln('USER INSTRUCTIONS (always follow):\n$instr');
     final repo = cloud ? '' : (ModelManager.instance.active?.repo.toLowerCase() ?? '');
     if (repo.contains('qwen3') && !repo.contains('2507') && !ultraModeNotifier.value) b.writeln('/no_think');
     return b.toString().trim();

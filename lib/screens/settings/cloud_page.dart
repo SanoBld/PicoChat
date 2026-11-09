@@ -297,6 +297,10 @@ class _CloudAccountPageState extends State<CloudAccountPage> {
   }
 
   Future<void> _use(CloudModelInfo m) async {
+    if (m.imageOnly) {
+      _toast(context, 'Modèle de génération d\'images (utilisé automatiquement pour [[imagine]])');
+      return;
+    }
     if (!_a.ready) {
       _toast(context, tr(_a.effectiveBaseUrl.isEmpty ? 'cloud_url_missing' : 'cloud_key_missing'));
       return;
@@ -307,11 +311,25 @@ class _CloudAccountPageState extends State<CloudAccountPage> {
   }
 
   Widget _modelTile(CloudModelInfo m, bool active, ColorScheme scheme) => SettingTile(
-        leading: Icon(active ? Icons.check_rounded : cloudProviderIcon(_a.provider)),
+        leading: Icon(active ? Icons.check_rounded : (m.imageOnly ? Icons.palette_rounded : cloudProviderIcon(_a.provider))),
         title: Text(m.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text([if (m.name != m.id) m.id, _tokens(m.contextTokens), if (active) tr('in_use')].join(' · '),
-            maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text([
+          if (m.name != m.id) m.id,
+          if (!m.imageOnly) _tokens(m.contextTokens),
+          if (m.vision) '👁',
+          if (m.image) '🎨 Image',
+          if (active) tr('in_use'),
+        ].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          IconButton(
+            tooltip: 'Image',
+            icon: Icon(m.image ? Icons.palette_rounded : Icons.palette_outlined,
+                color: m.image ? scheme.primary : scheme.onSurfaceVariant),
+            onPressed: () async {
+              _a.models[_a.models.indexWhere((x) => x.id == m.id)] = m.copyWith(image: !m.image);
+              await _save();
+            },
+          ),
           IconButton(
             tooltip: tr('cloud_vision'),
             icon: Icon(m.vision ? Icons.image_rounded : Icons.hide_image_outlined,
@@ -442,13 +460,16 @@ class _ModelPickSheet extends StatefulWidget {
 class _ModelPickSheetState extends State<_ModelPickSheet> {
   final Set<String> _sel = {};
   String _q = '';
+  int _filter = 0; // 0 = all, 1 = chat, 2 = image
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final shown = widget.models
-        .where((m) => _q.isEmpty || m.id.toLowerCase().contains(_q) || m.name.toLowerCase().contains(_q))
-        .toList();
+    final shown = widget.models.where((m) {
+      if (_filter == 1 && m.imageOnly) return false;
+      if (_filter == 2 && !m.image) return false;
+      return _q.isEmpty || m.id.toLowerCase().contains(_q) || m.name.toLowerCase().contains(_q);
+    }).toList();
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: BoxDecoration(
@@ -475,6 +496,32 @@ class _ModelPickSheetState extends State<_ModelPickSheet> {
             onChanged: (v) => setState(() => _q = v.trim().toLowerCase()),
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+          child: Row(children: [
+            ChoiceChip(
+              label: const Text('Tous'),
+              selected: _filter == 0,
+              onSelected: (_) => setState(() => _filter = 0),
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Text('Chat'),
+              selected: _filter == 1,
+              onSelected: (_) => setState(() => _filter = 1),
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.palette_rounded, size: 16),
+                SizedBox(width: 4),
+                Text('Images'),
+              ]),
+              selected: _filter == 2,
+              onSelected: (_) => setState(() => _filter = 2),
+            ),
+          ]),
+        ),
         Expanded(
           child: ListView.builder(
             itemCount: shown.length,
@@ -493,8 +540,12 @@ class _ModelPickSheetState extends State<_ModelPickSheet> {
                           }
                         }),
                 title: Text(m.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text([if (m.name != m.id) m.id, _tokens(m.contextTokens), if (m.vision) '👁'].join(' · '),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text([
+                  if (m.name != m.id) m.id,
+                  if (!m.imageOnly) _tokens(m.contextTokens),
+                  if (m.vision) '👁 Vision',
+                  if (m.image) '🎨 Image',
+                ].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
               );
             },
           ),

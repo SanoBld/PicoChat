@@ -87,9 +87,16 @@ class _ModelsPageState extends State<_ModelsPage> with SingleTickerProviderState
 
 // ── Installed ────────────────────────────────────────────────────────────────
 
-class _InstalledTab extends StatelessWidget {
+class _InstalledTab extends StatefulWidget {
   final VoidCallback onDiscover;
   const _InstalledTab({required this.onDiscover});
+
+  @override
+  State<_InstalledTab> createState() => _InstalledTabState();
+}
+
+class _InstalledTabState extends State<_InstalledTab> {
+  int _filter = 0; // 0 all, 1 chat, 2 images
 
   Future<void> _delete(BuildContext context, InstalledModel m) async {
     final ok = await showDialog<bool>(
@@ -111,10 +118,17 @@ class _InstalledTab extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
     final mgr = ModelManager.instance;
-    final list = mgr.installed;
+    final allLocal = mgr.installed;
+    final list = _filter == 2 ? <InstalledModel>[] : allLocal;
+
     // Optional cloud AI (Settings > Cloud AI): its models are listed below the local ones.
     final cloudOn = cloudEnabledNotifier.value;
-    final cloudModels = cloudOn ? CloudStore.instance.models : const <CloudModel>[];
+    final rawCloud = cloudOn ? CloudStore.instance.models : const <CloudModel>[];
+    final cloudModels = rawCloud.where((c) {
+      if (_filter == 1 && c.info.imageOnly) return false;
+      if (_filter == 2 && !c.info.image) return false;
+      return true;
+    }).toList();
     final activeCloud = ChatService.instance.currentCloud;
 
     Widget manageCloud() => Padding(
@@ -127,17 +141,44 @@ class _InstalledTab extends StatelessWidget {
           ),
         );
 
-    if (list.isEmpty && cloudModels.isEmpty) {
+    if (allLocal.isEmpty && rawCloud.isEmpty) {
       return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         M3EmptyState(icon: Icons.memory_rounded, message: tr('no_installed')),
         const SizedBox(height: 16),
-        M3LabelButton(kind: M3ButtonKind.filled, icon: Icons.explore_rounded, label: tr('tab_discover'), onTap: onDiscover),
+        M3LabelButton(kind: M3ButtonKind.filled, icon: Icons.explore_rounded, label: tr('tab_discover'), onTap: widget.onDiscover),
         if (cloudOn) ...[const SizedBox(height: 8), manageCloud()],
       ]);
     }
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
+        // Capability filter: Tous / Chat / Images
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(children: [
+            ChoiceChip(
+              label: const Text('Tous'),
+              selected: _filter == 0,
+              onSelected: (_) => setState(() => _filter = 0),
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Text('Chat'),
+              selected: _filter == 1,
+              onSelected: (_) => setState(() => _filter = 1),
+            ),
+            const SizedBox(width: 8),
+            ChoiceChip(
+              label: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.palette_rounded, size: 16),
+                SizedBox(width: 4),
+                Text('Images'),
+              ]),
+              selected: _filter == 2,
+              onSelected: (_) => setState(() => _filter = 2),
+            ),
+          ]),
+        ),
         for (var i = 0; i < list.length; i++)
           Builder(builder: (context) {
             final m = list[i];
@@ -183,7 +224,7 @@ class _InstalledTab extends StatelessWidget {
               ),
             );
           }),
-        if (cloudOn) ...[
+        if (cloudOn && cloudModels.isNotEmpty) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
             child: Text(tr('cloud_section'), style: text.titleSmall?.copyWith(color: scheme.onSurfaceVariant)),
@@ -194,32 +235,67 @@ class _InstalledTab extends StatelessWidget {
               child: M3PressCard(
                 color: c.id == activeCloud?.id ? scheme.primaryContainer : scheme.surfaceContainerLow,
                 onTap: () {
+                  if (c.info.imageOnly) {
+                    _toast(context, 'Modèle d\'images (utilisé automatiquement pour la génération d\'images)');
+                    return;
+                  }
                   m3Haptic();
                   CloudStore.instance.select(c.id);
                 },
                 child: Row(children: [
                   M3CookieBadge(
                     size: 44,
-                    color: c.id == activeCloud?.id ? scheme.primary : scheme.tertiaryContainer,
-                    child: Icon(c.id == activeCloud?.id ? Icons.check_rounded : cloudProviderIcon(c.provider),
-                        color: c.id == activeCloud?.id ? scheme.onPrimary : scheme.onTertiaryContainer),
+                    color: c.id == activeCloud?.id ? scheme.primary : (c.info.imageOnly ? scheme.secondaryContainer : scheme.tertiaryContainer),
+                    child: Icon(
+                      c.id == activeCloud?.id
+                          ? Icons.check_rounded
+                          : (c.info.imageOnly ? Icons.palette_rounded : cloudProviderIcon(c.provider)),
+                      color: c.id == activeCloud?.id
+                          ? scheme.onPrimary
+                          : (c.info.imageOnly ? scheme.onSecondaryContainer : scheme.onTertiaryContainer),
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(c.displayName,
-                          maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      Row(children: [
+                        Expanded(
+                          child: Text(c.displayName,
+                              maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        ),
+                        if (c.info.image)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 6),
+                            child: Icon(Icons.palette_rounded, size: 16, color: scheme.primary),
+                          ),
+                      ]),
                       const SizedBox(height: 2),
                       Text(
-                        [c.subtitle, if (c.id == activeCloud?.id) tr('in_use')].join(' · '),
+                        [
+                          c.subtitle,
+                          if (c.info.image) '🎨 Image',
+                          if (c.id == activeCloud?.id) tr('in_use'),
+                        ].join(' · '),
                         style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
                       ),
                     ]),
                   ),
-                  Icon(Icons.cloud_rounded, size: 18, color: scheme.onSurfaceVariant),
+                  Icon(c.info.imageOnly ? Icons.palette_rounded : Icons.cloud_rounded, size: 18, color: scheme.onSurfaceVariant),
                 ]),
               ),
             ),
+          manageCloud(),
+        ],
+        if (cloudOn && cloudModels.isEmpty && rawCloud.isNotEmpty && _filter != 0) ...[
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Text(
+                _filter == 2 ? 'Aucun modèle d\'image installé.' : 'Aucun modèle de chat trouvé.',
+                style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ),
           manageCloud(),
         ],
       ],
