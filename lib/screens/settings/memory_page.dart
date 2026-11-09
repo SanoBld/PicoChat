@@ -60,6 +60,8 @@ class _MemoryPageState extends State<MemoryPage> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+    useSafeArea: true,
+    constraints: const BoxConstraints(maxWidth: 640),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: SafeArea(

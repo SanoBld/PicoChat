@@ -450,6 +450,7 @@ const Map<String, String> kStringsFr = {
   "greet_evening": "Bonsoir",
   "greet_night": "Encore debout",
   "home_hint_local": "Tout reste sur votre appareil.",
+  "foryou_refresh": "Nouvelles idées",
   "home_suggestions": "Pour vous",
   "pill_web": "Recherche web",
   "pill_memories": "{n} souvenirs",
