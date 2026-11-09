@@ -54,6 +54,20 @@ static void my_application_activate(GApplication* application) {
 
   gtk_window_set_default_size(window, 1280, 720);
 
+  // Window icon: the bundled PicoChat smiley (data/icon.png), else the themed
+  // "picochat" icon installed by the .deb / .rpm packages.
+  {
+    g_autofree gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
+    g_autofree gchar* dir = exe ? g_path_get_dirname(exe) : nullptr;
+    g_autofree gchar* icon =
+        dir ? g_build_filename(dir, "data", "icon.png", nullptr) : nullptr;
+    if (icon && g_file_test(icon, G_FILE_TEST_EXISTS)) {
+      gtk_window_set_icon_from_file(window, icon, nullptr);
+    } else {
+      gtk_window_set_icon_name(window, "picochat");
+    }
+  }
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);

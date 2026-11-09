@@ -434,7 +434,7 @@ class M3FadeThroughRoute<T> extends PageRouteBuilder<T> {
 // ── Shared axis (Y) route ──────────────────────────────────────────────────
 // For child pages of the same flow (for example account level -> level
 // history). New page rises and fades in with a spatial spring, the old one
-// fades out and shrinks a little. Going back is the reverse, but faster.
+// stays still and solid. Going back is the reverse, but faster.
 class M3SharedAxisRoute<T> extends PageRouteBuilder<T> {
   M3SharedAxisRoute({required WidgetBuilder builder})
       : super(
@@ -454,26 +454,18 @@ class M3SharedAxisRoute<T> extends PageRouteBuilder<T> {
               curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
               reverseCurve: const Interval(0.4, 1.0, curve: Curves.easeIn),
             );
-            final behind = CurvedAnimation(
-              parent: secondary,
-              curve: M3Motion.emphasizedDecelerate,
-            );
+            // The page underneath stays still and solid (it never fades or
+            // shrinks), so the window background can never show through.
+            // Only the new page moves: it rises and fades in over it.
             return FadeTransition(
-              opacity: ReverseAnimation(
-                  behind.drive(CurveTween(curve: const Interval(0.0, 0.5)))),
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 1.0, end: 0.94).animate(behind),
-                child: FadeTransition(
-                  opacity: fadeIn,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                            begin: const Offset(0, 0.08), end: Offset.zero)
-                        .animate(rise),
-                    child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.96, end: 1.0).animate(rise),
-                      child: child,
-                    ),
-                  ),
+              opacity: fadeIn,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                        begin: const Offset(0, 0.08), end: Offset.zero)
+                    .animate(rise),
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 0.96, end: 1.0).animate(rise),
+                  child: child,
                 ),
               ),
             );

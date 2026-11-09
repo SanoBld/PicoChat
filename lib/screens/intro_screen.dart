@@ -16,7 +16,7 @@ import '../services/model_manager.dart';
 import '../services/prefs.dart';
 import '../supported_locales.dart';
 import '../theme/m3_motion.dart';
-import '../widgets/brand_icon.dart';
+import '../widgets/pico_face.dart';
 import '../widgets/m3_components.dart';
 import 'home_screen.dart';
 
@@ -258,7 +258,7 @@ class _WelcomeStep extends StatelessWidget {
     return ListenableBuilder(
       listenable: localeNotifier,
       builder: (_, _) => _Step(
-        badge: BrandIcon('assets/icons/app_logo.svg', Icons.sentiment_satisfied_rounded, size: 30, color: scheme.onPrimary),
+        badge: PicoFace(size: 30, color: scheme.onPrimary),
         title: tr('intro1_t'),
         subtitle: tr('intro1_s'),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

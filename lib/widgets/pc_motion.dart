@@ -8,7 +8,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/m3_motion.dart';
-import 'm3_components.dart';
 import 'skeleton.dart' show M3LoadingIndicator;
 
 /// Capped stagger delay for lists: item 40 does not wait 1.4 s to appear.

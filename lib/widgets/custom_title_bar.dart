@@ -85,7 +85,10 @@ class _CustomTitleBarState extends State<_CustomTitleBar> with WindowListener {
               child: Padding(
                 padding: const EdgeInsets.only(left: 12),
                 child: Row(children: [
-                  Icon(Icons.graphic_eq_rounded, size: 15, color: scheme.primary),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(5),
+                    child: Image.asset('assets/images/icon-512.png', width: 18, height: 18, filterQuality: FilterQuality.medium),
+                  ),
                   const SizedBox(width: 8),
                   Text('PicoChat',
                       style: TextStyle(

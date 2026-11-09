@@ -91,7 +91,7 @@ class _SidebarState extends State<_Sidebar> {
           M3CookieBadge(
             size: 40,
             color: scheme.primary,
-            child: BrandIcon('assets/icons/app_logo.svg', Icons.sentiment_satisfied_rounded, size: 22, color: scheme.onPrimary),
+            child: PicoFace(size: 22, color: scheme.onPrimary),
           ),
           const SizedBox(width: 12),
           Text('PicoChat', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
@@ -151,6 +151,7 @@ class _SidebarState extends State<_Sidebar> {
                               ),
                             ),
                             PopupMenuButton<String>(
+                              popUpAnimationStyle: kPcMenuAnimation,
                               icon: Icon(Icons.more_horiz_rounded, size: 20, color: scheme.onSurfaceVariant),
                               onSelected: (v) async {
                                 if (v == 'rename') {
@@ -167,10 +168,11 @@ class _SidebarState extends State<_Sidebar> {
                                 }
                               },
                               itemBuilder: (_) => [
-                                PopupMenuItem(value: 'rename', child: Text(tr('rename'))),
-                                PopupMenuItem(value: 'export', child: Text(tr('export'))),
-                                PopupMenuItem(value: 'import', child: Text(tr('import'))),
-                                PopupMenuItem(value: 'delete', child: Text(tr('delete'))),
+                                PcMenuItem<String>(value: 'rename', icon: Icons.edit_rounded, label: tr('rename')),
+                                PcMenuItem<String>(value: 'export', icon: Icons.ios_share_rounded, label: tr('export')),
+                                PcMenuItem<String>(value: 'import', icon: Icons.download_rounded, label: tr('import')),
+                                const PcMenuDivider(),
+                                PcMenuItem<String>(value: 'delete', icon: Icons.delete_rounded, label: tr('delete'), danger: true),
                               ],
                             ),
                           ]),

@@ -141,12 +141,43 @@ ThemeData applyM3Shapes(ThemeData t) {
       insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       shape: r20,
     ),
-    // Drop-down menus share the same rounded, tonal surface.
+    // Drop-down menus share the same rounded, tonal surface. They open with
+    // a soft grow + fade and close faster (Material 3 motion; the animation
+    // itself is set with kPcMenuAnimation on each menu).
     popupMenuTheme: PopupMenuThemeData(
       color: cs.surfaceContainerHigh,
       surfaceTintColor: Colors.transparent,
-      elevation: 3,
-      shape: r20,
+      shadowColor: Colors.black,
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      menuPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      textStyle: t.textTheme.bodyLarge
+          ?.copyWith(fontWeight: FontWeight.w600, color: cs.onSurface),
+      iconColor: cs.onSurfaceVariant,
+    ),
+    // Button descriptions (long press / mouse hover) use the same surface as
+    // the menus: tonal, rounded, soft shadow.
+    tooltipTheme: TooltipThemeData(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 14,
+              offset: const Offset(0, 4)),
+        ],
+      ),
+      textStyle: t.textTheme.labelLarge
+          ?.copyWith(color: cs.onSurface, fontWeight: FontWeight.w600),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+      margin: const EdgeInsets.all(8),
+      constraints: const BoxConstraints(maxWidth: 280),
+      waitDuration: const Duration(milliseconds: 400),
+      showDuration: const Duration(milliseconds: 1500),
+      exitDuration: const Duration(milliseconds: 100),
+      preferBelow: true,
     ),
     dropdownMenuTheme: DropdownMenuThemeData(
       menuStyle: MenuStyle(
@@ -232,3 +263,12 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showAppSnackBar(
     ),
   );
 }
+
+/// Open / close animation of every pop-up menu (Material 3 motion).
+/// Pass it as popUpAnimationStyle to PopupMenuButton and showMenu.
+final AnimationStyle kPcMenuAnimation = AnimationStyle(
+  curve: M3Motion.emphasizedDecelerate,
+  duration: const Duration(milliseconds: 300),
+  reverseCurve: M3Motion.emphasizedAccelerate,
+  reverseDuration: const Duration(milliseconds: 150),
+);

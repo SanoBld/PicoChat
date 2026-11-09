@@ -1,22 +1,23 @@
 // lib/widgets/pico_avatar.dart
-// The assistant's bubble: a cookie badge with the app's smiley.
-// While the AI works the bubble itself changes shape (same morph as the
-// loader). Press and hold it and it spins on itself.
+// The assistant's bubble: a cookie badge with the animated smiley.
+// While the AI works the bubble changes shape and the face reacts to what is
+// happening (loading, searching, thinking, writing). Tap = the face jumps for
+// joy. Press and hold = the bubble spins on itself.
 
 import 'package:flutter/material.dart';
 
 import '../theme/m3_motion.dart';
-import 'brand_icon.dart';
 import 'm3_components.dart' show M3CookieBadge;
+import 'pico_face.dart';
 import 'skeleton.dart' show M3MorphBlob;
 
 class PicoAvatar extends StatefulWidget {
-  const PicoAvatar({super.key, this.size = 34, this.active = false});
+  const PicoAvatar({super.key, this.size = 34, this.mood = PicoMood.idle});
 
   final double size;
 
-  /// True while the AI is loading, searching or writing: the bubble morphs.
-  final bool active;
+  /// What the AI is doing; the face and the bubble follow it.
+  final PicoMood mood;
 
   @override
   State<PicoAvatar> createState() => _PicoAvatarState();
@@ -26,6 +27,17 @@ class _PicoAvatarState extends State<PicoAvatar> with SingleTickerProviderStateM
   late final AnimationController _spin =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
   bool _held = false;
+  int _poke = 0;
+
+  static bool _busy(PicoMood m) =>
+      m == PicoMood.loading || m == PicoMood.searching || m == PicoMood.thinking || m == PicoMood.writing;
+
+  @override
+  void didUpdateWidget(PicoAvatar old) {
+    super.didUpdateWidget(old);
+    // Answer finished: a small happy jump.
+    if (_busy(old.mood) && !_busy(widget.mood) && widget.mood == PicoMood.idle) _poke++;
+  }
 
   @override
   void dispose() {
@@ -35,7 +47,7 @@ class _PicoAvatarState extends State<PicoAvatar> with SingleTickerProviderStateM
 
   void _start() {
     if (M3Motion.reduced(context)) return;
-    _held = true;
+    setState(() => _held = true);
     m3Haptic(M3Haptic.medium);
     _spin.repeat();
   }
@@ -43,7 +55,7 @@ class _PicoAvatarState extends State<PicoAvatar> with SingleTickerProviderStateM
   // Let go: finish the current turn with a soft slow-down.
   void _end() {
     if (!_held) return;
-    _held = false;
+    setState(() => _held = false);
     final left = 1 - _spin.value;
     _spin
         .animateTo(1,
@@ -56,10 +68,14 @@ class _PicoAvatarState extends State<PicoAvatar> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    Widget face() => BrandIcon('assets/icons/app_logo.svg', Icons.sentiment_satisfied_rounded,
-        size: widget.size * 0.54, color: scheme.onPrimary);
+    final mood = _held ? PicoMood.excited : widget.mood;
+    Widget face() => PicoFace(size: widget.size * 0.54, color: scheme.onPrimary, mood: mood, poke: _poke);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
+      onTap: () {
+        m3Haptic(M3Haptic.light);
+        setState(() => _poke++);
+      },
       onLongPressStart: (_) => _start(),
       onLongPressEnd: (_) => _end(),
       onLongPressCancel: _end,
@@ -67,7 +83,7 @@ class _PicoAvatarState extends State<PicoAvatar> with SingleTickerProviderStateM
         turns: _spin,
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
-          child: widget.active
+          child: _busy(widget.mood)
               ? M3MorphBlob(key: const ValueKey('blob'), size: widget.size, color: scheme.primary, child: face())
               : M3CookieBadge(key: const ValueKey('cookie'), size: widget.size, color: scheme.primary, child: face()),
         ),

@@ -352,6 +352,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
         actions: [
           // Small menu: installed models + "See more" (opens the store).
           PopupMenuButton<String>(
+            popUpAnimationStyle: kPcMenuAnimation,
             tooltip: tr('select_model'),
             onSelected: (id) {
               if (id == '__more') {
@@ -364,43 +365,24 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
             },
             itemBuilder: (_) => [
               for (final m in ModelManager.instance.installed.take(6))
-                CheckedPopupMenuItem<String>(
+                PcMenuItem<String>(
                   value: m.id,
-                  checked: cloud == null && m.id == active?.id,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 220),
-                    child: Row(children: [
-                      Icon(Icons.smartphone_rounded, size: 16, color: scheme.onSurfaceVariant),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    ]),
-                  ),
+                  icon: Icons.smartphone_rounded,
+                  label: m.displayName,
+                  selected: cloud == null && m.id == active?.id,
                 ),
               if (cloudModels.isNotEmpty) ...[
-                if (ModelManager.instance.installed.isNotEmpty) const PopupMenuDivider(),
+                if (ModelManager.instance.installed.isNotEmpty) const PcMenuDivider(),
                 for (final c in cloudModels.take(8))
-                  CheckedPopupMenuItem<String>(
+                  PcMenuItem<String>(
                     value: c.id,
-                    checked: c.id == cloud?.id,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 220),
-                      child: Row(children: [
-                        Icon(Icons.cloud_rounded, size: 16, color: scheme.onSurfaceVariant),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(c.displayName, maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      ]),
-                    ),
+                    icon: Icons.cloud_rounded,
+                    label: c.displayName,
+                    selected: c.id == cloud?.id,
                   ),
               ],
-              if (ModelManager.instance.installed.isNotEmpty || cloudModels.isNotEmpty) const PopupMenuDivider(),
-              PopupMenuItem<String>(
-                value: '__more',
-                child: Row(children: [
-                  const Icon(Icons.storefront_rounded, size: 18),
-                  const SizedBox(width: 10),
-                  Text(tr('see_more')),
-                ]),
-              ),
+              if (ModelManager.instance.installed.isNotEmpty || cloudModels.isNotEmpty) const PcMenuDivider(),
+              PcMenuItem<String>(value: '__more', icon: Icons.storefront_rounded, label: tr('see_more')),
             ],
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -801,28 +783,22 @@ class _EmptyChat extends StatelessWidget {
     final clip = ((await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '').trim();
     if (!context.mounted) return;
     final short = clip.length > 1500 ? clip.substring(0, 1500) : clip;
-    PopupMenuItem<String> item(String v, IconData icon, String label) => PopupMenuItem<String>(
-          value: v,
-          child: Row(children: [
-            Icon(icon, size: 19),
-            const SizedBox(width: 12),
-            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
-          ]),
-        );
+    PcMenuItem<String> item(String v, IconData icon, String label) =>
+        PcMenuItem<String>(value: v, icon: icon, label: label, maxWidth: 260);
     final choice = await showMenu<String>(
       context: context,
+      popUpAnimationStyle: kPcMenuAnimation,
       position: RelativeRect.fromRect(pos & const Size(1, 1), Offset.zero & box.size),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       items: [
         if (ChatService.instance.canChat) ...[
           for (final (i, sg) in sugs.indexed) item('s$i', sg.icon, sg.text),
           if (clip.isNotEmpty) ...[
-            const PopupMenuDivider(),
+            const PcMenuDivider(),
             item('sum', Icons.summarize_rounded, tr('clip_summarize')),
             item('trn', Icons.translate_rounded, tr('clip_translate')),
             item('exp', Icons.lightbulb_rounded, tr('clip_explain')),
           ],
-          const PopupMenuDivider(),
+          const PcMenuDivider(),
         ],
         item('models', Icons.memory_rounded, tr('get_model')),
       ],
@@ -1025,7 +1001,18 @@ class _MessageView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // The bubble changes shape while the AI works; press and hold = it spins.
-        PicoAvatar(size: 34, active: generating),
+        PicoAvatar(
+          size: 34,
+          mood: generating
+              ? (loadingModel
+                  ? PicoMood.loading
+                  : ChatService.instance.isSearching
+                      ? PicoMood.searching
+                      : waiting
+                          ? PicoMood.thinking
+                          : PicoMood.writing)
+              : (message.failed ? PicoMood.sad : PicoMood.idle),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
