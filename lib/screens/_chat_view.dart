@@ -997,6 +997,12 @@ class _MessageView extends StatelessWidget {
       );
     }
 
+    final waitLabel = loadingModel
+        ? tr('loading_model')
+        : ChatService.instance.isSearching
+            ? tr('searching_web')
+            : tr('thinking');
+
     return _HoverScope(builder: (context, hover) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1018,33 +1024,47 @@ class _MessageView extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (message.steps.isNotEmpty && showStepsNotifier.value) StepsTimeline(steps: message.steps, running: generating),
             for (final cd in message.cards) InfoCard(data: cd),
-            if (waiting)
-              // Loading model / searching web / first words not here yet: the bubble morphs, this label says why.
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: ShimmerText(
-                  loadingModel
-                      ? tr('loading_model')
-                      : ChatService.instance.isSearching
-                          ? tr('searching_web')
-                          : tr('thinking'),
-                  style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              )
-            else if (message.text.isNotEmpty)
-              // The text grows smoothly line by line, its tail fades in while it is written.
-              AnimatedSize(
-                duration: const Duration(milliseconds: 170),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topLeft,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: StreamFade(
-                    active: generating,
-                    child: MarkdownLite(text: generating ? message.text : FileOutput.hide(message.text), style: text.bodyLarge, linkColor: scheme.primary),
-                  ),
-                ),
+            // Label (loading / searching / thinking) and the answer blend into
+            // each other instead of swapping: fade + soft height change.
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              transitionBuilder: (c, a) => FadeTransition(
+                opacity: a,
+                child: SizeTransition(sizeFactor: a, axisAlignment: -1, child: c),
               ),
+              layoutBuilder: (cur, prev) => Stack(
+                alignment: Alignment.topLeft,
+                children: [...prev, if (cur != null) cur],
+              ),
+              child: waiting
+                  // Loading model / searching web / first words not here yet: the bubble morphs, this label says why.
+                  ? Padding(
+                      key: ValueKey(waitLabel),
+                      padding: const EdgeInsets.only(top: 8),
+                      child: ShimmerText(
+                        waitLabel,
+                        style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    )
+                  : message.text.isNotEmpty
+                      // The text grows smoothly line by line, its tail fades in while it is written.
+                      ? AnimatedSize(
+                          key: const ValueKey('text'),
+                          duration: const Duration(milliseconds: 170),
+                          curve: Curves.easeOutCubic,
+                          alignment: Alignment.topLeft,
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: StreamFade(
+                              active: generating,
+                              child: MarkdownLite(text: generating ? message.text : FileOutput.hide(message.text), style: text.bodyLarge, linkColor: scheme.primary),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(key: ValueKey('none')),
+            ),
             if (!generating)
               for (final f in FileOutput.extract(message.text))
                 Padding(

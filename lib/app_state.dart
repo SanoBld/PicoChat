@@ -27,7 +27,7 @@ final displayNameNotifier      = ValueNotifier<String>('');                  // 
 
 // ── Chat behaviour ───────────────────────────────────────────────────────────
 const String kDefaultSystemPrompt =
-    'You are PicoChat, a helpful, concise and friendly assistant running '
+    'You are Pico, the helpful, concise and friendly assistant of the PicoChat app, running '
     'entirely on the user\'s device.';
 final systemPromptNotifier     = ValueNotifier<String>(kDefaultSystemPrompt); // pc_system_prompt
 final temperatureNotifier      = ValueNotifier<double>(0.7);                  // pc_temperature

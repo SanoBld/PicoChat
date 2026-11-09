@@ -1,5 +1,6 @@
 // lib/main.dart
 import 'services/location_service.dart';
+import 'widgets/pc_pointer.dart';
 import 'services/memory_store.dart';
 import 'dart:async';
 import 'dart:io' show Platform;
@@ -215,7 +216,7 @@ class PicoChatApp extends StatelessWidget {
               theme: light,
               darkTheme: dark,
               themeMode: themeModeNotifier.value,
-              builder: (context, child) => AppTextScale(child: DesktopTitleBarShell(child: child!)),
+              builder: (context, child) => PcPointerTracker(child: AppTextScale(child: DesktopTitleBarShell(child: child!))),
               home: onboarded ? const HomeScreen() : const IntroScreen(),
             );
           },

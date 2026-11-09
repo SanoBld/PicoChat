@@ -10,12 +10,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../theme/m3_motion.dart';
+import 'pc_pointer.dart';
 
-enum PicoMood { idle, loading, searching, thinking, writing, happy, excited, sad }
+enum PicoMood { idle, loading, searching, thinking, writing, happy, excited, sad, surprised, laugh, sleepy, curious }
 
 class _Pose {
-  double smile, mouthW, lookX, lookY, open, arch, tilt;
-  _Pose(this.smile, this.mouthW, this.lookX, this.lookY, this.open, this.arch, this.tilt);
+  double smile, mouthW, lookX, lookY, open, arch, tilt, o; // o = mouth open (0..1)
+  _Pose(this.smile, this.mouthW, this.lookX, this.lookY, this.open, this.arch, this.tilt, [this.o = 0]);
 
   void glide(_Pose t, double a) {
     smile += (t.smile - smile) * a;
@@ -25,6 +26,7 @@ class _Pose {
     open += (t.open - open) * a;
     arch += (t.arch - arch) * a;
     tilt += (t.tilt - tilt) * a;
+    o += (t.o - o) * a;
   }
 }
 
@@ -41,13 +43,21 @@ _Pose _target(PicoMood m, double t) {
       return _Pose(0.15, 0.7, 0.55 + math.sin(t) * 0.1, -0.7, 0.95, 0, -0.06 + math.sin(t * 0.8) * 0.015);
     case PicoMood.writing: // reads along, mouth moves like talking
       final talk = ((math.sin(t * 10) + math.sin(t * 6.3 + 1)) / 4 + 0.5).clamp(0.0, 1.0);
-      return _Pose(0.5 + 0.5 * talk, 1 - 0.25 * talk, math.sin(t * 1.5) * 0.55, 0.3, 0.9, 0, math.sin(t * 2) * 0.02);
+      return _Pose(0.5 + 0.5 * talk, 1 - 0.25 * talk, math.sin(t * 1.5) * 0.55, 0.3, 0.9, 0, math.sin(t * 2) * 0.02, talk * 0.6);
     case PicoMood.happy:
-      return _Pose(1.25, 1.05, 0, 0, 0.3, 1, 0);
+      return _Pose(1.25, 1.05, 0, 0, 0.3, 1, 0, 0.35);
     case PicoMood.excited:
-      return _Pose(1.3, 1.08, 0, 0, 0.3, 1, math.sin(t * 10) * 0.08);
+      return _Pose(1.3, 1.08, 0, 0, 0.3, 1, math.sin(t * 10) * 0.08, 0.6);
     case PicoMood.sad:
       return _Pose(-0.7, 0.8, 0, 0.5, 0.85, 0, 0.04);
+    case PicoMood.surprised: // tall eyes, small round mouth
+      return _Pose(0.35, 0.3, 0, -0.15, 1.2, 0, 0, 0.5);
+    case PicoMood.laugh: // eyes shut in arches, big open mouth, shaking
+      return _Pose(1.3, 1.0, 0, 0, 0.3, 1, math.sin(t * 16) * 0.05, 0.95);
+    case PicoMood.sleepy: // half-closed eyes, slow sway
+      return _Pose(0.3, 0.6, 0, 0.45, 0.32, 0, math.sin(t * 0.8) * 0.07);
+    case PicoMood.curious: // head tilted, one look aside, wide eyes
+      return _Pose(0.55, 0.8, 0.6, -0.2, 1.1, 0, 0.1);
   }
 }
 
@@ -92,6 +102,14 @@ class _PicoFaceState extends State<PicoFace> with SingleTickerProviderStateMixin
   double _blinkP = -1; // -1 = not blinking, else 0..1
   int _winkSide = 0; // 0 = both eyes, 1 = left, 2 = right
   double _pokeAt = -10;
+  // Idle life: random little expressions, looking at the mouse, falling asleep.
+  PicoMood? _flair;
+  double _flairUntil = 0, _nextFlair = 7;
+  double _watchUntil = 0, _nextWatch = 4;
+  double _activity = 0;
+  bool _asleep = false;
+
+  void _onPointer() => _activity = _t;
 
   bool get _still => !widget.animated || M3Motion.reduced(context);
 
@@ -100,6 +118,7 @@ class _PicoFaceState extends State<PicoFace> with SingleTickerProviderStateMixin
     super.initState();
     final p = _target(widget.mood, 0);
     _m.pose.glide(p, 1);
+    pcPointer.addListener(_onPointer);
   }
 
   @override
@@ -123,7 +142,15 @@ class _PicoFaceState extends State<PicoFace> with SingleTickerProviderStateMixin
   @override
   void didUpdateWidget(PicoFace old) {
     super.didUpdateWidget(old);
-    if (widget.poke != old.poke) _pokeAt = _t;
+    if (widget.poke != old.poke) {
+      _pokeAt = _t;
+      _activity = _t;
+    }
+    // A change of mood starts with a blink: it links the two expressions.
+    if (widget.mood != old.mood && _blinkP < 0) {
+      _blinkP = 0;
+      _winkSide = 0;
+    }
     if (_still) {
       _m.pose.glide(_target(widget.mood, 0), 1);
       _m.changed();
@@ -132,6 +159,7 @@ class _PicoFaceState extends State<PicoFace> with SingleTickerProviderStateMixin
 
   @override
   void dispose() {
+    pcPointer.removeListener(_onPointer);
     _ticker?.dispose();
     _m.dispose();
     super.dispose();
@@ -145,10 +173,63 @@ class _PicoFaceState extends State<PicoFace> with SingleTickerProviderStateMixin
     // A poke (or a finished answer) plays a short happy reaction.
     final since = _t - _pokeAt;
     final reacting = since >= 0 && since < 1.1;
-    final mood = reacting ? PicoMood.excited : widget.mood;
-    final fast = mood == PicoMood.writing || mood == PicoMood.searching || reacting;
+    final idle = widget.mood == PicoMood.idle;
+
+    // Idle only: fall asleep after a long time without any activity, wake up
+    // surprised; otherwise now and then pull a small expression.
+    if (idle && !reacting) {
+      if (!_asleep && _t - _activity > 45) {
+        _asleep = true;
+      } else if (_asleep && _t - _activity < 1) {
+        _asleep = false;
+        _flair = PicoMood.surprised;
+        _flairUntil = _t + 1.1;
+      }
+      if (!_asleep && _flair == null && _t >= _nextFlair) {
+        const pool = [PicoMood.curious, PicoMood.surprised, PicoMood.happy, PicoMood.laugh, PicoMood.curious];
+        _flair = pool[_rnd.nextInt(pool.length)];
+        _flairUntil = _t + (_flair == PicoMood.laugh ? 1.6 : 1.3);
+      }
+      if (_flair != null && _t >= _flairUntil) {
+        _flair = null;
+        _nextFlair = _t + 7 + _rnd.nextDouble() * 9;
+      }
+    } else {
+      if (!idle) _asleep = false;
+      _flair = null;
+    }
+
+    final mood = reacting
+        ? PicoMood.excited
+        : (idle && _asleep)
+            ? PicoMood.sleepy
+            : (idle && _flair != null)
+                ? _flair!
+                : widget.mood;
+    final fast = mood == PicoMood.writing || mood == PicoMood.searching || mood == PicoMood.laugh || reacting;
     final a = 1 - math.exp(-dt * (fast ? 16 : 8));
-    _m.pose.glide(_target(mood, _t), a);
+    final tp = _target(mood, _t);
+
+    // Idle: from time to time Pico looks at the mouse (if it moved lately).
+    final ptr = pcPointer.value;
+    if (mood == PicoMood.idle && ptr != null && _t - _activity < 8) {
+      if (_t >= _nextWatch && _t >= _watchUntil) {
+        _watchUntil = _t + 2.5 + _rnd.nextDouble() * 3;
+        _nextWatch = _watchUntil + 3 + _rnd.nextDouble() * 6;
+      }
+      final ro = context.findRenderObject();
+      if (_t < _watchUntil && ro is RenderBox && ro.attached && ro.hasSize) {
+        final d = ptr - ro.localToGlobal(ro.size.center(Offset.zero));
+        final len = d.distance;
+        if (len > 1) {
+          final k = (len / 160).clamp(0.0, 1.0);
+          tp.lookX = d.dx / len * k;
+          tp.lookY = d.dy / len * k * 0.9;
+          tp.tilt = tp.lookX * 0.05;
+        }
+      }
+    }
+    _m.pose.glide(tp, a);
 
     // Squash and stretch after a poke.
     _m.bounce = reacting ? math.exp(-4 * since) * math.sin(15 * since) * 0.13 : 0;
@@ -237,12 +318,15 @@ class _FacePainter extends CustomPainter {
     stroke
       ..strokeWidth = 96
       ..color = color;
-    canvas.drawPath(
-      Path()
-        ..moveTo(512 - halfW, y0)
-        ..quadraticBezierTo(512, ctrl, 512 + halfW, y0),
-      stroke,
-    );
+    final mouth = Path()
+      ..moveTo(512 - halfW, y0)
+      ..quadraticBezierTo(512, ctrl, 512 + halfW, y0);
+    // Open mouth: the space between the lip line and the curve is filled.
+    if (p.o > 0.02 && p.smile > 0) {
+      fill.color = color.withValues(alpha: color.a * p.o.clamp(0.0, 1.0));
+      canvas.drawPath(Path.from(mouth)..close(), fill);
+    }
+    canvas.drawPath(mouth, stroke);
     canvas.restore();
   }
 

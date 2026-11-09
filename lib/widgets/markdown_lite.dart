@@ -10,6 +10,7 @@ import '../app_state.dart';
 import '../l10n/l10n.dart';
 import '../services/image_lookup.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'image_viewer.dart';
 import 'pc_motion.dart';
 import 'skeleton.dart' show M3Spinner;
 
@@ -398,22 +399,25 @@ class _Token {
   _Token(this.start, this.end, this.type, this.text);
 }
 
-// Picture in an answer: rounded, fades in, tap = full screen with pinch to zoom.
+// Picture in an answer: rounded, shown whole (never cropped), fades in. Under it:
+// the source in small text, copy and download. Tap = full-screen viewer.
 class _MarkdownImage extends StatefulWidget {
   final String url;
   final String alt;
-  const _MarkdownImage({required this.url, required this.alt});
+  final String source;
+  const _MarkdownImage({required this.url, required this.alt, this.source = ''});
 
   @override
   State<_MarkdownImage> createState() => _MarkdownImageState();
 }
 
 class _MarkdownImageState extends State<_MarkdownImage> {
-  final Object _tag = Object();
-
   @override
   Widget build(BuildContext context) {
     final sc = Theme.of(context).colorScheme;
+    final small = Theme.of(context).textTheme.labelSmall?.copyWith(color: sc.onSurfaceVariant);
+    final src = widget.source.isNotEmpty ? widget.source : ImageTools.host(widget.url);
+    final caption = [if (widget.alt.isNotEmpty) widget.alt, if (src.isNotEmpty) '${tr('img_source')} : $src'].join(' · ');
     Widget box(Widget child) => Container(
           height: 230,
           width: double.infinity,
@@ -421,50 +425,55 @@ class _MarkdownImageState extends State<_MarkdownImage> {
           alignment: Alignment.center,
           child: child,
         );
+    Widget tool(IconData icon, String tip, VoidCallback onTap) => IconButton(
+          tooltip: tip,
+          visualDensity: VisualDensity.compact,
+          iconSize: 18,
+          color: sc.onSurfaceVariant,
+          icon: Icon(icon),
+          onPressed: onTap,
+        );
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 560),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           PcGesture(
-            onTap: () => Navigator.of(context).push(PageRouteBuilder<void>(
-              opaque: false,
-              barrierColor: Colors.black87,
-              pageBuilder: (_, _, _) => _FullscreenImage(url: widget.url, tag: _tag),
-              transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
-              transitionDuration: const Duration(milliseconds: 220),
-              reverseTransitionDuration: const Duration(milliseconds: 180),
-            )),
-            child: Hero(
-              tag: _tag,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(22),
-                child: SizedBox(
-                  height: 230,
-                  width: double.infinity,
-                  child: Stack(fit: StackFit.expand, children: [
-                    box(SizedBox(width: 26, height: 26, child: M3Spinner(color: sc.primary))),
-                    Image.network(
-                      widget.url,
-                      fit: BoxFit.cover,
-                      frameBuilder: (_, child, frame, sync) => AnimatedOpacity(
-                        opacity: frame == null && !sync ? 0 : 1,
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeOut,
-                        child: child,
-                      ),
-                      errorBuilder: (_, _, _) => box(Icon(Icons.broken_image_outlined, color: sc.onSurfaceVariant, size: 32)),
-                    ),
-                  ]),
+            onTap: () => Navigator.of(context).push(ImageTools.route(widget.url, source: src, alt: widget.alt)),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topLeft,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 380),
+                  child: Image.network(
+                    widget.url,
+                    fit: BoxFit.contain,
+                    frameBuilder: (_, child, frame, sync) => frame == null && !sync
+                        ? box(SizedBox(width: 26, height: 26, child: M3Spinner(color: sc.primary)))
+                        : TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0, end: 1),
+                            duration: const Duration(milliseconds: 400),
+                            curve: Curves.easeOut,
+                            builder: (_, v, c) => Opacity(opacity: v, child: c),
+                            child: child,
+                          ),
+                    errorBuilder: (_, _, _) => box(Icon(Icons.broken_image_outlined, color: sc.onSurfaceVariant, size: 32)),
+                  ),
                 ),
               ),
             ),
           ),
-          if (widget.alt.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(6, 5, 6, 0),
-              child: Text(widget.alt, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: sc.onSurfaceVariant)),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 2, 0, 0),
+            child: Row(children: [
+              Expanded(child: Text(caption, maxLines: 2, overflow: TextOverflow.ellipsis, style: small)),
+              tool(Icons.copy_rounded, tr('img_copy'), () => ImageTools.copy(context, widget.url)),
+              tool(Icons.download_rounded, tr('img_save'), () => ImageTools.save(context, widget.url)),
+            ]),
+          ),
         ]),
       ),
     );
@@ -504,31 +513,10 @@ class _WikiImageState extends State<_WikiImage> {
           );
         }
         final u = snap.data;
-        return u == null ? const SizedBox.shrink() : _MarkdownImage(url: u, alt: widget.query);
+        return u == null ? const SizedBox.shrink() : _MarkdownImage(url: u, alt: widget.query, source: 'Wikipedia');
       },
     );
   }
-}
-
-// Full-screen, pinch-to-zoom viewer.
-class _FullscreenImage extends StatelessWidget {
-  final String url;
-  final Object tag;
-  const _FullscreenImage({required this.url, required this.tag});
-
-  @override
-  Widget build(BuildContext context) => PcGesture(
-        onTap: () => Navigator.of(context).pop(),
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Center(
-            child: Hero(
-              tag: tag,
-              child: InteractiveViewer(minScale: 1, maxScale: 5, child: Image.network(url, fit: BoxFit.contain)),
-            ),
-          ),
-        ),
-      );
 }
 
 class _CodeBlock extends StatelessWidget {

@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/m3_motion.dart';
+import 'pico_face.dart';
 import 'skeleton.dart' show M3LoadingIndicator;
 
 /// Capped stagger delay for lists: item 40 does not wait 1.4 s to appear.
@@ -80,7 +81,14 @@ class WavyLoader extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const M3LoadingIndicator(size: 56),
+          SizedBox(
+            width: 56,
+            height: 56,
+            child: Stack(alignment: Alignment.center, children: [
+              const M3LoadingIndicator(size: 56),
+              PicoFace(size: 22, color: scheme.primary, mood: PicoMood.loading),
+            ]),
+          ),
           if (label != null) ...[
             const SizedBox(height: 14),
             Text(label!, style: TextStyle(color: scheme.onSurfaceVariant)),

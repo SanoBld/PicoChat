@@ -88,12 +88,6 @@ class _SidebarState extends State<_Sidebar> {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
         child: Row(children: [
-          M3CookieBadge(
-            size: 40,
-            color: scheme.primary,
-            child: PicoFace(size: 22, color: scheme.onPrimary),
-          ),
-          const SizedBox(width: 12),
           Text('PicoChat', style: text.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
         ]),
       ),
