@@ -9,6 +9,7 @@ import '../app_state.dart';
 import '../l10n/l10n.dart';
 import '../supported_locales.dart';
 import 'chat_store.dart';
+import 'cloud/cloud_store.dart';
 import 'memory_store.dart';
 import 'model_manager.dart';
 
@@ -128,6 +129,14 @@ class ResetService {
     activeModelNotifier.value = '';
     hfTokenNotifier.value = '';
     hfEndpointNotifier.value = kDefaultHfEndpoint;
+    CloudStore.instance.resetMemory(); // accounts and API keys
+    cloudCtxMemoryNotifier.value = true;
+    cloudCtxTimeNotifier.value = true;
+    cloudCtxLocationNotifier.value = false;
+    cloudCtxFilesNotifier.value = true;
+    cloudCtxWebNotifier.value = true;
+    cloudCtxDeviceNotifier.value = false;
+    cloudHistoryNotifier.value = 40;
     return true;
   }
 }

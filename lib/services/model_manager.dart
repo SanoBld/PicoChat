@@ -15,6 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_state.dart';
 import '../models/model_models.dart';
+import 'cloud/cloud_store.dart';
 import 'hf_service.dart';
 
 enum DownloadStatus { queued, downloading, paused, failed }
@@ -141,7 +142,11 @@ class ModelManager extends ChangeNotifier {
 
   // ── Active model ──────────────────────────────────────────────────────────
 
-  Future<void> setActive(String id) => _setActive(id);
+  /// The person picks a local model: chats use it instead of any cloud model.
+  Future<void> setActive(String id) async {
+    await _setActive(id);
+    await CloudStore.instance.clearActive();
+  }
 
   Future<void> _setActive(String id) async {
     activeModelNotifier.value = id;

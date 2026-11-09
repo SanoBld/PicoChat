@@ -70,6 +70,13 @@ class _SettingsPageState extends State<_SettingsPage> {
               onTap: () => _open(const _ModelsPage()),
             ),
             SettingActionRow(
+              icon: Icons.cloud_rounded,
+              title: tr('cloud_title'),
+              subtitle: tr('cloud_sub'),
+              trailing: chevron,
+              onTap: () => _open(const CloudPage()),
+            ),
+            SettingActionRow(
               icon: Icons.phonelink_lock_rounded,
               title: tr('acc_title'),
               subtitle: tr('acc_sub'),

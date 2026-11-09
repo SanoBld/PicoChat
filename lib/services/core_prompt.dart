@@ -8,10 +8,18 @@ import 'memory_store.dart';
 import 'model_manager.dart';
 
 class CorePrompt {
-  static String build({bool fileRequested = false, bool canSearch = false}) {
+  /// [cloudName] is set when the answer comes from a cloud AI (Claude, Gemini,
+  /// ChatGPT…): the prompt then says so, and only the context the person
+  /// allowed in Settings > Cloud AI is included.
+  static String build({bool fileRequested = false, bool canSearch = false, String? cloudName}) {
+    final cloud = cloudName != null;
     final lang = supportedLocaleFor(localeNotifier.value).englishName;
     final b = StringBuffer()
-      ..writeln('You are PicoChat, a private AI assistant running 100% on the user\'s device.')
+      ..writeln(cloud
+          ? 'You are the assistant of PicoChat, a chat app. You answer through the app with the cloud model '
+              '"$cloudName", chosen by the user. Do not say that you run on the user\'s device. '
+              'Do not claim to be another model than the one you really are.'
+          : 'You are PicoChat, a private AI assistant running 100% on the user\'s device.')
       ..writeln('ABSOLUTE RULES:')
       ..writeln('1. Do exactly what the user asks. Respect every constraint (format, length, number of items, '
           'tone, language, style). Follow the user instructions below at all times.')
@@ -32,7 +40,7 @@ class CorePrompt {
           'Speaker icon under an answer = read aloud; copy and regenerate buttons are next to it. '
           'The tune button = chat tools. Settings > Memory = list, export or delete what you remember '
           'and edit the instructions. Models page = download or switch the AI model. '
-          'Everything stays on the device.');
+          '${cloud ? 'Chats are saved on the device; the messages sent to you travel to the cloud provider. Settings > Cloud AI = accounts and shared context.' : 'Everything stays on the device.'}');
     switch (answerLengthNotifier.value) {
       case 'short':
         b.writeln('LENGTH: keep answers very short (1 to 3 sentences or a few lines), only the essentials.');
@@ -66,7 +74,7 @@ class CorePrompt {
         'Or ![short description](URL) ONLY with a direct image URL given by the user or found in the web results. '
         'Never invent a URL. At most 2 images per answer. Never mention this syntax.');
     if (fileRequested) b.writeln('The user asked for a file in this message: produce the file block now.');
-    if (memoryEnabledNotifier.value) {
+    if (memoryEnabledNotifier.value && (!cloud || cloudCtxMemoryNotifier.value)) {
       final all = MemoryStore.instance.items;
       final lim = memoryLimitNotifier.value;
       final facts = (lim <= 0 || unlimitedNotifier.value || all.length <= lim) ? all : all.sublist(all.length - lim);
@@ -83,7 +91,7 @@ class CorePrompt {
           'These tags are hidden commands: never explain or mention them.');
     }
     final ctx = <String>[];
-    if (contextTimeNotifier.value) {
+    if (contextTimeNotifier.value && (!cloud || cloudCtxTimeNotifier.value)) {
       final n = DateTime.now();
       final off = n.timeZoneOffset;
       final sign = off.isNegative ? '-' : '+';
@@ -92,13 +100,15 @@ class CorePrompt {
       ctx.add('current date and time ${n.toString().substring(0, 16)} (UTC$sign$hh:$mm)');
     }
     final place = LocationService.instance.label;
-    if (locationEnabledNotifier.value && place != null) ctx.add('approximate location $place');
+    if (locationEnabledNotifier.value && place != null && (!cloud || cloudCtxLocationNotifier.value)) {
+      ctx.add('approximate location $place');
+    }
     if (ctx.isNotEmpty) {
       b.writeln('DEVICE CONTEXT (use only when relevant, never invent beyond it): ${ctx.join('; ')}.');
     }
     final instr = systemPromptNotifier.value.trim();
     if (instr.isNotEmpty && instr != kDefaultSystemPrompt) b.writeln('USER INSTRUCTIONS (always follow):\n$instr');
-    final repo = ModelManager.instance.active?.repo.toLowerCase() ?? '';
+    final repo = cloud ? '' : (ModelManager.instance.active?.repo.toLowerCase() ?? '');
     if (repo.contains('qwen3') && !repo.contains('2507') && !ultraModeNotifier.value) b.writeln('/no_think');
     return b.toString().trim();
   }

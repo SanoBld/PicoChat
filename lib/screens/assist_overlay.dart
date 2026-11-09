@@ -302,7 +302,7 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
                                 avatar: const Icon(Icons.memory_rounded, size: 18),
                                 label: ConstrainedBox(
                                   constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.5),
-                                  child: Text(ChatService.instance.currentModel?.fileName ?? tr('no_installed'),
+                                  child: Text(ChatService.instance.currentCloud?.displayName ?? ChatService.instance.currentModel?.fileName ?? tr('no_installed'),
                                       maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ),
                               ),

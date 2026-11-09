@@ -49,6 +49,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     ChatStore.instance.addListener(_onChange);
     ChatService.instance.addListener(_onChange);
     ModelManager.instance.addListener(_onChange);
+    CloudStore.instance.addListener(_onChange);
+    cloudEnabledNotifier.addListener(_onChange);
     localeNotifier.addListener(_onChange);
     webSearchNotifier.addListener(_onChange);
     locationEnabledNotifier.addListener(_onChange);
@@ -69,6 +71,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     ChatStore.instance.removeListener(_onChange);
     ChatService.instance.removeListener(_onChange);
     ModelManager.instance.removeListener(_onChange);
+    CloudStore.instance.removeListener(_onChange);
+    cloudEnabledNotifier.removeListener(_onChange);
     localeNotifier.removeListener(_onChange);
     webSearchNotifier.removeListener(_onChange);
     locationEnabledNotifier.removeListener(_onChange);
@@ -317,6 +321,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     final text = Theme.of(context).textTheme;
     final service = ChatService.instance;
     final active = ModelManager.instance.active;
+    final cloud = service.currentCloud;
+    final cloudModels = cloudEnabledNotifier.value ? CloudStore.instance.models : const <CloudModel>[];
     final busy = service.isGeneratingIn(widget.chat);
     final messages = widget.chat.messages;
 
@@ -350,21 +356,43 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
             onSelected: (id) {
               if (id == '__more') {
                 widget.onOpenModels();
+              } else if (id.startsWith(kCloudPrefix)) {
+                CloudStore.instance.select(id);
               } else {
-                ModelManager.instance.setActive(id);
+                ModelManager.instance.setActive(id); // also leaves the cloud model
               }
             },
             itemBuilder: (_) => [
               for (final m in ModelManager.instance.installed.take(6))
                 CheckedPopupMenuItem<String>(
                   value: m.id,
-                  checked: m.id == active?.id,
+                  checked: cloud == null && m.id == active?.id,
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 220),
-                    child: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Row(children: [
+                      Icon(Icons.smartphone_rounded, size: 16, color: scheme.onSurfaceVariant),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    ]),
                   ),
                 ),
-              if (ModelManager.instance.installed.isNotEmpty) const PopupMenuDivider(),
+              if (cloudModels.isNotEmpty) ...[
+                if (ModelManager.instance.installed.isNotEmpty) const PopupMenuDivider(),
+                for (final c in cloudModels.take(8))
+                  CheckedPopupMenuItem<String>(
+                    value: c.id,
+                    checked: c.id == cloud?.id,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 220),
+                      child: Row(children: [
+                        Icon(Icons.cloud_rounded, size: 16, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(c.displayName, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      ]),
+                    ),
+                  ),
+              ],
+              if (ModelManager.instance.installed.isNotEmpty || cloudModels.isNotEmpty) const PopupMenuDivider(),
               PopupMenuItem<String>(
                 value: '__more',
                 child: Row(children: [
@@ -377,11 +405,12 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.memory_rounded, size: 18),
+                Icon(cloud != null ? Icons.cloud_rounded : Icons.smartphone_rounded, size: 18),
                 const SizedBox(width: 8),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 150),
-                  child: Text(active?.displayName ?? tr('select_model'), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  child: Text(cloud?.displayName ?? active?.displayName ?? tr('select_model'),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
                 const Icon(Icons.arrow_drop_down_rounded, size: 20),
               ]),
@@ -395,7 +424,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
       body: DropTarget(
         onDragDone: _onDrop,
         child: Column(children: [
-        if (service.canChat && InferenceService.engine.isPlaceholder)
+        if (service.canChat && service.currentCloud == null && InferenceService.engine.isPlaceholder)
           Container(
             width: double.infinity,
             color: scheme.tertiaryContainer.withValues(alpha: 0.6),
@@ -767,10 +796,10 @@ class _EmptyChat extends StatelessWidget {
 
   // Right-click (Windows, macOS, Linux) or long press (Android): ideas + actions on the clipboard.
   Future<void> _menu(BuildContext context, Offset pos, List<_Sug> sugs) async {
+    final box = Overlay.of(context).context.findRenderObject() as RenderBox;
     final clip = ((await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '').trim();
     if (!context.mounted) return;
     final short = clip.length > 1500 ? clip.substring(0, 1500) : clip;
-    final box = Overlay.of(context).context.findRenderObject() as RenderBox;
     PopupMenuItem<String> item(String v, IconData icon, String label) => PopupMenuItem<String>(
           value: v,
           child: Row(children: [
@@ -820,6 +849,7 @@ class _EmptyChat extends StatelessWidget {
     final name = displayNameNotifier.value.trim();
     final sugs = canChat ? _suggestions() : const <_Sug>[];
     final model = ChatService.instance.currentModel;
+    final cloud = ChatService.instance.currentCloud;
     final mem = memoryEnabledNotifier.value ? MemoryStore.instance.items.length : 0;
     final loc = locationEnabledNotifier.value ? LocationService.instance.label : null;
     final tints = [
@@ -871,8 +901,12 @@ class _EmptyChat extends StatelessWidget {
               FadeSlideIn(
                 delay: const Duration(milliseconds: 150),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
-                  _pill(context, Icons.lock_rounded, tr('home_hint_local')),
-                  if (model != null) _pill(context, Icons.memory_rounded, model.fileName.replaceAll('.gguf', '')),
+                  _pill(context, cloud != null ? Icons.cloud_rounded : Icons.lock_rounded,
+                      cloud != null ? tr('home_hint_cloud') : tr('home_hint_local')),
+                  if (cloud != null)
+                    _pill(context, cloudProviderIcon(cloud.provider), cloud.displayName)
+                  else if (model != null)
+                    _pill(context, Icons.smartphone_rounded, model.fileName.replaceAll('.gguf', '')),
                   if (webSearchNotifier.value) _pill(context, Icons.public_rounded, tr('pill_web')),
                   if (loc != null && loc.isNotEmpty) _pill(context, Icons.place_rounded, loc),
                   if (mem > 0) _pill(context, Icons.psychology_rounded, mem == 1 ? tr('pill_memory_one') : tr('pill_memories', {'n': '$mem'})),
@@ -1063,7 +1097,8 @@ class _MessageView extends StatelessWidget {
             if (message.failed)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
-                child: Text(tr('gen_failed'), style: text.bodySmall?.copyWith(color: scheme.error)),
+                child: Text(message.error.isNotEmpty ? message.error : tr('gen_failed'),
+                    style: text.bodySmall?.copyWith(color: scheme.error)),
               ),
             if (message.memories.isNotEmpty)
               Padding(

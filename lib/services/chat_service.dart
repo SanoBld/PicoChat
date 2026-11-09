@@ -20,6 +20,9 @@ import 'map_service.dart';
 import 'auto_commands.dart';
 import 'cards.dart';
 import 'chat_store.dart';
+import 'cloud/cloud_engine.dart';
+import 'cloud/cloud_protocol.dart';
+import 'cloud/cloud_store.dart';
 import 'file_output.dart';
 import 'core_prompt.dart';
 import 'inference_engine.dart';
@@ -64,14 +67,22 @@ class ChatService extends ChangeNotifier {
   InstalledModel? modelOverride;
   InstalledModel? get currentModel => modelOverride ?? ModelManager.instance.active;
 
-  bool get canChat => currentModel != null;
+  /// Cloud model in use (Claude, Gemini, ChatGPT…), or null. Only when the
+  /// optional cloud AI is switched on, and never while the assistant overlay
+  /// forces a local model.
+  CloudModel? get currentCloud {
+    if (!cloudEnabledNotifier.value || modelOverride != null) return null;
+    return CloudStore.instance.byId(activeCloudNotifier.value);
+  }
+
+  bool get canChat => currentCloud != null || currentModel != null;
 
   Future<void> send(Conversation chat, String text,
       {List<Attachment> files = const [], bool web = false}) async {
     final clean = text.trim();
     if (clean.isEmpty || _generating || !canChat) return;
     final first = chat.messages.isEmpty;
-    chat.modelId = currentModel!.id;
+    chat.modelId = currentCloud?.id ?? currentModel!.id;
     VoiceService.instance.stop();
     final msg = ChatMessage(
       role: ChatRole.user,
@@ -112,6 +123,7 @@ class ChatService extends ChangeNotifier {
     if (!_generating) return;
     _stopRequested = true;
     InferenceService.engine.stop();
+    CloudEngine.instance.stop();
   }
 
   /// Three short search queries written by the model (Ultra mode).
@@ -152,9 +164,18 @@ class ChatService extends ChangeNotifier {
   Future<void> _answer(Conversation chat,
       {List<Attachment> files = const [], bool web = false, String query = '', String? remembered, String? command}) async {
     final store = ChatStore.instance;
-    final engine = InferenceService.engine;
-    final model = currentModel;
-    if (model == null) return;
+    final cloud = currentCloud;
+    final model = cloud == null ? currentModel : null;
+    if (cloud == null && model == null) return;
+    // A cloud answer uses the same pipeline (context, web, memory, steps):
+    // only the engine that writes the answer changes.
+    final InferenceEngine engine = cloud != null ? CloudEngine.instance.bind(cloud) : InferenceService.engine;
+    final modelFile = cloud != null ? cloud.info.id : model!.fileName;
+    // Room for files and web results: the model's own window for the cloud.
+    final ctxTokens = cloud != null ? math.min(cloud.info.contextTokens, 128000) : contextSizeNotifier.value;
+    final maxCtxChars = cloud != null ? 240000 : 60000;
+    final shareFiles = cloud == null || cloudCtxFilesNotifier.value;
+    final webOk = cloud == null || cloudCtxWebNotifier.value;
 
     final history = List<ChatMessage>.of(chat.messages); // ends with the user message
     final reply = ChatMessage(role: ChatRole.assistant, text: '');
@@ -200,8 +221,12 @@ class ChatService extends ChangeNotifier {
       }
 
       // Files
-      if (files.isNotEmpty) {
-        final budget = ((contextSizeNotifier.value - maxTokensNotifier.value - 500) * 3).clamp(1500, 60000);
+      if (files.isNotEmpty && !shareFiles) {
+        ctx.writeln('--- Note ---\nThe user attached files, but chose not to share them with this cloud AI. '
+            'Say it in one short sentence; do not guess their content.\n');
+      }
+      if (files.isNotEmpty && shareFiles) {
+        final budget = ((ctxTokens - maxTokensNotifier.value - 500) * 3).clamp(1500, maxCtxChars);
         for (final f in files.where((f) => !f.isImage)) {
           final cut = budget ~/ files.length;
           final t = f.text.length > cut ? f.text.substring(0, cut) : f.text;
@@ -235,7 +260,7 @@ class ChatService extends ChangeNotifier {
       }
 
       // Phone data (contacts, messages, notifications, calendar): only if asked AND allowed.
-      if (query.isNotEmpty) {
+      if (query.isNotEmpty && (cloud == null || cloudCtxDeviceNotifier.value)) {
         final dv = await DeviceData.build(query);
         if (dv != null) {
           step(dv.step, dv.detail);
@@ -250,7 +275,7 @@ class ChatService extends ChangeNotifier {
       }
 
       // Model
-      if (engine.loadedModelId != model.id || _loadedCtx != contextSizeNotifier.value) {
+      if (model != null && (engine.loadedModelId != model.id || _loadedCtx != contextSizeNotifier.value)) {
         step('step_load', model.displayName);
         _loadingModel = true;
         notifyListeners();
@@ -284,7 +309,7 @@ class ChatService extends ChangeNotifier {
         }
         final list = found.take(ultra ? 20 : (per == 0 ? 40 : per)).toList();
         if (list.isNotEmpty) {
-          final budget = ((contextSizeNotifier.value - maxTokensNotifier.value - 500) * 3).clamp(1500, 60000);
+          final budget = ((ctxTokens - maxTokensNotifier.value - 500) * 3).clamp(1500, maxCtxChars);
           reply.sources = [for (final w in list) {'title': w.title, 'url': w.url, 'domain': w.domain}];
           step('step_read', '${list.length} · ${list.map((w) => w.domain).toSet().take(6).join(', ')}');
           ctx.writeln('--- Web results (use them and cite the URLs) ---\n${WebSearch.format(list, budget ~/ 2)}\n');
@@ -293,7 +318,7 @@ class ChatService extends ChangeNotifier {
       }
 
       // Web
-      final doWeb = (web || ultra) && query.isNotEmpty && (card == null || ultra);
+      final doWeb = (web || ultra) && query.isNotEmpty && (card == null || ultra) && webOk;
       if (doWeb) {
         var queries = [WebIntent.augment(query)];
         if (ultra) {
@@ -333,7 +358,7 @@ class ChatService extends ChangeNotifier {
         await for (final piece in engine.generate(
             h2,
             GenerationOptions(
-                systemPrompt: CorePrompt.build(fileRequested: false),
+                systemPrompt: CorePrompt.build(fileRequested: false, cloudName: cloud?.displayName),
                 temperature: 0.3,
                 maxTokens: unl ? 1500 : math.min(maxTokensNotifier.value, ultra ? 700 : 350)))) {
           analysis.write(piece);
@@ -354,10 +379,10 @@ class ChatService extends ChangeNotifier {
 
       step('step_write');
       GenerationOptions makeOptions(bool searchNow) => GenerationOptions(
-            systemPrompt: CorePrompt.build(fileRequested: wantsFile, canSearch: searchNow),
+            systemPrompt: CorePrompt.build(fileRequested: wantsFile, canSearch: searchNow, cloudName: cloud?.displayName),
             temperature: temperatureNotifier.value,
             maxTokens: unl
-                ? math.max(maxTokensNotifier.value, (contextSizeNotifier.value - 800).clamp(1024, 32768))
+                ? math.max(maxTokensNotifier.value, (ctxTokens - 800).clamp(1024, 32768))
                 : switch (answerLengthNotifier.value) {
                     'short' => math.min(maxTokensNotifier.value, 400),
                     'medium' => math.min(maxTokensNotifier.value, 900),
@@ -369,7 +394,8 @@ class ChatService extends ChangeNotifier {
       int? firstMs;
       var pieces = 0;
       // The model may decide by itself to search the web ("[[search: ...]]"), once.
-      final canSelfSearch = (webAutoNotifier.value || webSearchNotifier.value) && !doWeb && card == null && lastUser.trim().isNotEmpty;
+      final canSelfSearch =
+          (webAutoNotifier.value || webSearchNotifier.value) && !doWeb && card == null && lastUser.trim().isNotEmpty && webOk;
       for (var pass = 0; pass < 2; pass++) {
         final searchNow = pass == 0 && canSelfSearch;
         final options = makeOptions(searchNow);
@@ -426,8 +452,8 @@ class ChatService extends ChangeNotifier {
           'tokens': pieces,
           'firstMs': firstMs ?? 0,
           'totalMs': sw.elapsedMilliseconds,
-          'model': model.fileName,
-          'ctx': contextSizeNotifier.value,
+          'model': cloud != null ? '${cloud.provider.shortName}: $modelFile' : modelFile,
+          'ctx': ctxTokens,
           'promptTok': (reply.prompt.length / 3.5).round(),
         };
       }
@@ -451,6 +477,7 @@ class ChatService extends ChangeNotifier {
       debugPrint('Generation failed: $e');
       reply.text = shown(buffer.toString());
       reply.failed = true;
+      if (cloud != null) reply.error = cloudErrorText(e); // wrong key, no credit, network…
     } finally {
       for (final s in reply.steps) {
         s['state'] = 'done';

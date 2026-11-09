@@ -14,6 +14,18 @@ resumable downloads, chat history and CI/CD are done. Answers come from a real
 on-device engine: llama.cpp through the [`llamadart`](https://pub.dev/packages/llamadart)
 package (`lib/services/llama_engine.dart`). The web build keeps a demo engine.
 
+## Cloud AI (optional)
+
+Off by default. Settings > Cloud AI: add an account for Claude (Anthropic),
+Gemini (Google), ChatGPT (OpenAI) or any OpenAI-compatible server (Mistral,
+DeepSeek, Groq, OpenRouter, Ollama, LM Studio...) with your own API key, fetch
+the model list from the service, then pick a cloud model in the chat header or
+in Models. Cloud answers use the same pipeline as local ones (files, memory,
+web results, steps, stop button). Settings > Cloud AI > Context chooses what is
+sent along with the messages (memory, date, location, files, web, phone data,
+history length). Protocol code: `lib/services/cloud/` (tested in
+`test/cloud_protocol_test.dart`).
+
 ## Layout
 
 ```

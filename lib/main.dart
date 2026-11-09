@@ -17,6 +17,7 @@ import 'screens/assist_overlay.dart';
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
 import 'services/chat_store.dart';
+import 'services/cloud/cloud_store.dart';
 import 'services/inference_engine.dart';
 import 'services/llama_engine.dart';
 import 'services/model_manager.dart';
@@ -131,7 +132,17 @@ Future<SharedPreferences> _loadState() async {
   hfTokenNotifier.value = p.getString('pc_hf_token') ?? '';
   hfEndpointNotifier.value = p.getString('pc_hf_endpoint') ?? kDefaultHfEndpoint;
 
-  await Future.wait([ChatStore.instance.init(), ModelManager.instance.init(), MemoryStore.instance.init()]);
+  cloudEnabledNotifier.value = p.getBool('pc_cloud_enabled') ?? false;
+  activeCloudNotifier.value = p.getString('pc_active_cloud') ?? '';
+  cloudCtxMemoryNotifier.value = p.getBool('pc_cloud_ctx_memory') ?? true;
+  cloudCtxTimeNotifier.value = p.getBool('pc_cloud_ctx_time') ?? true;
+  cloudCtxLocationNotifier.value = p.getBool('pc_cloud_ctx_location') ?? false;
+  cloudCtxFilesNotifier.value = p.getBool('pc_cloud_ctx_files') ?? true;
+  cloudCtxWebNotifier.value = p.getBool('pc_cloud_ctx_web') ?? true;
+  cloudCtxDeviceNotifier.value = p.getBool('pc_cloud_ctx_device') ?? false;
+  cloudHistoryNotifier.value = p.getInt('pc_cloud_history') ?? 40;
+
+  await Future.wait([ChatStore.instance.init(), ModelManager.instance.init(), MemoryStore.instance.init(), CloudStore.instance.init()]);
   NotifService.instance.attach();
   return p;
 }

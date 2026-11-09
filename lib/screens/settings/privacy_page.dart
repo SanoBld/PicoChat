@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../../app_state.dart';
 import '../../l10n/l10n.dart';
 import '../../widgets/m3_components.dart';
 
@@ -15,7 +16,10 @@ class PrivacyPage extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final items = <(IconData, String, String)>[
       (Icons.phone_android_rounded, tr('pv_1_t'), tr('pv_1_s')),
-      (Icons.cloud_off_rounded, tr('pv_2_t'), tr('pv_2_s')),
+      if (cloudEnabledNotifier.value)
+        (Icons.cloud_upload_rounded, tr('pv_cloud_t'), tr('pv_cloud_s'))
+      else
+        (Icons.cloud_off_rounded, tr('pv_2_t'), tr('pv_2_s')),
       (Icons.download_rounded, tr('pv_3_t'), tr('pv_3_s')),
       (Icons.person_off_rounded, tr('pv_4_t'), tr('pv_4_s')),
     ];

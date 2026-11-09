@@ -18,6 +18,7 @@ class ChatMessage {
   final DateTime createdAt;
   bool stopped; // the person pressed stop while this answer was written
   bool failed; // the engine failed while writing this answer
+  String error; // why it failed (cloud AI: wrong key, no credit, network…); empty = generic message
   String context; // hidden text sent with this message (files, web results)
   List<String> files; // names of attached files (display only)
   List<String> images; // image paths for vision models (not saved)
@@ -35,6 +36,7 @@ class ChatMessage {
     DateTime? createdAt,
     this.stopped = false,
     this.failed = false,
+    this.error = '',
     this.context = '',
     List<String>? files,
     List<String>? images,
@@ -62,6 +64,7 @@ class ChatMessage {
         'createdAt': createdAt.toIso8601String(),
         if (stopped) 'stopped': true,
         if (failed) 'failed': true,
+        if (error.isNotEmpty) 'error': error,
         if (context.isNotEmpty) 'context': context,
         if (files.isNotEmpty) 'files': files,
         if (sources.isNotEmpty) 'sources': sources,
@@ -78,6 +81,7 @@ class ChatMessage {
         createdAt: DateTime.tryParse((j['createdAt'] as String?) ?? ''),
         stopped: j['stopped'] == true,
         failed: j['failed'] == true,
+        error: (j['error'] as String?) ?? '',
         context: (j['context'] as String?) ?? '',
         files: ((j['files'] as List?) ?? []).whereType<String>().toList(),
         memories: ((j['memories'] as List?) ?? []).whereType<String>().toList(),

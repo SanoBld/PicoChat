@@ -17,12 +17,16 @@ class _ModelsPageState extends State<_ModelsPage> with SingleTickerProviderState
   void initState() {
     super.initState();
     ModelManager.instance.addListener(_rebuild);
+    CloudStore.instance.addListener(_rebuild);
+    cloudEnabledNotifier.addListener(_rebuild);
     localeNotifier.addListener(_rebuild);
   }
 
   @override
   void dispose() {
     ModelManager.instance.removeListener(_rebuild);
+    CloudStore.instance.removeListener(_rebuild);
+    cloudEnabledNotifier.removeListener(_rebuild);
     localeNotifier.removeListener(_rebuild);
     _tabs.dispose();
     super.dispose();
@@ -108,59 +112,117 @@ class _InstalledTab extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final mgr = ModelManager.instance;
     final list = mgr.installed;
-    if (list.isEmpty) {
+    // Optional cloud AI (Settings > Cloud AI): its models are listed below the local ones.
+    final cloudOn = cloudEnabledNotifier.value;
+    final cloudModels = cloudOn ? CloudStore.instance.models : const <CloudModel>[];
+    final activeCloud = ChatService.instance.currentCloud;
+
+    Widget manageCloud() => Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: M3LabelButton(
+            kind: M3ButtonKind.tonal,
+            icon: Icons.cloud_rounded,
+            label: tr('cloud_manage'),
+            onTap: () => Navigator.of(context).push(M3SharedAxisRoute<void>(builder: (_) => const CloudPage())),
+          ),
+        );
+
+    if (list.isEmpty && cloudModels.isEmpty) {
       return Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         M3EmptyState(icon: Icons.memory_rounded, message: tr('no_installed')),
         const SizedBox(height: 16),
         M3LabelButton(kind: M3ButtonKind.filled, icon: Icons.explore_rounded, label: tr('tab_discover'), onTap: onDiscover),
+        if (cloudOn) ...[const SizedBox(height: 8), manageCloud()],
       ]);
     }
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-      itemCount: list.length,
-      itemBuilder: (_, i) {
-        final m = list[i];
-        final isActive = m.id == activeModelNotifier.value;
-        return FadeSlideIn(
-          key: ValueKey(m.id),
-          delay: staggerDelay(i),
-          child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: M3PressCard(
-            color: isActive ? scheme.primaryContainer : scheme.surfaceContainerLow,
-            onTap: () {
-              m3Haptic();
-              mgr.setActive(m.id);
-            },
-            child: Row(children: [
-              M3CookieBadge(
-                size: 44,
-                color: isActive ? scheme.primary : scheme.secondaryContainer,
-                child: Icon(isActive ? Icons.check_rounded : Icons.memory_rounded,
-                    color: isActive ? scheme.onPrimary : scheme.onSecondaryContainer),
+      children: [
+        for (var i = 0; i < list.length; i++)
+          Builder(builder: (context) {
+            final m = list[i];
+            final isActive = activeCloud == null && m.id == activeModelNotifier.value;
+            return FadeSlideIn(
+              key: ValueKey(m.id),
+              delay: staggerDelay(i),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: M3PressCard(
+                  color: isActive ? scheme.primaryContainer : scheme.surfaceContainerLow,
+                  onTap: () {
+                    m3Haptic();
+                    mgr.setActive(m.id);
+                  },
+                  child: Row(children: [
+                    M3CookieBadge(
+                      size: 44,
+                      color: isActive ? scheme.primary : scheme.secondaryContainer,
+                      child: Icon(isActive ? Icons.check_rounded : Icons.smartphone_rounded,
+                          color: isActive ? scheme.onPrimary : scheme.onSecondaryContainer),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(m.displayName,
+                            maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(
+                          [if (m.quant.isNotEmpty) m.quant, formatBytes(m.sizeBytes), if (isActive) tr('in_use')].join(' · '),
+                          style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                        ),
+                      ]),
+                    ),
+                    Icon(Icons.smartphone_rounded, size: 18, color: scheme.onSurfaceVariant),
+                    IconButton(
+                      tooltip: tr('delete'),
+                      icon: Icon(Icons.delete_outline_rounded, color: scheme.onSurfaceVariant),
+                      onPressed: () => _delete(context, m),
+                    ),
+                  ]),
+                ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(
-                    [if (m.quant.isNotEmpty) m.quant, formatBytes(m.sizeBytes), if (isActive) tr('in_use')].join(' · '),
-                    style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+            );
+          }),
+        if (cloudOn) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+            child: Text(tr('cloud_section'), style: text.titleSmall?.copyWith(color: scheme.onSurfaceVariant)),
+          ),
+          for (final c in cloudModels)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: M3PressCard(
+                color: c.id == activeCloud?.id ? scheme.primaryContainer : scheme.surfaceContainerLow,
+                onTap: () {
+                  m3Haptic();
+                  CloudStore.instance.select(c.id);
+                },
+                child: Row(children: [
+                  M3CookieBadge(
+                    size: 44,
+                    color: c.id == activeCloud?.id ? scheme.primary : scheme.tertiaryContainer,
+                    child: Icon(c.id == activeCloud?.id ? Icons.check_rounded : cloudProviderIcon(c.provider),
+                        color: c.id == activeCloud?.id ? scheme.onPrimary : scheme.onTertiaryContainer),
                   ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(c.displayName,
+                          maxLines: 1, overflow: TextOverflow.ellipsis, style: text.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text(
+                        [c.subtitle, if (c.id == activeCloud?.id) tr('in_use')].join(' · '),
+                        style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                      ),
+                    ]),
+                  ),
+                  Icon(Icons.cloud_rounded, size: 18, color: scheme.onSurfaceVariant),
                 ]),
               ),
-              IconButton(
-                tooltip: tr('delete'),
-                icon: Icon(Icons.delete_outline_rounded, color: scheme.onSurfaceVariant),
-                onPressed: () => _delete(context, m),
-              ),
-            ]),
-          ),
-          ),
-        );
-      },
+            ),
+          manageCloud(),
+        ],
+      ],
     );
   }
 }

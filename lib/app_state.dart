@@ -77,6 +77,19 @@ final activeModelNotifier      = ValueNotifier<String>('');                   //
 final hfTokenNotifier          = ValueNotifier<String>('');                   // pc_hf_token
 final hfEndpointNotifier       = ValueNotifier<String>(kDefaultHfEndpoint);   // pc_hf_endpoint
 
+// ── Cloud AI (optional, off by default) ──────────────────────────────────────
+// Claude / Gemini / ChatGPT / OpenAI-compatible servers with the person's own
+// API key. Nothing leaves the device unless this is on AND a cloud model is used.
+final cloudEnabledNotifier     = ValueNotifier<bool>(false);                  // pc_cloud_enabled
+final activeCloudNotifier      = ValueNotifier<String>('');                   // pc_active_cloud: 'cloud:<account>/<model>' or ''
+final cloudCtxMemoryNotifier   = ValueNotifier<bool>(true);                   // pc_cloud_ctx_memory: remembered facts
+final cloudCtxTimeNotifier     = ValueNotifier<bool>(true);                   // pc_cloud_ctx_time: date and time
+final cloudCtxLocationNotifier = ValueNotifier<bool>(false);                  // pc_cloud_ctx_location: approximate place
+final cloudCtxFilesNotifier    = ValueNotifier<bool>(true);                   // pc_cloud_ctx_files: attached files and images
+final cloudCtxWebNotifier      = ValueNotifier<bool>(true);                   // pc_cloud_ctx_web: web search results
+final cloudCtxDeviceNotifier   = ValueNotifier<bool>(false);                  // pc_cloud_ctx_device: contacts, SMS, calendar…
+final cloudHistoryNotifier     = ValueNotifier<int>(40);                      // pc_cloud_history: messages sent (0 = all)
+
 ThemeMode themeFromString(String? s) {
   switch (s) {
     case 'light':  return ThemeMode.light;

@@ -56,6 +56,8 @@ import '../widgets/m3_components.dart';
 import '../widgets/markdown_lite.dart';
 import '../widgets/pc_motion.dart';
 import 'settings/appearance_page.dart';
+import 'settings/cloud_page.dart';
+import '../services/cloud/cloud_store.dart';
 import 'settings/access_settings_page.dart';
 import 'settings/chat_settings_page.dart';
 import 'settings/hf_page.dart';
