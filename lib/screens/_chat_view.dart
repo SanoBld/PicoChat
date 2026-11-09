@@ -37,6 +37,12 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    draftNotifier.addListener(_takeDraft);
+    voiceRequestNotifier.addListener(_voiceRequested);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _takeDraft();
+      _voiceRequested();
+    });
     _focus.addListener(() {
       if (_focus.hasFocus) _followEnd();
     });
@@ -56,6 +62,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    draftNotifier.removeListener(_takeDraft);
+    voiceRequestNotifier.removeListener(_voiceRequested);
     _follow?.cancel();
     _showJump.dispose();
     ChatStore.instance.removeListener(_onChange);
@@ -165,6 +173,23 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
         _scroll.jumpTo(p.maxScrollExtent);
       }
     });
+  }
+
+  // Text shared from another app: put it in the composer, ready to be completed.
+  void _takeDraft() {
+    final d = draftNotifier.value;
+    if (d == null || !mounted) return;
+    draftNotifier.value = null;
+    _ctrl.text = d;
+    _ctrl.selection = TextSelection.collapsed(offset: d.length);
+    _focus.requestFocus();
+  }
+
+  // Launcher shortcut "voice dictation".
+  void _voiceRequested() {
+    if (!voiceRequestNotifier.value || !mounted) return;
+    voiceRequestNotifier.value = false;
+    if (ChatService.instance.canChat && !VoiceInput.instance.listening.value) _toggleMic();
   }
 
   Future<void> _sendMic() async {
@@ -740,6 +765,53 @@ class _EmptyChat extends StatelessWidget {
     );
   }
 
+  // Right-click (Windows, macOS, Linux) or long press (Android): ideas + actions on the clipboard.
+  Future<void> _menu(BuildContext context, Offset pos, List<_Sug> sugs) async {
+    final clip = ((await Clipboard.getData(Clipboard.kTextPlain))?.text ?? '').trim();
+    if (!context.mounted) return;
+    final short = clip.length > 1500 ? clip.substring(0, 1500) : clip;
+    final box = Overlay.of(context).context.findRenderObject() as RenderBox;
+    PopupMenuItem<String> item(String v, IconData icon, String label) => PopupMenuItem<String>(
+          value: v,
+          child: Row(children: [
+            Icon(icon, size: 19),
+            const SizedBox(width: 12),
+            Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ]),
+        );
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(pos & const Size(1, 1), Offset.zero & box.size),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      items: [
+        if (ChatService.instance.canChat) ...[
+          for (final (i, sg) in sugs.indexed) item('s$i', sg.icon, sg.text),
+          if (clip.isNotEmpty) ...[
+            const PopupMenuDivider(),
+            item('sum', Icons.summarize_rounded, tr('clip_summarize')),
+            item('trn', Icons.translate_rounded, tr('clip_translate')),
+            item('exp', Icons.lightbulb_rounded, tr('clip_explain')),
+          ],
+          const PopupMenuDivider(),
+        ],
+        item('models', Icons.memory_rounded, tr('get_model')),
+      ],
+    );
+    if (choice == null) return;
+    if (choice == 'models') {
+      onOpenModels();
+    } else if (choice == 'sum') {
+      onSuggest('${tr('clip_summarize_p')}\n\n$short');
+    } else if (choice == 'trn') {
+      onSuggest('${tr('clip_translate_p')}\n\n$short');
+    } else if (choice == 'exp') {
+      onSuggest('${tr('clip_explain_p')}\n\n$short');
+    } else if (choice.startsWith('s')) {
+      final i = int.tryParse(choice.substring(1));
+      if (i != null && i < sugs.length) onSuggest(sugs[i].text);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -756,7 +828,11 @@ class _EmptyChat extends StatelessWidget {
       (scheme.tertiaryContainer, scheme.onTertiaryContainer),
     ];
 
-    return Center(
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onSecondaryTapDown: (d) => _menu(context, d.globalPosition, sugs),
+      onLongPressStart: (d) => _menu(context, d.globalPosition, sugs),
+      child: Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
         child: ConstrainedBox(
@@ -855,7 +931,7 @@ class _EmptyChat extends StatelessWidget {
           ]),
         ),
       ),
-    );
+    ));
   }
 }
 

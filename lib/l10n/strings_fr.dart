@@ -465,4 +465,10 @@ const Map<String, String> kStringsFr = {
   "s_topic": "Approfondis ce sujet : {topic}",
   "s_news": "Résume l’actualité du jour",
   "s_image": "Montre-moi une photo de {city}",
+  "clip_summarize": "Résumer le presse-papiers",
+  "clip_translate": "Traduire le presse-papiers",
+  "clip_explain": "Expliquer le presse-papiers",
+  "clip_summarize_p": "Résume ce texte :",
+  "clip_translate_p": "Traduis ce texte :",
+  "clip_explain_p": "Explique ce texte simplement :",
 };

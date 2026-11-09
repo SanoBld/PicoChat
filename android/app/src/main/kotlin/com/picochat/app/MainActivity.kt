@@ -1,6 +1,7 @@
 package com.picochat.app
 
 import android.content.Intent
+import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -17,10 +18,47 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // Action asked from outside: launcher shortcut, "Share" menu, text selection menu.
+    private var pending: String? = null
+
+    private fun actionOf(i: Intent?): String? {
+        if (i == null) return null
+        return when (i.action) {
+            "com.picochat.app.NEW_CHAT" -> "new_chat"
+            "com.picochat.app.VOICE" -> "voice"
+            "com.picochat.app.WEB" -> "web"
+            Intent.ACTION_SEND -> i.getStringExtra(Intent.EXTRA_TEXT)?.let { "send:" + it }
+            Intent.ACTION_PROCESS_TEXT -> i.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.let { "send:" + it }
+            else -> null
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) pending = actionOf(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val a = actionOf(intent)
+        if (a != null) {
+            setIntent(intent)
+            channel?.invokeMethod("launchAction", a)
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         channel = MethodChannel(messenger, "picochat/assist")
+        channel?.setMethodCallHandler { call, result ->
+            if (call.method == "launchAction") {
+                result.success(pending)
+                pending = null
+            } else {
+                result.notImplemented()
+            }
+        }
         DeviceBridge.register(this, messenger)
 
         MethodChannel(messenger, "picochat/download").setMethodCallHandler { call, result ->

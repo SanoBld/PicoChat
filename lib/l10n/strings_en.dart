@@ -465,4 +465,10 @@ const Map<String, String> kStringsEn = {
   "s_topic": "Go deeper on this topic: {topic}",
   "s_news": "Summarize today’s news",
   "s_image": "Show me a photo of {city}",
+  "clip_summarize": "Summarize clipboard",
+  "clip_translate": "Translate clipboard",
+  "clip_explain": "Explain clipboard",
+  "clip_summarize_p": "Summarize this text:",
+  "clip_translate_p": "Translate this text:",
+  "clip_explain_p": "Explain this text simply:",
 };

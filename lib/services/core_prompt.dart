@@ -8,7 +8,7 @@ import 'memory_store.dart';
 import 'model_manager.dart';
 
 class CorePrompt {
-  static String build({bool fileRequested = false}) {
+  static String build({bool fileRequested = false, bool canSearch = false}) {
     final lang = supportedLocaleFor(localeNotifier.value).englishName;
     final b = StringBuffer()
       ..writeln('You are PicoChat, a private AI assistant running 100% on the user\'s device.')
@@ -48,6 +48,19 @@ class CorePrompt {
         '- bullet lists and **bold**) and xlsx (write it as CSV): the app turns them into real files. '
         'Only if it is truly impossible (image, audio, video, pptx, zip, scanned or binary data) say so in one short '
         'sentence and offer the closest text version. Never use a file block for a normal answer. Never mention this syntax.');
+    if (canSearch) {
+      b.writeln('WEB SEARCH: you can search the internet. When a good answer needs information you cannot be sure of, '
+          'do NOT guess and do NOT say you cannot know: search. This applies to recent or changing facts (news, prices, '
+          'weather, sports results, schedules, opening hours, versions, laws, events), anything after your training, '
+          'specific people, places, products, companies or technical details you do not know well, and every time the '
+          'user asks you to look something up or to check. To search, reply with ONLY one to three tags and no other '
+          'text, for example [[search: iPhone 17 price France]] (short precise queries, in the best language for the '
+          'topic, with the year if it matters). The app runs the search and gives you the results, then you answer '
+          'from them. Never search for greetings, chit-chat, maths, translation, rewriting, writing or code help, '
+          'or things you know well that do not change. Never mention this syntax.');
+    }
+    b.writeln('WEB RESULTS: when web results are provided, base the answer on them, prefer the most recent and reliable '
+        'sources, name the site (domain) for key facts, and if they do not contain the answer say so instead of guessing.');
     b.writeln('IMAGES: you can show a picture when it really helps (a city, landmark, animal, object). Write '
         '[[image: precise subject]] alone on its own line, e.g. [[image: Lyon, France]]: the app finds and shows the image. '
         'Or ![short description](URL) ONLY with a direct image URL given by the user or found in the web results. '

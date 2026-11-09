@@ -27,3 +27,18 @@ class WebIntent {
     return '$query $city';
   }
 }
+
+/// "[[search: query]]" tags written by the model when it decides to look something up.
+class SelfSearch {
+  static final _tag = RegExp(r'\[\[search:\s*(.*?)\]\]', dotAll: true);
+
+  static bool hasTag(String s) => _tag.hasMatch(s);
+
+  static List<String> queries(String s) => _tag
+      .allMatches(s)
+      .map((m) => (m.group(1) ?? '').replaceAll('"', '').trim())
+      .where((q) => q.length >= 3 && q.length <= 100)
+      .toSet()
+      .take(3)
+      .toList();
+}

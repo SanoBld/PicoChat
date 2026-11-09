@@ -267,22 +267,8 @@ class ChatService extends ChangeNotifier {
             'Say it in one short sentence and suggest installing a model with the Vision tag from the Models store.\n');
       }
 
-      // Web
-      final doWeb = (web || ultra) && query.isNotEmpty && (card == null || ultra);
-      if (doWeb) {
-        var queries = [WebIntent.augment(query)];
-        if (ultra) {
-          step('step_plan');
-          _searching = true;
-          notifyListeners();
-          final plan = await _plan(engine, query);
-          queries = [...queries, ...plan];
-          reply.steps.last['detail'] = queries.join('\n');
-        }
-        if (!await _netOk('web', '${tr('net_what_web')}\n${queries.map((q) => '• $q').join('\n')}')) {
-          _searching = false;
-          ctx.writeln('--- Note ---\nThe user refused web search. Answer only with what you already know and say it may be outdated.\n');
-        } else {
+      // Runs the searches, keeps the sources and adds the results to the context.
+      Future<bool> runWebSearch(List<String> queries) async {
         step('step_search', queries.join('\n'));
         _searching = true;
         notifyListeners();
@@ -303,7 +289,27 @@ class ChatService extends ChangeNotifier {
           step('step_read', '${list.length} · ${list.map((w) => w.domain).toSet().take(6).join(', ')}');
           ctx.writeln('--- Web results (use them and cite the URLs) ---\n${WebSearch.format(list, budget ~/ 2)}\n');
         }
+        return reply.sources.isNotEmpty;
       }
+
+      // Web
+      final doWeb = (web || ultra) && query.isNotEmpty && (card == null || ultra);
+      if (doWeb) {
+        var queries = [WebIntent.augment(query)];
+        if (ultra) {
+          step('step_plan');
+          _searching = true;
+          notifyListeners();
+          final plan = await _plan(engine, query);
+          queries = [...queries, ...plan];
+          reply.steps.last['detail'] = queries.join('\n');
+        }
+        if (!await _netOk('web', '${tr('net_what_web')}\n${queries.map((q) => '• $q').join('\n')}')) {
+          _searching = false;
+          ctx.writeln('--- Note ---\nThe user refused web search. Answer only with what you already know and say it may be outdated.\n');
+        } else {
+        await runWebSearch(queries);
+        }
       }
 
       if (ctx.isNotEmpty) {
@@ -347,34 +353,70 @@ class ChatService extends ChangeNotifier {
       }
 
       step('step_write');
-      final options = GenerationOptions(
-        systemPrompt: CorePrompt.build(fileRequested: wantsFile),
-        temperature: temperatureNotifier.value,
-        maxTokens: unl
-            ? math.max(maxTokensNotifier.value, (contextSizeNotifier.value - 800).clamp(1024, 32768))
-            : switch (answerLengthNotifier.value) {
-                'short' => math.min(maxTokensNotifier.value, 400),
-                'medium' => math.min(maxTokensNotifier.value, 900),
-                _ => maxTokensNotifier.value,
-              },
-      );
+      GenerationOptions makeOptions(bool searchNow) => GenerationOptions(
+            systemPrompt: CorePrompt.build(fileRequested: wantsFile, canSearch: searchNow),
+            temperature: temperatureNotifier.value,
+            maxTokens: unl
+                ? math.max(maxTokensNotifier.value, (contextSizeNotifier.value - 800).clamp(1024, 32768))
+                : switch (answerLengthNotifier.value) {
+                    'short' => math.min(maxTokensNotifier.value, 400),
+                    'medium' => math.min(maxTokensNotifier.value, 900),
+                    _ => maxTokensNotifier.value,
+                  },
+          );
       final dev = devModeNotifier.value;
       final sw = Stopwatch()..start();
       int? firstMs;
       var pieces = 0;
-      if (dev) reply.prompt = _promptDump(options.systemPrompt, history);
-      await for (final piece in engine.generate(history, options)) {
-        pieces++;
-        firstMs ??= sw.elapsedMilliseconds;
-        buffer.write(piece);
-        if (streamResponsesNotifier.value) {
-          reply.text = shown(buffer.toString());
-          final now = DateTime.now();
-          if (now.difference(lastPush).inMilliseconds > 40) {
-            lastPush = now;
-            store.messageChanged(chat);
+      // The model may decide by itself to search the web ("[[search: ...]]"), once.
+      final canSelfSearch = (webAutoNotifier.value || webSearchNotifier.value) && !doWeb && card == null && lastUser.trim().isNotEmpty;
+      for (var pass = 0; pass < 2; pass++) {
+        final searchNow = pass == 0 && canSelfSearch;
+        final options = makeOptions(searchNow);
+        if (dev) reply.prompt = _promptDump(options.systemPrompt, history);
+        var asked = false;
+        await for (final piece in engine.generate(history, options)) {
+          pieces++;
+          firstMs ??= sw.elapsedMilliseconds;
+          buffer.write(piece);
+          if (searchNow && !asked && SelfSearch.hasTag(buffer.toString())) {
+            asked = true;
+            engine.stop(); // the rest is not needed: the tag is the whole answer
+          }
+          if (!asked && streamResponsesNotifier.value) {
+            reply.text = shown(buffer.toString());
+            final now = DateTime.now();
+            if (now.difference(lastPush).inMilliseconds > 40) {
+              lastPush = now;
+              store.messageChanged(chat);
+            }
           }
         }
+        if (asked && !_stopRequested) {
+          final qs = SelfSearch.queries(buffer.toString());
+          buffer.clear();
+          reply.text = '';
+          var found = false;
+          if (qs.isNotEmpty) {
+            if (await _netOk('web', '${tr('net_what_web')}\n${qs.map((q) => '• $q').join('\n')}')) {
+              found = await runWebSearch(qs);
+              if (!found) {
+                ctx.writeln('--- Note ---\nThe web search found nothing usable. Answer with what you know and say it may be outdated.\n');
+              }
+            } else {
+              ctx.writeln('--- Note ---\nThe user refused web search. Answer only with what you already know and say it may be outdated.\n');
+            }
+          }
+          for (var i = history.length - 1; i >= 0; i--) {
+            if (history[i].role == ChatRole.user) {
+              history[i].context = ctx.toString();
+              break;
+            }
+          }
+          step('step_write');
+          continue;
+        }
+        break;
       }
       if (dev && pieces > 0) {
         // One streamed piece is about one token.

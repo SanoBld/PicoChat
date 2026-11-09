@@ -142,7 +142,31 @@ class _HomeScreenState extends State<HomeScreen> {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
     _assist.setMethodCallHandler((call) async {
       if (call.method == 'unload') await InferenceService.engine.unload();
+      if (call.method == 'launchAction') _handleLaunch(call.arguments as String?);
     });
+    // Action that started the app (shortcut, share, selection menu).
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        _handleLaunch(await _assist.invokeMethod<String>('launchAction'));
+      } catch (_) {}
+    });
+  }
+
+  void _handleLaunch(String? a) {
+    if (a == null || !mounted) return;
+    if (a == 'new_chat') {
+      _newChat();
+    } else if (a == 'voice') {
+      _newChat();
+      voiceRequestNotifier.value = true;
+    } else if (a == 'web') {
+      webSearchNotifier.value = true;
+      savePref('pc_web_search', true);
+      _newChat();
+    } else if (a.startsWith('send:')) {
+      _newChat();
+      draftNotifier.value = a.substring(5);
+    }
   }
 
   @override
@@ -212,7 +236,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     final collapsed = sidebarCollapsedNotifier.value;
 
-    return Scaffold(
+    return CallbackShortcuts(
+      bindings: {
+        for (final ctrl in const [true, false])
+          SingleActivator(LogicalKeyboardKey.keyN, control: ctrl, meta: !ctrl): _newChat,
+        for (final ctrl in const [true, false])
+          SingleActivator(LogicalKeyboardKey.comma, control: ctrl, meta: !ctrl): () => _push(const _SettingsPage()),
+        for (final ctrl in const [true, false])
+          SingleActivator(LogicalKeyboardKey.keyM, control: ctrl, meta: !ctrl): () => _push(const _ModelsPage()),
+      },
+      child: Scaffold(
       key: _scaffoldKey,
       drawer: wide ? null : Drawer(child: SafeArea(child: sidebar(inDrawer: true))),
       body: wide
@@ -268,6 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ])
           : M3Switcher(child: chatView),
+    ),
     );
   }
 }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="new_chat"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_new_chat"
+        android:shortcutLongLabel="@string/sc_new_chat_long">
+        <intent
+            android:action="com.picochat.app.NEW_CHAT"
+            android:targetPackage="com.picochat.app"
+            android:targetClass="com.picochat.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="voice"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_voice"
+        android:shortcutLongLabel="@string/sc_voice_long">
+        <intent
+            android:action="com.picochat.app.VOICE"
+            android:targetPackage="com.picochat.app"
+            android:targetClass="com.picochat.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="web"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/sc_web"
+        android:shortcutLongLabel="@string/sc_web_long">
+        <intent
+            android:action="com.picochat.app.WEB"
+            android:targetPackage="com.picochat.app"
+            android:targetClass="com.picochat.app.MainActivity" />
+    </shortcut>
+</shortcuts>
