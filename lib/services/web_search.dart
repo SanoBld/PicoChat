@@ -135,4 +135,22 @@ class WebSearch {
     }
     return b.toString().trim();
   }
+
+  // Preview picture of a result page (og:image). Cached; null when there is none.
+  static final Map<String, Future<String?>> _thumbs = {};
+
+  static Future<String?> thumb(String url) => _thumbs.putIfAbsent(url, () async {
+        try {
+          final r = await http.get(Uri.parse(url), headers: {'User-Agent': _ua}).timeout(const Duration(seconds: 6));
+          final body = utf8.decode(r.bodyBytes.take(200000).toList(), allowMalformed: true);
+          final m = RegExp(r'<meta[^>]+(?:property|name)=["\x27](?:og:image|twitter:image)(?::secure_url)?["\x27][^>]*?content=["\x27]([^"\x27]+)["\x27]', caseSensitive: false).firstMatch(body) ??
+              RegExp(r'<meta[^>]+content=["\x27]([^"\x27]+)["\x27][^>]*?(?:property|name)=["\x27](?:og:image|twitter:image)["\x27]', caseSensitive: false).firstMatch(body);
+          final raw = m?.group(1)?.replaceAll('&amp;', '&');
+          if (raw == null) return null;
+          final abs = Uri.parse(url).resolve(raw).toString();
+          return abs.startsWith('http') ? abs : null;
+        } catch (_) {
+          return null;
+        }
+      });
 }

@@ -35,6 +35,7 @@ import '../services/prefs.dart';
 import '../services/reset.dart';
 import 'intro_screen.dart';
 import '../services/voice.dart';
+import '../services/web_search.dart';
 import '../services/voice_input.dart';
 import 'settings/memory_page.dart';
 import 'settings/context_page.dart';

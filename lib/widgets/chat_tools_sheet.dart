@@ -34,11 +34,13 @@ class _ToolsSheetState extends State<_ToolsSheet> {
   void _apply(String key) {
     final v = _presets[key]!;
     setState(() {
+      unlimitedNotifier.value = key == 'max' || key == 'ultra';
       ultraModeNotifier.value = key == 'ultra';
       temperatureNotifier.value = v.$1;
       maxTokensNotifier.value = v.$2;
       contextSizeNotifier.value = v.$3;
     });
+    savePref('pc_unlimited', key == 'max' || key == 'ultra');
     savePref('pc_ultra', key == 'ultra');
     savePref('pc_temperature', v.$1);
     savePref('pc_max_tokens', v.$2);
@@ -108,7 +110,8 @@ class _ToolsSheetState extends State<_ToolsSheet> {
                   )
                 : const SizedBox(width: double.infinity),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          _sw(tr('unlimited'), tr('unlimited_sub'), unlimitedNotifier, 'pc_unlimited'),
           _row(text, scheme, tr('cs_temperature'), temperatureNotifier.value.toStringAsFixed(1)),
           Slider(
             min: 0,

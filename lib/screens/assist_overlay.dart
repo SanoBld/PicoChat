@@ -19,6 +19,7 @@ import '../services/model_manager.dart';
 import '../services/prefs.dart';
 import '../services/voice_input.dart';
 import '../supported_locales.dart';
+import '../widgets/pc_motion.dart';
 
 const _channel = MethodChannel('picochat/assist_overlay');
 
@@ -269,7 +270,7 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
         backgroundColor: Colors.transparent,
         body: Column(children: [
           // Tap outside the card to close.
-          Expanded(child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: _close)),
+          Expanded(child: PcGesture(behavior: HitTestBehavior.opaque, onTap: _close)),
           // The card slides up and fades in when the assistant opens.
           TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: 1),
@@ -405,7 +406,7 @@ class _BouncyState extends State<_Bouncy> {
   bool _down = false;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => PcGesture(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => setState(() => _down = true),
         onTapCancel: () => setState(() => _down = false),

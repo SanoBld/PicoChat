@@ -62,6 +62,8 @@ class VoiceService {
 
   String _plain(String s) => s
       .replaceAll(RegExp(r'```[\s\S]*?```'), ' ')
+      .replaceAll(RegExp(r'\[\[image:[^\]]*\]\]'), ' ')
+      .replaceAll(RegExp(r'!\[[^\]]*\]\([^)]*\)'), ' ')
       .replaceAllMapped(RegExp(r'\[([^\]]*)\]\([^)]*\)'), (m) => m.group(1) ?? '')
       .replaceAll(RegExp(r'https?://\S+'), ' ')
       .replaceAll(RegExp(r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]', unicode: true), '')

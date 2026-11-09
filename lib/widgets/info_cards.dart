@@ -434,7 +434,7 @@ class _StepRowState extends State<_StepRow> {
     }
     return MouseRegion(
       cursor: long ? SystemMouseCursors.click : MouseCursor.defer,
-      child: GestureDetector(
+      child: PcGesture(
         onTap: long ? () => setState(() => _full = !_full) : null,
         child: AnimatedSize(
           duration: const Duration(milliseconds: 220),

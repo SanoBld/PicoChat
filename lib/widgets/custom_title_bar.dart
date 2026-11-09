@@ -11,6 +11,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+import 'pc_motion.dart';
 
 bool get _isDesktopFrameless =>
     !kIsWeb && (Platform.isWindows || Platform.isLinux);
@@ -79,7 +80,7 @@ class _CustomTitleBarState extends State<_CustomTitleBar> with WindowListener {
         // ── Drag region + app name ────────────────────────────────────────
         Expanded(
           child: DragToMoveArea(
-            child: GestureDetector(
+            child: PcGesture(
               onDoubleTap: _toggleMaximize,
               child: Padding(
                 padding: const EdgeInsets.only(left: 12),
@@ -154,7 +155,7 @@ class _CaptionButtonState extends State<_CaptionButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit:  (_) => setState(() => _hover = false),
-      child: GestureDetector(
+      child: PcGesture(
         onTap: widget.onTap,
         child: Container(
           width: 46,

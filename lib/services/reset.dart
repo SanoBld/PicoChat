@@ -121,6 +121,7 @@ class ResetService {
     cityManualNotifier.value = '';
     memoryEnabledNotifier.value = true;
     webMaxSourcesNotifier.value = 8;
+    unlimitedNotifier.value = false;
     answerLengthNotifier.value = 'auto';
     memoryLimitNotifier.value = 30;
     autoSpeakNotifier.value = false;

@@ -443,4 +443,6 @@ const Map<String, String> kStringsEs = {
   "mem_limit": "Memories used",
   "mem_limit_sub": "How many memories are sent to the AI (most recent first). Fewer = faster.",
   "mem_all": "All",
+  "unlimited": "Unlimited mode",
+  "unlimited_sub": "Removes the limits: answer length, reasoning, memories, web sources.",
 };

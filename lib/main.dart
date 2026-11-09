@@ -112,6 +112,7 @@ Future<SharedPreferences> _loadState() async {
   materialShapesNotifier.value = p.getBool('pc_shapes') ?? true;
   memoryEnabledNotifier.value = p.getBool('pc_memory') ?? true;
   webMaxSourcesNotifier.value = p.getInt('pc_web_max') ?? 8;
+  unlimitedNotifier.value = p.getBool('pc_unlimited') ?? false;
   answerLengthNotifier.value = p.getString('pc_answer_len') ?? 'auto';
   memoryLimitNotifier.value = p.getInt('pc_memory_limit') ?? 30;
   autoSpeakNotifier.value = p.getBool('pc_auto_speak') ?? false;

@@ -443,4 +443,6 @@ const Map<String, String> kStringsFr = {
   "mem_limit": "Souvenirs utilisés",
   "mem_limit_sub": "Nombre de souvenirs envoyés à l’IA (les plus récents). Moins = plus rapide.",
   "mem_all": "Tous",
+  "unlimited": "Mode illimité",
+  "unlimited_sub": "Enlève les limites : longueur des réponses, réflexion, souvenirs, sources web.",
 };

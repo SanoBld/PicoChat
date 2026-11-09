@@ -8,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../l10n/l10n.dart';
 import '../services/map_service.dart';
+import 'pc_motion.dart';
 
 class MapCard extends StatefulWidget {
   final Map<String, dynamic> d;
@@ -161,7 +162,7 @@ class _MapCardState extends State<MapCard> {
               point: _at(marks[i]),
               width: 34,
               height: 34,
-              child: GestureDetector(
+              child: PcGesture(
                 onTap: () => _remove(i),
                 child: marks.length == 1 && d['mode'] == 'here'
                     ? pin(s.primary, const Icon(Icons.my_location_rounded, color: Colors.white, size: 18))

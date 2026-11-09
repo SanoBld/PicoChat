@@ -48,11 +48,15 @@ class CorePrompt {
         '- bullet lists and **bold**) and xlsx (write it as CSV): the app turns them into real files. '
         'Only if it is truly impossible (image, audio, video, pptx, zip, scanned or binary data) say so in one short '
         'sentence and offer the closest text version. Never use a file block for a normal answer. Never mention this syntax.');
+    b.writeln('IMAGES: you can show a picture when it really helps (a city, landmark, animal, object). Write '
+        '[[image: precise subject]] alone on its own line, e.g. [[image: Lyon, France]]: the app finds and shows the image. '
+        'Or ![short description](URL) ONLY with a direct image URL given by the user or found in the web results. '
+        'Never invent a URL. At most 2 images per answer. Never mention this syntax.');
     if (fileRequested) b.writeln('The user asked for a file in this message: produce the file block now.');
     if (memoryEnabledNotifier.value) {
       final all = MemoryStore.instance.items;
       final lim = memoryLimitNotifier.value;
-      final facts = (lim <= 0 || all.length <= lim) ? all : all.sublist(all.length - lim);
+      final facts = (lim <= 0 || unlimitedNotifier.value || all.length <= lim) ? all : all.sublist(all.length - lim);
       if (facts.isNotEmpty) {
         b.writeln('What you remember about the user:');
         for (final f in facts) {

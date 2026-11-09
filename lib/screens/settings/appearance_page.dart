@@ -10,6 +10,7 @@ import '../../services/reset.dart';
 import '../../widgets/m3_components.dart';
 import 'settings_helpers.dart';
 import 'settings_rows.dart';
+import '../../widgets/pc_motion.dart';
 
 class AppearancePage extends StatefulWidget {
   const AppearancePage({super.key});
@@ -137,7 +138,7 @@ class _AppearancePageState extends State<AppearancePage> {
                       padding: const EdgeInsets.all(16),
                       child: Wrap(spacing: 10, runSpacing: 10, children: [
                         for (final (color, key, label) in kSettingsAccentOptions)
-                          GestureDetector(
+                          PcGesture(
                             onTap: () => _setAccent(key, color),
                             child: Tooltip(
                               message: tr(label),
@@ -161,7 +162,7 @@ class _AppearancePageState extends State<AppearancePage> {
                               ),
                             ),
                           ),
-                        GestureDetector(
+                        PcGesture(
                           onTap: _pickCustom,
                           child: Container(
                             width: 36,

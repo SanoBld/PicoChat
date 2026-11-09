@@ -296,3 +296,41 @@ class StreamFade extends StatelessWidget {
     );
   }
 }
+
+
+// GestureDetector that shows the hand cursor on desktop / web.
+class PcGesture extends StatelessWidget {
+  const PcGesture({
+    super.key,
+    this.onTap,
+    this.onTapDown,
+    this.onTapCancel,
+    this.onDoubleTap,
+    this.onPanUpdate,
+    this.behavior,
+    this.child,
+  });
+  final VoidCallback? onTap;
+  final GestureTapDownCallback? onTapDown;
+  final GestureTapCancelCallback? onTapCancel;
+  final VoidCallback? onDoubleTap;
+  final GestureDragUpdateCallback? onPanUpdate;
+  final HitTestBehavior? behavior;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        cursor: (onTap != null || onDoubleTap != null || onPanUpdate != null || onTapDown != null)
+            ? SystemMouseCursors.click
+            : MouseCursor.defer,
+        child: GestureDetector(
+          onTap: onTap,
+          onTapDown: onTapDown,
+          onTapCancel: onTapCancel,
+          onDoubleTap: onDoubleTap,
+          onPanUpdate: onPanUpdate,
+          behavior: behavior,
+          child: child,
+        ),
+      );
+}

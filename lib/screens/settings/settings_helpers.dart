@@ -8,6 +8,7 @@ import '../../theme/m3_motion.dart';
 import '../../widgets/m3_components.dart';
 import '../../l10n/l10n.dart';
 import 'settings_rows.dart';
+import '../../widgets/pc_motion.dart';
 
 // (colour, preference value, l10n key of its name)
 const kSettingsAccentOptions = [
@@ -272,7 +273,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
     } catch (_) { setState(() => _hexError = true); }
   }
 
-  Widget _hueSlider() => LayoutBuilder(builder: (_, c) => GestureDetector(
+  Widget _hueSlider() => LayoutBuilder(builder: (_, c) => PcGesture(
     onTapDown:   (d) => setState(() { _hsl = _hsl.withHue((d.localPosition.dx / c.maxWidth).clamp(0, 1) * 360); _syncHex(); }),
     onPanUpdate: (d) => setState(() { _hsl = _hsl.withHue((d.localPosition.dx / c.maxWidth).clamp(0, 1) * 360); _syncHex(); }),
     child: SizedBox(height: 36, child: Stack(alignment: Alignment.centerLeft, children: [
@@ -295,7 +296,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
 
   Widget _sliderRow(String label, double value, double min, double max,
       List<Color> gradient, void Function(double) onChange) =>
-    LayoutBuilder(builder: (_, c) => GestureDetector(
+    LayoutBuilder(builder: (_, c) => PcGesture(
       onTapDown:   (d) => setState(() { onChange(((d.localPosition.dx / c.maxWidth) * (max - min) + min).clamp(min, max)); _syncHex(); }),
       onPanUpdate: (d) => setState(() { onChange(((d.localPosition.dx / c.maxWidth) * (max - min) + min).clamp(min, max)); _syncHex(); }),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -371,7 +372,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
           Text(L.colorPickerQuickColors, style: text.labelMedium?.copyWith(
               color: scheme.onSurfaceVariant, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          Wrap(spacing: 8, runSpacing: 8, children: quickPresets.map((c) => GestureDetector(
+          Wrap(spacing: 8, runSpacing: 8, children: quickPresets.map((c) => PcGesture(
             onTap: () => setState(() { _hsl = HSLColor.fromColor(c); _syncHex(); }),
             child: Container(width: 28, height: 28, decoration: BoxDecoration(
                 color: c, shape: BoxShape.circle,

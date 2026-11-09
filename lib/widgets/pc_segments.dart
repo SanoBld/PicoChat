@@ -1,6 +1,7 @@
 // lib/widgets/pc_segments.dart
 // Expressive selector: animated rounded pills (replaces SegmentedButton).
 import 'package:flutter/material.dart';
+import 'pc_motion.dart';
 
 class PcSegments<T> extends StatelessWidget {
   final List<(T, String, IconData?)> items;
@@ -20,7 +21,7 @@ class PcSegments<T> extends StatelessWidget {
             padding: EdgeInsets.only(left: i == 0 ? 0 : 6),
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
-              child: GestureDetector(
+              child: PcGesture(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => onChanged(it.$1),
                 child: AnimatedContainer(

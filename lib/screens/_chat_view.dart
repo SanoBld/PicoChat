@@ -29,6 +29,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
   bool _hasText = false;
   List<Attachment> _files = [];
   bool _stick = true; // the list follows the end (user did not scroll up)
+  final ValueNotifier<bool> _showJump = ValueNotifier(false); // arrow "back to the live answer"
+  bool _jumping = false; // jump animation running: the follow timer waits
   Timer? _follow; // while writing: keeps the end in view as the text grows smoothly
 
   @override
@@ -55,6 +57,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _follow?.cancel();
+    _showJump.dispose();
     ChatStore.instance.removeListener(_onChange);
     ChatService.instance.removeListener(_onChange);
     ModelManager.instance.removeListener(_onChange);
@@ -75,7 +78,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     if (gen) {
       _scrollToEnd();
       _follow ??= Timer.periodic(const Duration(milliseconds: 16), (_) {
-        if (!mounted || !_scroll.hasClients || !_stick) return;
+        if (!mounted || !_scroll.hasClients || !_stick || _jumping) return;
         final p = _scroll.position;
         if (p.maxScrollExtent - p.pixels > 0.5) _scroll.jumpTo(p.maxScrollExtent);
       });
@@ -85,12 +88,62 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     }
   }
 
+  // Arrow in the middle: back to the end (the answer being written) with a smooth scroll.
+  Future<void> _jumpToEnd() async {
+    if (!_scroll.hasClients) return;
+    _stick = true;
+    _jumping = true;
+    try {
+      await _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 380), curve: Curves.easeOutCubic);
+    } finally {
+      _jumping = false;
+    }
+    if (_scroll.hasClients) _scroll.jumpTo(_scroll.position.maxScrollExtent);
+  }
+
+  Widget _jumpButton(ColorScheme scheme) => Positioned(
+        left: 0,
+        right: 0,
+        bottom: 10,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _showJump,
+          builder: (_, show, _) => IgnorePointer(
+            ignoring: !show,
+            child: AnimatedSlide(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+              offset: show ? Offset.zero : const Offset(0, 0.8),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 220),
+                opacity: show ? 1 : 0,
+                child: Center(
+                  child: Material(
+                    color: scheme.secondaryContainer,
+                    elevation: 3,
+                    shadowColor: Colors.black54,
+                    shape: const StadiumBorder(),
+                    child: InkWell(
+                      customBorder: const StadiumBorder(),
+                      onTap: _jumpToEnd,
+                      child: Padding(
+                        padding: const EdgeInsets.all(11),
+                        child: Icon(Icons.arrow_downward_rounded, size: 22, color: scheme.onSecondaryContainer),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
   // Keyboard opens/closes: the viewport changes size, stay on the prompt.
   @override
   void didChangeMetrics() => _followEnd();
 
   void _followEnd() {
-    if (!_stick && !ChatService.instance.isGeneratingIn(widget.chat)) return;
+    if (!_stick) return;
     // Two passes: once now, once after the keyboard animation has moved the layout.
     for (final ms in const [0, 120, 320]) {
       Future<void>.delayed(Duration(milliseconds: ms), () {
@@ -108,7 +161,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scroll.hasClients) return;
       final p = _scroll.position;
-      if (force || _stick || p.maxScrollExtent - p.pixels < 200) {
+      if (force || _stick) {
         _scroll.jumpTo(p.maxScrollExtent);
       }
     });
@@ -331,11 +384,19 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
         Expanded(
           child: messages.isEmpty
               ? _EmptyChat(onSuggest: _send, onOpenModels: widget.onOpenModels)
-              : SelectionArea(
+              : Stack(children: [
+                SelectionArea(
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (n) {
-                      if (n is ScrollUpdateNotification || n is ScrollEndNotification) {
-                        _stick = n.metrics.maxScrollExtent - n.metrics.pixels < 80;
+                      if (n is ScrollUpdateNotification) {
+                        final gap = n.metrics.maxScrollExtent - n.metrics.pixels;
+                        // Scrolling up (by the user) releases the list; reaching the end follows again.
+                        if ((n.scrollDelta ?? 0) < 0) {
+                          _stick = false;
+                        } else if (gap < 40) {
+                          _stick = true;
+                        }
+                        _showJump.value = gap > 160;
                       }
                       return false;
                     },
@@ -367,6 +428,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                     },
                   )),
                 ),
+                _jumpButton(scheme),
+              ]),
         ),
         _composer(scheme, text, busy),
       ])),
@@ -945,14 +1008,9 @@ void _showSources(BuildContext context, List<Map<String, String>> src) {
                     child: InkWell(
                       onTap: () => launchUrl(Uri.parse(s['url'] ?? ''), mode: LaunchMode.externalApplication),
                       child: Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+                        padding: const EdgeInsets.fromLTRB(10, 10, 16, 10),
                         child: Row(children: [
-                          M3CookieBadge(
-                            size: 40,
-                            color: scheme.secondaryContainer,
-                            child: Text(((s['domain'] ?? '?').isEmpty ? '?' : s['domain']!.substring(0, 1)).toUpperCase(),
-                                style: TextStyle(fontWeight: FontWeight.w800, color: scheme.onSecondaryContainer)),
-                          ),
+                          _SourceThumb(url: s['url'] ?? '', domain: s['domain'] ?? ''),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1140,4 +1198,40 @@ void _showFilePreview(BuildContext context, GeneratedFile f) {
       );
     },
   );
+}
+
+
+// Result thumbnail (page picture), letter badge while loading or when there is none.
+class _SourceThumb extends StatelessWidget {
+  final String url;
+  final String domain;
+  const _SourceThumb({required this.url, required this.domain});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget badge() => M3CookieBadge(
+          key: const ValueKey('badge'),
+          size: 56,
+          color: scheme.secondaryContainer,
+          child: Text(domain.isEmpty ? '?' : domain.substring(0, 1).toUpperCase(),
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: scheme.onSecondaryContainer)),
+        );
+    return FutureBuilder<String?>(
+      future: WebSearch.thumb(url),
+      builder: (_, snap) {
+        final u = snap.data;
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: u == null
+              ? badge()
+              : ClipRRect(
+                  key: ValueKey(u),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.network(u, width: 56, height: 56, fit: BoxFit.cover, errorBuilder: (_, _, _) => badge()),
+                ),
+        );
+      },
+    );
+  }
 }

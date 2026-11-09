@@ -168,7 +168,8 @@ class ChatService extends ChangeNotifier {
 
     final ultra = ultraModeNotifier.value;
     final rm = reasoningModeNotifier.value;
-    final thinking = rm == 'on' || (rm == 'auto' && (ultra || maxTokensNotifier.value >= 3072));
+    final unl = unlimitedNotifier.value;
+    final thinking = unl || rm == 'on' || (rm == 'auto' && (ultra || maxTokensNotifier.value >= 3072));
     void push() => store.messageChanged(chat);
     void step(String title, [String detail = '']) {
       if (reply.steps.isNotEmpty) reply.steps.last['state'] = 'done';
@@ -285,7 +286,7 @@ class ChatService extends ChangeNotifier {
         step('step_search', queries.join('\n'));
         _searching = true;
         notifyListeners();
-        final per = ultra ? 8 : webMaxSourcesNotifier.value;
+        final per = ultra ? 8 : (unl ? 0 : webMaxSourcesNotifier.value);
         final batches = await Future.wait([for (final q in queries) WebSearch.run(q, max: per)]);
         _searching = false;
         final seen = <String>{};
@@ -328,7 +329,7 @@ class ChatService extends ChangeNotifier {
             GenerationOptions(
                 systemPrompt: CorePrompt.build(fileRequested: false),
                 temperature: 0.3,
-                maxTokens: math.min(maxTokensNotifier.value, ultra ? 700 : 350)))) {
+                maxTokens: unl ? 1500 : math.min(maxTokensNotifier.value, ultra ? 700 : 350)))) {
           analysis.write(piece);
           if (_stopRequested) break;
         }
@@ -349,11 +350,13 @@ class ChatService extends ChangeNotifier {
       final options = GenerationOptions(
         systemPrompt: CorePrompt.build(fileRequested: wantsFile),
         temperature: temperatureNotifier.value,
-        maxTokens: switch (answerLengthNotifier.value) {
-          'short' => math.min(maxTokensNotifier.value, 400),
-          'medium' => math.min(maxTokensNotifier.value, 900),
-          _ => maxTokensNotifier.value,
-        },
+        maxTokens: unl
+            ? math.max(maxTokensNotifier.value, (contextSizeNotifier.value - 800).clamp(1024, 32768))
+            : switch (answerLengthNotifier.value) {
+                'short' => math.min(maxTokensNotifier.value, 400),
+                'medium' => math.min(maxTokensNotifier.value, 900),
+                _ => maxTokensNotifier.value,
+              },
       );
       final dev = devModeNotifier.value;
       final sw = Stopwatch()..start();

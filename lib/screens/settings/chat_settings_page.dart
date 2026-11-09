@@ -107,6 +107,17 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
                 setState(() {});
               },
             ),
+            SettingSwitchRow(
+              icon: Icons.all_inclusive_rounded,
+              title: tr('unlimited'),
+              subtitle: tr('unlimited_sub'),
+              value: unlimitedNotifier.value,
+              onChanged: (v) {
+                unlimitedNotifier.value = v;
+                savePref('pc_unlimited', v);
+                setState(() {});
+              },
+            ),
             SettingChoiceRow(
               icon: Icons.format_align_left_rounded,
               title: tr('answer_len'),
