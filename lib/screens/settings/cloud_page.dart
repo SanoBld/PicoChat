@@ -110,7 +110,7 @@ class _CloudPageState extends State<CloudPage> {
           ),
           for (final p in CloudProvider.values)
             ListTile(
-              leading: Icon(cloudProviderIcon(p)),
+              leading: cloudProviderLogo(p, size: 26),
               title: Text(p.label),
               subtitle: p == CloudProvider.custom ? Text(tr('cloud_custom_sub')) : null,
               onTap: () => Navigator.pop(ctx, p),
@@ -338,12 +338,12 @@ class _CloudAccountPageState extends State<CloudAccountPage> {
           if (m.name != m.id) m.id,
           if (!m.imageOnly) _tokens(m.contextTokens),
           if (m.vision) '👁',
-          if (m.image) '🎨 Image',
+          if (m.image) '🎨 ${tr('cloud_imagegen')}',
           if (active) tr('in_use'),
         ].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
-            tooltip: 'Image',
+            tooltip: tr('cloud_imagegen'),
             icon: Icon(m.image ? Icons.palette_rounded : Icons.palette_outlined,
                 color: m.image ? scheme.primary : scheme.onSurfaceVariant),
             onPressed: () async {
@@ -565,7 +565,7 @@ class _ModelPickSheetState extends State<_ModelPickSheet> {
                   if (m.name != m.id) m.id,
                   if (!m.imageOnly) _tokens(m.contextTokens),
                   if (m.vision) '👁 Vision',
-                  if (m.image) '🎨 Image',
+                  if (m.image) '🎨 ${tr('cloud_imagegen')}',
                 ].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
               );
             },

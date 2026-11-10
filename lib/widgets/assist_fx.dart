@@ -6,44 +6,51 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-// ── Glow around the screen edge ─────────────────────────────────────────────
+// ── Glow around the screen edge (temporary) ────────────────────────────────
 class AssistGlow extends StatelessWidget {
-  final double enter; // 0..1 opening progress
-  final double t; // 0..1 looping time
-  final bool dim;
+  final double intensity; // 0..1 glow strength (rises then fades, never stays)
+  final double t; // looping time (turns the colours)
+  final double scrim; // 0..1 soft shade behind the card (lower part only)
   final List<Color> colors;
-  const AssistGlow({super.key, required this.enter, required this.t, required this.dim, required this.colors});
+  const AssistGlow({super.key, required this.intensity, required this.t, required this.scrim, required this.colors});
 
   @override
   Widget build(BuildContext context) =>
-      CustomPaint(size: Size.infinite, painter: _GlowPainter(enter.clamp(0.0, 1.0), t, dim, colors));
+      CustomPaint(size: Size.infinite, painter: _GlowPainter(intensity.clamp(0.0, 1.0), t, scrim.clamp(0.0, 1.0), colors));
 }
 
 class _GlowPainter extends CustomPainter {
-  final double e, t;
-  final bool dim;
+  final double k, t, scrim;
   final List<Color> colors;
-  _GlowPainter(this.e, this.t, this.dim, this.colors);
+  _GlowPainter(this.k, this.t, this.scrim, this.colors);
 
   @override
   void paint(Canvas c, Size s) {
     final rect = Offset.zero & s;
-    if (dim) c.drawRect(rect, Paint()..color = Colors.black.withValues(alpha: 0.30 * e));
-    if (e <= 0) return;
+    // Soft shade only in the lower part: the screen behind stays visible and usable.
+    if (scrim > 0) {
+      c.drawRect(
+        rect,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.26 * scrim)],
+            stops: const [0.45, 1],
+          ).createShader(rect),
+      );
+    }
+    if (k <= 0.01) return;
     final rr = RRect.fromRectAndRadius(rect.deflate(2), const Radius.circular(38));
-    final shader = SweepGradient(
-      colors: [...colors, colors.first],
-      transform: GradientRotation(t * 2 * math.pi),
-    ).createShader(rect);
-    final a = e * (0.6 + 0.25 * math.sin(t * 4 * math.pi));
-    c.saveLayer(rect, Paint()..color = Colors.white.withValues(alpha: a));
-    c.drawRRect(rr, Paint()..shader = shader..style = PaintingStyle.stroke..strokeWidth = 18..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24));
-    c.drawRRect(rr, Paint()..shader = shader..style = PaintingStyle.stroke..strokeWidth = 3);
+    final shader = SweepGradient(colors: [...colors, colors.first], transform: GradientRotation(t * 2 * math.pi)).createShader(rect);
+    c.saveLayer(rect, Paint()..color = Colors.white.withValues(alpha: 0.9 * k));
+    c.drawRRect(rr, Paint()..shader = shader..style = PaintingStyle.stroke..strokeWidth = 12..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20));
+    c.drawRRect(rr, Paint()..shader = shader..style = PaintingStyle.stroke..strokeWidth = 2.5);
     c.restore();
   }
 
   @override
-  bool shouldRepaint(_GlowPainter o) => o.e != e || o.t != t || o.dim != dim;
+  bool shouldRepaint(_GlowPainter o) => o.k != k || o.t != t || o.scrim != scrim;
 }
 
 // ── Circle-to-search picker ─────────────────────────────────────────────────

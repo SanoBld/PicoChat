@@ -15,7 +15,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app_state.dart';
-import 'widgets/opening_splash.dart';
 import 'screens/assist_overlay.dart';
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
@@ -225,7 +224,6 @@ class PicoChatApp extends StatelessWidget {
               themeMode: themeModeNotifier.value,
               builder: (context, child) {
                 Widget w = PcPointerTracker(child: AppTextScale(child: DesktopTitleBarShell(child: child!)));
-                if (onboarded) w = OpeningGate(child: w); // launch animation
                 // Energy saving: turn off animations everywhere.
                 if (ecoModeNotifier.value) {
                   w = MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: w);

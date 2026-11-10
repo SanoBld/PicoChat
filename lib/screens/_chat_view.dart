@@ -505,7 +505,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
         maxWidth: _contentW(context),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-          child: Container(
+          child: ComposerIntro(
+            child: Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 8, 6),
             decoration: BoxDecoration(
               color: scheme.surfaceContainerHigh,
@@ -692,7 +693,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
               ]),
             ])),
           ])),
-          ),
+          )),
         ),
       ),
     );
@@ -1057,8 +1058,27 @@ class _MessageView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // The bubble changes shape while the AI works; press and hold = it spins.
-        if (!showAvatar) const SizedBox(width: 34, height: 34) else
-        PicoAvatar(
+        // The smiley stays on the newest answer: it fades and slides away from the old one
+        // and glides in on the new one (Material You easing).
+        SizedBox(
+          width: 34,
+          height: 34,
+          child: AnimatedSwitcher(
+            duration: M3Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 450),
+            reverseDuration: M3Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 220),
+            switchInCurve: M3Motion.emphasizedDecelerate,
+            switchOutCurve: M3Motion.emphasizedAccelerate,
+            layoutBuilder: (cur, prev) => Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [...prev, ?cur]),
+            transitionBuilder: (c, a) => FadeTransition(
+              opacity: a,
+              child: SlideTransition(
+                position: Tween(begin: const Offset(0, -0.6), end: Offset.zero).animate(a),
+                child: ScaleTransition(scale: Tween(begin: 0.5, end: 1.0).animate(a), child: c),
+              ),
+            ),
+            child: showAvatar
+                ? PicoAvatar(
+                    key: const ValueKey('pico'),
           size: 34,
           mood: generating
               ? (loadingModel
@@ -1069,6 +1089,9 @@ class _MessageView extends StatelessWidget {
                           ? PicoMood.thinking
                           : PicoMood.writing)
               : (message.failed ? PicoMood.sad : PicoMood.idle),
+                  )
+                : const SizedBox.shrink(key: ValueKey('none')),
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -1083,7 +1106,7 @@ class _MessageView extends StatelessWidget {
               switchOutCurve: Curves.easeIn,
               transitionBuilder: (c, a) => FadeTransition(
                 opacity: a,
-                child: SizeTransition(sizeFactor: a, alignment: Alignment.topCenter, child: c),
+                child: SizeTransition(sizeFactor: a, alignment: Alignment.topLeft, child: c),
               ),
               layoutBuilder: (cur, prev) => Stack(
                 alignment: Alignment.topLeft,
@@ -1093,7 +1116,7 @@ class _MessageView extends StatelessWidget {
                   // Loading model / searching web / first words not here yet: the bubble morphs, this label says why.
                   ? Padding(
                       key: ValueKey(waitLabel),
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: 7),
                       child: ShimmerText(
                         waitLabel,
                         style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),

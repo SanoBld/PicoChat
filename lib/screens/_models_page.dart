@@ -271,7 +271,7 @@ class _InstalledTabState extends State<_InstalledTab> {
                       Text(
                         [
                           c.subtitle,
-                          if (c.info.image) '🎨 Image',
+                          if (c.info.image) '🎨 ${tr('cloud_imagegen')}',
                           if (c.id == activeCloud?.id) tr('in_use'),
                         ].join(' · '),
                         style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),

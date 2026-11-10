@@ -150,6 +150,7 @@ const Map<String, String> kStringsDe = {
   "im_prompt": "You will help me move context from one AI assistant to another. Go through our previous conversations and summarize everything you know about me: identity, work or studies, interests, projects, tastes, answer preferences. Write one fact per line, short and factual, without first-person pronouns (use \"the user\"). Do not invent anything and do not add an introduction or conclusion.",
   "eco_mode": "Energy saving",
   "eco_mode_sub": "Turns off all animations",
+  "cloud_imagegen": "Bildgenerierung",
   "assist_lens_hint": "Circle what you want to understand",
   "assist_lens_q": "What is this? Explain what I circled.",
   "assist_on_device": "On this device",

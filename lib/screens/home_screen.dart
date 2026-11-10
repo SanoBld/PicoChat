@@ -56,6 +56,7 @@ import '../theme/m3_interaction.dart';
 import '../theme/m3_motion.dart';
 import '../theme/m3_shapes.dart';
 import '../widgets/pico_face.dart';
+import '../widgets/opening_splash.dart';
 import '../widgets/pc_menu.dart';
 import '../widgets/m3_components.dart';
 import '../widgets/markdown_lite.dart';

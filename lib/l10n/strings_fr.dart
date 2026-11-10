@@ -150,6 +150,7 @@ const Map<String, String> kStringsFr = {
   "im_prompt": "Tu vas m'aider à importer du contexte d'un assistant IA vers un autre. Parcours nos conversations précédentes et résume tout ce que tu sais de moi : identité, travail ou études, centres d'intérêt, projets, goûts, préférences de réponse. Écris une information par ligne, courte et factuelle, sans pronoms à la première personne (utilise « l'utilisateur »). N'invente rien et n'ajoute pas d'introduction ni de conclusion.",
   "eco_mode": "Économie d'énergie",
   "eco_mode_sub": "Désactive toutes les animations",
+  "cloud_imagegen": "Génération d'images",
   "assist_lens_hint": "Entoure ce que tu veux comprendre",
   "assist_lens_q": "Qu'est-ce que c'est ? Explique ce que j'ai entouré.",
   "assist_on_device": "Sur l'appareil",

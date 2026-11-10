@@ -26,6 +26,7 @@ import '../services/model_manager.dart';
 import '../services/prefs.dart';
 import '../services/voice_input.dart';
 import '../supported_locales.dart';
+import '../theme/m3_motion.dart';
 import '../widgets/assist_fx.dart';
 import '../widgets/pc_motion.dart';
 import 'settings/cloud_page.dart' show cloudProviderLogo;
@@ -65,6 +66,7 @@ enum _Phase { listening, thinking, answered }
 
 class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMixin {
   final _ctrl = TextEditingController();
+  final _focus = FocusNode();
   final _chat = ChatStore.instance.create();
   final _voice = VoiceInput.instance;
   late final AnimationController _pulse =
@@ -72,9 +74,14 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
   // Opening / closing animation of the card (instant in energy saving).
   late final AnimationController _enter = AnimationController(
     vsync: this,
-    duration: Duration(milliseconds: ecoModeNotifier.value ? 1 : 520),
-    reverseDuration: Duration(milliseconds: ecoModeNotifier.value ? 1 : 260),
+    duration: Duration(milliseconds: ecoModeNotifier.value ? 1 : 480),
+    reverseDuration: Duration(milliseconds: ecoModeNotifier.value ? 1 : 300),
   );
+  // Material You easing: decelerate when it opens, accelerate when it leaves.
+  late final CurvedAnimation _enterC =
+      CurvedAnimation(parent: _enter, curve: M3Motion.emphasizedDecelerate, reverseCurve: M3Motion.emphasizedAccelerate);
+  // The coloured edge glow shows briefly (open and close), it never stays.
+  late final AnimationController _glowC = AnimationController(vsync: this, duration: const Duration(milliseconds: 1700));
   bool _closing = false;
   bool _locked = false; // lock screen: no screenshot, no phone data
   Uint8List? _shot; // picture of the screen given by Android
@@ -93,7 +100,11 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     super.initState();
     // Model chosen for the assistant (setting); falls back to the model of the app.
     _applyChoice(assistModelNotifier.value);
+    _focus.addListener(() {
+      if (_focus.hasFocus) _startTyping(); // keyboard opened: stop listening
+    });
     _enter.forward();
+    if (!ecoModeNotifier.value) _glowC.forward();
     _channel.setMethodCallHandler((c) async {
       if (c.method == 'screenshot') _gotShot(c.arguments as String?);
     });
@@ -117,9 +128,12 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
   void dispose() {
     _silence?.cancel();
     _pulse.dispose();
+    _enterC.dispose();
+    _glowC.dispose();
     _enter.dispose();
     _channel.setMethodCallHandler(null);
     _ctrl.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -130,6 +144,14 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
       _typing = false;
     });
     final ok = await _voice.start(_ctrl);
+    // The person started writing while the engine was still starting (the model can
+    // take a while to load): the microphone must not stay on.
+    if (mounted && (_typing || _closing)) {
+      final typed = _ctrl.text;
+      await _voice.cancel();
+      _ctrl.value = TextEditingValue(text: typed, selection: TextSelection.collapsed(offset: typed.length));
+      return;
+    }
     if (!ok && mounted) setState(() => _micFailed = true);
   }
 
@@ -322,7 +344,8 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     _closing = true;
     await _voice.cancel();
     ChatService.instance.requestStop();
-    final anim = _enter.reverse(); // the card slides away while the model is freed
+    _glowC.duration = const Duration(milliseconds: 520); // short glow on the way out
+    final anim = Future.wait([_enter.reverse(), if (!ecoModeNotifier.value) _glowC.forward(from: 0)]);
     try {
       await InferenceService.engine.unload(); // free the RAM
     } catch (_) {}
@@ -445,35 +468,33 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
                   : const SizedBox.shrink(key: ValueKey('nolens')),
             ),
           ),
-          // Dim + coloured glow around the screen, fading in with the card.
-          if (!ecoModeNotifier.value)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([_enter, _pulse]),
-                  builder: (_, _) => AssistGlow(
-                    enter: _enter.value,
-                    t: _pulse.value,
-                    dim: !_selecting,
-                    colors: [scheme.primary, scheme.tertiary, scheme.secondary],
-                  ),
+          // Brief coloured glow (open and close) + soft shade under the card.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: AnimatedBuilder(
+                animation: Listenable.merge([_enterC, _glowC]),
+                builder: (_, _) => AssistGlow(
+                  intensity: ecoModeNotifier.value ? 0 : math.sin(math.pi * _glowC.value),
+                  t: _glowC.value * 1.5,
+                  scrim: _selecting ? 0 : _enterC.value,
+                  colors: [scheme.primary, scheme.tertiary, scheme.secondary],
                 ),
               ),
             ),
+          ),
           Column(children: [
           // Tap outside the card to close (not while circling).
           Expanded(child: _selecting ? const IgnorePointer(child: SizedBox.expand()) : PcGesture(behavior: HitTestBehavior.opaque, onTap: _close)),
           // The card springs up and fades in; on close it slides away.
           AnimatedBuilder(
-            animation: _enter,
+            animation: _enterC,
             builder: (_, child) {
-              final v = _enter.value.clamp(0.0, 1.0);
-              final b = Curves.easeOutBack.transform(v);
+              final v = _enterC.value.clamp(0.0, 1.0);
               return Opacity(
                 opacity: v,
                 child: Transform.translate(
-                  offset: Offset(0, 110 * (1 - b)),
-                  child: Transform.scale(scale: 0.94 + 0.06 * v, alignment: Alignment.bottomCenter, child: child),
+                  offset: Offset(0, 56 * (1 - v)),
+                  child: Transform.scale(scale: 0.96 + 0.04 * v, alignment: Alignment.bottomCenter, child: child),
                 ),
               );
             },
@@ -541,6 +562,7 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
                               Expanded(
                                 child: TextField(
                                   controller: _ctrl,
+                                  focusNode: _focus,
                                   minLines: 1,
                                   maxLines: 3,
                                   onTap: _startTyping,
@@ -561,7 +583,10 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
                                   ? _btn('send', Icons.arrow_upward_rounded, _send, filled: true, pulse: true)
                                   : _phase == _Phase.thinking
                                       ? _btn('wait', Icons.hourglass_top_rounded, null)
-                                      : Row(key: const ValueKey('mic+send'), mainAxisSize: MainAxisSize.min, children: [
+                                      : _typing
+                                          // Writing: no microphone, only send.
+                                          ? _btn('send3', Icons.arrow_upward_rounded, _send, filled: true)
+                                          : Row(key: const ValueKey('mic+send'), mainAxisSize: MainAxisSize.min, children: [
                                           _btn('mic', Icons.mic_rounded, _listen),
                                           const SizedBox(width: 8),
                                           _btn('send2', Icons.arrow_upward_rounded, _send, filled: true),
