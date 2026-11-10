@@ -69,6 +69,7 @@ enum _Phase { listening, thinking, answered }
 
 class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMixin {
   final _ctrl = TextEditingController();
+  String _question = ''; // what was asked: shown in the card, never left in the text field
   final _focus = FocusNode();
   final _scroll = ScrollController();
   bool _sent = false; // a question is being answered
@@ -169,9 +170,10 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
   // What was typed (or already heard) is kept: the voice engine would overwrite the field.
   Future<void> _startTyping() async {
     if (_typing || _phase == _Phase.thinking) return;
-    if (_phase == _Phase.answered) _ctrl.clear();
+    final fresh = _phase == _Phase.answered; // a new question: start from an empty field
+    if (fresh) _ctrl.clear();
     var keep = _ctrl.text;
-    if (keep.trim().isEmpty) keep = _voice.transcript.value;
+    if (!fresh && keep.trim().isEmpty) keep = _voice.transcript.value;
     setState(() {
       _typing = true;
       if (_phase == _Phase.answered) _phase = _Phase.listening;
@@ -344,12 +346,14 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     }
     final before = _chat.messages.length;
     _sent = true;
-    _ctrl.text = text;
+    _question = text;
+    _ctrl.clear(); // the field is empty again: the question lives in the card
     await ChatService.instance.send(_chat, text,
         files: hasImg ? [Attachment('screen.png', '', imagePath: _cropPath)] : const []);
     _sent = false;
     if (_chat.messages.length == before) {
       // Nothing was sent (no model ready, or the AI is busy): go back to the field.
+      _ctrl.text = text;
       if (mounted) {
         setState(() {
           _phase = _Phase.listening;
@@ -359,7 +363,6 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
       return;
     }
     if (hasImg) _cropSent = true;
-    _ctrl.text = text;
     await ChatStore.instance.flush(); // saved in the app history (merged by the app)
     if (mounted) setState(() => _phase = _Phase.answered);
   }
@@ -414,6 +417,9 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     } catch (_) {}
     try {
       await ChatStore.instance.flush();
+      // The app opens this conversation (it reads the request when it comes to the front).
+      final id = _chat.messages.isEmpty ? null : _chat.id;
+      if (id != null) await ChatStore.instance.requestOpen(id);
     } catch (_) {}
     try {
       await _channel.invokeMethod('openApp');
@@ -502,7 +508,7 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     final r = _reply;
     final generating = ChatService.instance.isGenerating;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(_ctrl.text, style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+      Text(_question, style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
       const SizedBox(height: 10),
       if (r != null && r.failed && r.text.isEmpty)
         ErrorCard(kind: r.errorKind, detail: r.error, onRetry: _retry)

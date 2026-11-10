@@ -27,6 +27,11 @@ class ChatStore extends ChangeNotifier {
   File? _inbox;
   AppLifecycleListener? _life;
   static const _inboxName = 'assist_inbox.json';
+  static const _openName = 'assist_open.txt';
+  File? _openFile;
+
+  /// Id of a chat the assistant asked the app to open (the home screen reacts to it).
+  final ValueNotifier<String?> openRequest = ValueNotifier<String?>(null);
 
   /// Newest first.
   List<Conversation> get chats => List.unmodifiable(_chats);
@@ -38,6 +43,7 @@ class ChatStore extends ChangeNotifier {
       final dir = await getApplicationSupportDirectory();
       _file = File('${dir.path}${Platform.pathSeparator}chats.json');
       _inbox = File('${dir.path}${Platform.pathSeparator}$_inboxName');
+      _openFile = File('${dir.path}${Platform.pathSeparator}$_openName');
       if (await _file!.exists()) {
         final data = jsonDecode(await _file!.readAsString());
         if (data is List) {
@@ -69,15 +75,45 @@ class ChatStore extends ChangeNotifier {
     try {
       final dir = await getApplicationSupportDirectory();
       _inbox = File('${dir.path}${Platform.pathSeparator}$_inboxName');
+      _openFile = File('${dir.path}${Platform.pathSeparator}$_openName');
     } catch (e) {
       debugPrint('ChatStore.initAssist failed: $e');
     }
+  }
+
+  /// Assistant overlay: asks the app to open this chat the next time it comes to the front.
+  Future<void> requestOpen(String id) async {
+    try {
+      await _openFile?.writeAsString(id, flush: true);
+    } catch (_) {}
+  }
+
+  Future<void> _readOpenRequest() async {
+    final o = _openFile;
+    if (o == null) return;
+    try {
+      if (!await o.exists()) return;
+      final id = (await o.readAsString()).trim();
+      await o.delete();
+      if (id.isNotEmpty && _chats.any((c) => c.id == id)) {
+        openRequest.value = null; // same id twice in a row still notifies
+        openRequest.value = id;
+      }
+    } catch (_) {}
   }
 
   /// Main app: adds the chats made in the assistant overlay to the history.
   Future<void> mergeInbox() async {
     final f = _inbox;
     if (assistMode || f == null) return;
+    try {
+      await _mergeFile(f);
+    } finally {
+      await _readOpenRequest();
+    }
+  }
+
+  Future<void> _mergeFile(File f) async {
     try {
       if (!await f.exists()) return;
       final data = jsonDecode(await f.readAsString());

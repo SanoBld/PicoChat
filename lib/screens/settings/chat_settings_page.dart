@@ -175,24 +175,6 @@ class _ChatSettingsPageState extends State<ChatSettingsPage> {
             ),
           ]),
           const SizedBox(height: 20),
-          SettingsSection(label: tr('cs_assistant'), children: [
-            SettingChoiceRow(
-              icon: Icons.assistant_rounded,
-              title: tr('cs_assist_model'),
-              description: tr('cs_assist_model_sub'),
-              options: [
-                ('', tr('cs_assist_same'), null),
-                for (final m in ModelManager.instance.installed) (m.id, m.fileName, null),
-              ],
-              value: ModelManager.instance.byId(assistModelNotifier.value) == null ? '' : assistModelNotifier.value,
-              onChanged: (v) {
-                assistModelNotifier.value = v;
-                savePref('pc_assist_model', v);
-                setState(() {});
-              },
-            ),
-          ]),
-          const SizedBox(height: 20),
           SettingsSection(label: tr('cs_developer'), children: [
             SettingSwitchRow(
               icon: Icons.terminal_rounded,

@@ -66,6 +66,7 @@ import 'settings/cloud_page.dart';
 import '../widgets/brand_icon.dart';
 import '../services/cloud/cloud_store.dart';
 import 'settings/access_settings_page.dart';
+import 'settings/assistant_page.dart';
 import 'settings/chat_settings_page.dart';
 import 'settings/hf_page.dart';
 import 'settings/language_page.dart';
@@ -142,7 +143,23 @@ class _HomeScreenState extends State<HomeScreen> {
     pcModeNotifier.addListener(_rebuild);
     sidebarCollapsedNotifier.addListener(_rebuild);
     sidebarWidthNotifier.addListener(_rebuild);
+    ChatStore.instance.openRequest.addListener(_openRequested);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openRequested()); // cold start from the assistant
     _initAssist();
+  }
+
+  // The assistant asked for its conversation to be opened here.
+  void _openRequested() {
+    final id = ChatStore.instance.openRequest.value;
+    if (id == null || !mounted) return;
+    ChatStore.instance.openRequest.value = null;
+    for (final c in ChatStore.instance.chats) {
+      if (c.id == id) {
+        Navigator.of(context).popUntil((r) => r.isFirst);
+        _select(c);
+        return;
+      }
+    }
   }
 
   // Android assistant: the small overlay runs its own engine, so this one frees
@@ -186,6 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
     pcModeNotifier.removeListener(_rebuild);
     sidebarCollapsedNotifier.removeListener(_rebuild);
     sidebarWidthNotifier.removeListener(_rebuild);
+    ChatStore.instance.openRequest.removeListener(_openRequested);
     super.dispose();
   }
 
