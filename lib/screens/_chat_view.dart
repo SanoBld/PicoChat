@@ -443,6 +443,8 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                     itemBuilder: (_, i) {
                       final m = messages[i];
                       final isLast = i == messages.length - 1;
+                      // The smiley sits only on the newest AI answer.
+                      final lastAi = messages.lastIndexWhere((e) => e.role == ChatRole.assistant);
                       // Only messages written just now slide in; old ones
                       // scrolled back into view stay still.
                       final fresh = DateTime.now().difference(m.createdAt).inMilliseconds < 2500;
@@ -453,6 +455,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                           skip: !fresh,
                           child: _MessageView(
                             message: m,
+                            showAvatar: i == lastAi,
                             showActions: isLast && !busy && m.role == ChatRole.assistant && m.text.isNotEmpty,
                             waiting: busy && isLast && m.role == ChatRole.assistant && m.text.isEmpty,
                             generating: busy && isLast && m.role == ChatRole.assistant,
@@ -944,6 +947,7 @@ class _EmptyChat extends StatelessWidget {
 
 class _MessageView extends StatelessWidget {
   final ChatMessage message;
+  final bool showAvatar;
   final bool showActions;
   final bool waiting;
   final bool generating;
@@ -953,6 +957,7 @@ class _MessageView extends StatelessWidget {
 
   const _MessageView({
     required this.message,
+    required this.showAvatar,
     required this.showActions,
     required this.waiting,
     required this.generating,
@@ -1007,6 +1012,7 @@ class _MessageView extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // The bubble changes shape while the AI works; press and hold = it spins.
+        if (!showAvatar) const SizedBox(width: 34, height: 34) else
         PicoAvatar(
           size: 34,
           mood: generating

@@ -99,6 +99,8 @@ Future<SharedPreferences> _loadState() async {
   sendOnEnterNotifier.value = p.getBool('pc_send_on_enter') ?? true;
   searchEngineNotifier.value = p.getString('pc_search_engine') ?? 'duckduckgo';
   sidebarCollapsedNotifier.value = p.getBool('pc_sidebar_collapsed') ?? false;
+  sidebarWidthNotifier.value = (p.getDouble('pc_sidebar_width') ?? 300).clamp(220.0, 520.0);
+  ecoModeNotifier.value = p.getBool('pc_eco_mode') ?? false;
   voiceEngineNotifier.value = p.getString('pc_voice_engine') ?? 'whisper';
   voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'base';
   reasoningModeNotifier.value = p.getString('pc_reasoning') ?? 'auto';
@@ -178,6 +180,7 @@ class PicoChatApp extends StatelessWidget {
             localeNotifier,
             colorHarmonyNotifier,
             oledModeNotifier,
+            ecoModeNotifier,
           ]),
           builder: (_, _) {
             // Material You look with the chosen accent.
@@ -216,7 +219,14 @@ class PicoChatApp extends StatelessWidget {
               theme: light,
               darkTheme: dark,
               themeMode: themeModeNotifier.value,
-              builder: (context, child) => PcPointerTracker(child: AppTextScale(child: DesktopTitleBarShell(child: child!))),
+              builder: (context, child) {
+                Widget w = PcPointerTracker(child: AppTextScale(child: DesktopTitleBarShell(child: child!)));
+                // Energy saving: turn off animations everywhere.
+                if (ecoModeNotifier.value) {
+                  w = MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: w);
+                }
+                return w;
+              },
               home: onboarded ? const HomeScreen() : const IntroScreen(),
             );
           },

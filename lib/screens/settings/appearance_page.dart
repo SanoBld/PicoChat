@@ -116,6 +116,17 @@ class _AppearancePageState extends State<AppearancePage> {
                 setState(() {});
               },
             ),
+            SettingSwitchRow(
+              icon: Icons.battery_saver_rounded,
+              title: tr('eco_mode'),
+              subtitle: tr('eco_mode_sub'),
+              value: ecoModeNotifier.value,
+              onChanged: (v) {
+                ecoModeNotifier.value = v;
+                savePref('pc_eco_mode', v);
+                setState(() {});
+              },
+            ),
           ]),
           const SizedBox(height: 20),
           SettingsSection(label: tr('ap_accent'), children: [

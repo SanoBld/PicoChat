@@ -8,6 +8,7 @@ import '../../services/memory_store.dart';
 import '../../services/prefs.dart';
 import '../../widgets/m3_components.dart' show M3CookieBadge;
 import '../../widgets/pc_motion.dart';
+import '../../widgets/import_memory_sheet.dart';
 
 class MemoryPage extends StatefulWidget {
   const MemoryPage({super.key});
@@ -131,6 +132,7 @@ class _MemoryPageState extends State<MemoryPage> {
       appBar: AppBar(
         title: Text(tr('memory_title')),
         actions: [
+          IconButton(tooltip: tr('im_btn'), icon: const Icon(Icons.auto_awesome_rounded), onPressed: () => showImportMemorySheet(context)),
           IconButton(tooltip: tr('import'), icon: const Icon(Icons.file_upload_outlined), onPressed: _import),
           IconButton(tooltip: tr('export'), icon: const Icon(Icons.file_download_outlined), onPressed: Backup.exportMemory),
           if (_store.items.isNotEmpty)

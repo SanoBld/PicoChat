@@ -17,6 +17,7 @@ import '../services/prefs.dart';
 import '../supported_locales.dart';
 import '../theme/m3_motion.dart';
 import '../widgets/pico_face.dart';
+import '../widgets/import_memory_sheet.dart';
 import '../widgets/m3_components.dart';
 import 'home_screen.dart';
 
@@ -452,6 +453,12 @@ class _AboutStep extends StatelessWidget {
             _f(work, tr('onb_q_work')),
             _f(likes, tr('onb_q_likes')),
             _f(aiStyle, tr('onb_q_ai')),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.auto_awesome_rounded, size: 18),
+              label: Text(tr('im_btn')),
+              onPressed: () => showImportMemorySheet(context),
+            ),
+            const SizedBox(height: 12),
             const SizedBox(height: 4),
             Text(tr('engine_title'), style: text.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),

@@ -221,12 +221,39 @@ class MarkdownLite extends StatelessWidget {
     );
   }
 
+  // Small models wrap normal answers in ```text ... ```. Show them as normal text.
+  static List<String> _unwrapTextFences(List<String> src) {
+    const plain = {'text', 'txt', 'plaintext', 'plain', 'markdown', 'md'};
+    final out = <String>[];
+    var inPlain = false;
+    var inCode = false;
+    for (final l in src) {
+      final t = l.trim();
+      if (t.startsWith('```')) {
+        if (inPlain) {
+          inPlain = false; // closing fence of a plain block: drop it
+          continue;
+        }
+        if (inCode) {
+          inCode = false;
+        } else if (plain.contains(t.substring(3).trim().toLowerCase())) {
+          inPlain = true; // opening fence of a plain block: drop it
+          continue;
+        } else {
+          inCode = true;
+        }
+      }
+      out.add(l);
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     _codeBg = scheme.surfaceContainerHighest;
     _codeFg = scheme.tertiary;
-    final lines = text.split('\n');
+    final lines = _unwrapTextFences(text.split('\n'));
     final widgets = <Widget>[];
     int i = 0;
 

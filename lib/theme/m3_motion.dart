@@ -84,7 +84,7 @@ class M3Motion {
 
   /// True when the user turned on "reduce animations".
   static bool reduced(BuildContext context) =>
-      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+      ecoModeNotifier.value || (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
 
   /// Position of a widget, in the coordinates of the app overlay.
   /// Used as the start of a container transform. Returns null if unknown.

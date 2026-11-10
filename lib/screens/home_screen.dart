@@ -130,6 +130,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _scaffoldKey = GlobalKey<ScaffoldState>();
   Conversation _chat = ChatStore.instance.create();
+  bool _dragging = false; // sidebar edge is being dragged
   bool _hover = false; // sidebar shown over the chat while hovering the left edge
 
   @override
@@ -138,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
     localeNotifier.addListener(_rebuild);
     pcModeNotifier.addListener(_rebuild);
     sidebarCollapsedNotifier.addListener(_rebuild);
+    sidebarWidthNotifier.addListener(_rebuild);
     _initAssist();
   }
 
@@ -181,6 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
     localeNotifier.removeListener(_rebuild);
     pcModeNotifier.removeListener(_rebuild);
     sidebarCollapsedNotifier.removeListener(_rebuild);
+    sidebarWidthNotifier.removeListener(_rebuild);
     super.dispose();
   }
 
@@ -259,20 +262,37 @@ class _HomeScreenState extends State<HomeScreen> {
           ? Stack(children: [
               Row(children: [
                 AnimatedContainer(
-                  duration: const Duration(milliseconds: 320),
+                  duration: _dragging ? Duration.zero : const Duration(milliseconds: 320),
                   curve: Curves.easeOutCubic,
-                  width: collapsed ? 0 : 300,
+                  width: collapsed ? 0 : sidebarWidthNotifier.value,
                   clipBehavior: Clip.hardEdge,
                   decoration: const BoxDecoration(),
                   child: OverflowBox(
                     alignment: Alignment.centerLeft,
-                    minWidth: 300,
-                    maxWidth: 300,
+                    minWidth: sidebarWidthNotifier.value,
+                    maxWidth: sidebarWidthNotifier.value,
                     child: SizedBox(
-                      width: 300,
+                      width: sidebarWidthNotifier.value,
                       child: Row(children: [
                         Expanded(child: ColoredBox(color: scheme.surfaceContainerLow, child: SafeArea(child: sidebar(inDrawer: false)))),
-                        VerticalDivider(width: 1, color: scheme.outlineVariant),
+                        // Drag this edge to make the sidebar wider or narrower.
+                        MouseRegion(
+                          cursor: SystemMouseCursors.resizeColumn,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onHorizontalDragStart: (_) => setState(() => _dragging = true),
+                            onHorizontalDragUpdate: (d) => sidebarWidthNotifier.value =
+                                (sidebarWidthNotifier.value + d.delta.dx).clamp(220.0, 520.0),
+                            onHorizontalDragEnd: (_) {
+                              setState(() => _dragging = false);
+                              savePref('pc_sidebar_width', sidebarWidthNotifier.value);
+                            },
+                            child: SizedBox(
+                              width: 10,
+                              child: Center(child: VerticalDivider(width: 1, color: scheme.outlineVariant)),
+                            ),
+                          ),
+                        ),
                       ]),
                     ),
                   ),
