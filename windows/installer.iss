@@ -15,7 +15,10 @@
 #endif
 
 [Setup]
-AppId={{8F2E4C1A-9B3D-4E5F-A123-1234567890AB}
+; UNIQUE to PicoChat. Inno Setup uses this id to recognise an existing install: the old
+; placeholder id was the same as another app (LastStats), so the installer replaced that app.
+; NEVER reuse or change this id again.
+AppId={{45FD41E5-7804-4F29-B36C-5C8B95DDEA9E}
 AppName=PicoChat
 AppVersion={#MyAppVersion}
 AppPublisher=SanoBld
@@ -30,6 +33,7 @@ SolidCompression=yes
 SetupIconFile=runner\resources\app_icon.ico
 WizardStyle=modern
 DisableProgramGroupPage=yes
+UsePreviousAppDir=yes
 CloseApplications=yes
 RestartApplications=yes
 #if MyArch == "arm64"
@@ -67,3 +71,22 @@ Name: "{autodesktop}\PicoChat"; Filename: "{app}\{#MyAppExeName}"; Tasks: deskto
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,PicoChat}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// Safety net: never install into the folder of another application.
+function NextButtonClick(CurPageID: Integer): Boolean;
+var
+  Dir: String;
+begin
+  Result := True;
+  if CurPageID = wpSelectDir then
+  begin
+    Dir := WizardDirValue;
+    if FileExists(AddBackslash(Dir) + 'LastStats.exe') or
+       (FileExists(AddBackslash(Dir) + 'unins000.exe') and not FileExists(AddBackslash(Dir) + '{#MyAppExeName}')) then
+    begin
+      MsgBox('This folder already contains another application. Please choose an empty folder or keep the default one.', mbError, MB_OK);
+      Result := False;
+    end;
+  end;
+end;

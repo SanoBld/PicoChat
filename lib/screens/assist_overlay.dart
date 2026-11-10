@@ -103,7 +103,6 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     _focus.addListener(() {
       if (_focus.hasFocus) _startTyping(); // keyboard opened: stop listening
     });
-    _enter.forward();
     if (!ecoModeNotifier.value) _glowC.forward();
     _channel.setMethodCallHandler((c) async {
       if (c.method == 'screenshot') _gotShot(c.arguments as String?);
@@ -121,7 +120,10 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
         _send();
       }
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _listen());
+    // The card opens first; the microphone starts right after, so the animation stays smooth.
+    _enter.forward().then((_) {
+      if (mounted && !_typing && !_closing) _listen();
+    });
   }
 
   @override
@@ -342,11 +344,13 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
-    await _voice.cancel();
-    ChatService.instance.requestStop();
+    FocusManager.instance.primaryFocus?.unfocus();
+    // The animation starts at once; the microphone and the model are freed while it plays.
     _glowC.duration = const Duration(milliseconds: 520); // short glow on the way out
     final anim = Future.wait([_enter.reverse(), if (!ecoModeNotifier.value) _glowC.forward(from: 0)]);
     try {
+      await _voice.cancel();
+      ChatService.instance.requestStop();
       await InferenceService.engine.unload(); // free the RAM
     } catch (_) {}
     try {
@@ -375,9 +379,19 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
   }
 
   // ── Animated pieces ─────────────────────────────────────────────────────
-  Widget _fade(Widget child, String key) => AnimatedSwitcher(
+  Widget _fade(Widget child, String key) => AnimatedSize(
+        // The card changes height smoothly instead of jumping.
+        duration: Duration(milliseconds: M3Motion.reduced(context) ? 1 : 320),
+        curve: M3Motion.emphasized,
+        alignment: Alignment.topCenter,
+        child: _fadeSwitch(child, key),
+      );
+
+  Widget _fadeSwitch(Widget child, String key) => AnimatedSwitcher(
         duration: const Duration(milliseconds: 280),
-        switchInCurve: Curves.easeOutCubic,
+        switchInCurve: M3Motion.emphasizedDecelerate,
+        switchOutCurve: Curves.easeIn,
+        layoutBuilder: (cur, prev) => Stack(alignment: Alignment.topLeft, children: [...prev, ?cur]),
         transitionBuilder: (c, a) => FadeTransition(
           opacity: a,
           child: SlideTransition(position: Tween(begin: const Offset(0, 0.08), end: Offset.zero).animate(a), child: c),
@@ -415,11 +429,20 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     );
   }
 
-  Widget _swap(Widget child) => AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        transitionBuilder: (c, a) => ScaleTransition(
-            scale: CurvedAnimation(parent: a, curve: Curves.easeOutBack), child: FadeTransition(opacity: a, child: c)),
-        child: child,
+  // Buttons next to the text field: the field widens / narrows smoothly.
+  Widget _swap(Widget child) => AnimatedSize(
+        duration: Duration(milliseconds: M3Motion.reduced(context) ? 1 : 260),
+        curve: M3Motion.emphasized,
+        alignment: Alignment.centerRight,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          switchInCurve: M3Motion.emphasizedDecelerate,
+          switchOutCurve: Curves.easeIn,
+          layoutBuilder: (cur, prev) => Stack(alignment: Alignment.centerRight, children: [...prev, ?cur]),
+          transitionBuilder: (c, a) => ScaleTransition(
+              scale: Tween(begin: 0.7, end: 1.0).animate(a), child: FadeTransition(opacity: a, child: c)),
+          child: child,
+        ),
       );
 
   Widget _body(ColorScheme scheme, TextTheme text, bool canChat, bool micOn) {
@@ -471,6 +494,7 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
           // Brief coloured glow (open and close) + soft shade under the card.
           Positioned.fill(
             child: IgnorePointer(
+              child: RepaintBoundary(
               child: AnimatedBuilder(
                 animation: Listenable.merge([_enterC, _glowC]),
                 builder: (_, _) => AssistGlow(
@@ -480,24 +504,19 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
                   colors: [scheme.primary, scheme.tertiary, scheme.secondary],
                 ),
               ),
-            ),
+            )),
           ),
           Column(children: [
           // Tap outside the card to close (not while circling).
           Expanded(child: _selecting ? const IgnorePointer(child: SizedBox.expand()) : PcGesture(behavior: HitTestBehavior.opaque, onTap: _close)),
           // The card springs up and fades in; on close it slides away.
-          AnimatedBuilder(
-            animation: _enterC,
-            builder: (_, child) {
-              final v = _enterC.value.clamp(0.0, 1.0);
-              return Opacity(
-                opacity: v,
-                child: Transform.translate(
-                  offset: Offset(0, 56 * (1 - v)),
-                  child: Transform.scale(scale: 0.96 + 0.04 * v, alignment: Alignment.bottomCenter, child: child),
-                ),
-              );
-            },
+          FadeTransition(
+            opacity: _enterC,
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.22), end: Offset.zero).animate(_enterC),
+              child: ScaleTransition(
+                scale: Tween(begin: 0.96, end: 1.0).animate(_enterC),
+                alignment: Alignment.bottomCenter,
             child: Material(
               color: scheme.surfaceContainerHigh,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -583,10 +602,7 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
                                   ? _btn('send', Icons.arrow_upward_rounded, _send, filled: true, pulse: true)
                                   : _phase == _Phase.thinking
                                       ? _btn('wait', Icons.hourglass_top_rounded, null)
-                                      : _typing
-                                          // Writing: no microphone, only send.
-                                          ? _btn('send3', Icons.arrow_upward_rounded, _send, filled: true)
-                                          : Row(key: const ValueKey('mic+send'), mainAxisSize: MainAxisSize.min, children: [
+                                      : Row(key: const ValueKey('mic+send'), mainAxisSize: MainAxisSize.min, children: [
                                           _btn('mic', Icons.mic_rounded, _listen),
                                           const SizedBox(width: 8),
                                           _btn('send2', Icons.arrow_upward_rounded, _send, filled: true),
@@ -599,7 +615,7 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
                 ),
               ),
             ),
-          ),
+          ))),
         ]),
         ]),
       ),

@@ -20,16 +20,18 @@ class ComposerIntro extends StatefulWidget {
 }
 
 class _ComposerIntroState extends State<ComposerIntro> with SingleTickerProviderStateMixin {
-  late final bool _play = !ComposerIntro._played && openingAnimNotifier.value && !ecoModeNotifier.value;
   late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 2200));
+  bool _play = false;
 
   @override
   void initState() {
     super.initState();
+    // Decide BEFORE marking it as played (otherwise it would never play).
+    _play = !ComposerIntro._played && openingAnimNotifier.value && !ecoModeNotifier.value;
     ComposerIntro._played = true;
     if (_play) {
       // Let the home screen settle first, so the light is noticed.
-      Future<void>.delayed(const Duration(milliseconds: 350), () {
+      Future<void>.delayed(const Duration(milliseconds: 450), () {
         if (mounted) _c.forward();
       });
     }
