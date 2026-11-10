@@ -156,10 +156,10 @@ Future<SharedPreferences> _loadState() async {
 @pragma('vm:entry-point')
 Future<void> assistMain() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ChatStore.instance.assistMode = true; // before _loadState: chats go to an inbox the app merges
   if (!kIsWeb) InferenceService.engine = LlamaDartEngine();
   if (!kIsWeb) SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge); // card + screenshot cover the whole screen
   await _loadState();
-  ChatStore.instance.persist = false; // the overlay must not overwrite the saved chats
   if (locationEnabledNotifier.value) LocationService.instance.refresh();
   runApp(const AssistApp());
 }

@@ -7,6 +7,7 @@ class _ChatView extends StatefulWidget {
   final VoidCallback? onMenu; // null on wide layouts (sidebar is always visible)
   final VoidCallback onNewChat;
   final VoidCallback onOpenModels;
+  final ValueChanged<Conversation> onOpenChat; // from the "continue" list of the home screen
   final VoidCallback? onToggleSidebar; // wide layouts only
 
   const _ChatView({
@@ -15,6 +16,7 @@ class _ChatView extends StatefulWidget {
     required this.onMenu,
     required this.onNewChat,
     required this.onOpenModels,
+    required this.onOpenChat,
     this.onToggleSidebar,
   });
 
@@ -439,7 +441,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
           ),
         Expanded(
           child: messages.isEmpty
-              ? _EmptyChat(onSuggest: _send, onOpenModels: widget.onOpenModels)
+              ? _EmptyChat(onSuggest: _send, onOpenModels: widget.onOpenModels, onOpenChat: widget.onOpenChat)
               : Stack(children: [
                 SelectionArea(
                   child: NotificationListener<ScrollNotification>(
@@ -711,7 +713,66 @@ class _Sug {
 class _EmptyChat extends StatelessWidget {
   final ValueChanged<String> onSuggest;
   final VoidCallback onOpenModels;
-  const _EmptyChat({required this.onSuggest, required this.onOpenModels});
+  final ValueChanged<Conversation> onOpenChat;
+  const _EmptyChat({required this.onSuggest, required this.onOpenModels, required this.onOpenChat});
+
+  // Last three requests (the last question of each of the three most recent chats).
+  List<(Conversation, String)> _recent() {
+    final out = <(Conversation, String)>[];
+    for (final c in ChatStore.instance.chats) {
+      final q = c.messages.lastWhere((m) => m.role == ChatRole.user, orElse: () => ChatMessage(role: ChatRole.user, text: '')).text.trim();
+      if (q.isEmpty) continue;
+      out.add((c, q));
+      if (out.length == 3) break;
+    }
+    return out;
+  }
+
+  String _when(BuildContext context, DateTime d) {
+    final l = MaterialLocalizations.of(context);
+    final n = DateTime.now();
+    if (d.year == n.year && d.month == n.month && d.day == n.day) return l.formatTimeOfDay(TimeOfDay.fromDateTime(d));
+    return l.formatShortDate(d);
+  }
+
+  Widget _recentCard(BuildContext context, List<(Conversation, String)> items) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = Theme.of(context).textTheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(26),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: [
+        for (final (i, it) in items.indexed) ...[
+          if (i > 0) Divider(height: 1, indent: 66, endIndent: 16, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+          InkWell(
+            onTap: () => onOpenChat(it.$1),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 12, 10),
+              child: Row(children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(color: scheme.secondaryContainer, shape: BoxShape.circle),
+                  child: Icon(Icons.history_rounded, size: 20, color: scheme.onSecondaryContainer),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(it.$2, maxLines: 1, overflow: TextOverflow.ellipsis, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(_when(context, it.$1.updatedAt),
+                        maxLines: 1, overflow: TextOverflow.ellipsis, style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant)),
+                  ]),
+                ),
+                Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+              ]),
+            ),
+          ),
+        ],
+      ]),
+    );
+  }
 
   // First word of the title of a recent chat, used as a topic to go deeper on.
   String? _recentTopic() {
@@ -893,8 +954,8 @@ class _EmptyChat extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 580),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const FadeSlideIn(child: PicoAvatar(size: 72)),
-            const SizedBox(height: 22),
+            const FadeSlideIn(child: PicoAvatar(size: 68)),
+            const SizedBox(height: 18),
             FadeSlideIn(
               delay: const Duration(milliseconds: 60),
               child: canChat
@@ -920,8 +981,9 @@ class _EmptyChat extends StatelessWidget {
               FadeSlideIn(
                 delay: const Duration(milliseconds: 150),
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
+                  // Honest about where the messages go: cloud model, local model with cloud on, or fully local.
                   _pill(context, cloud != null ? Icons.cloud_rounded : Icons.lock_rounded,
-                      cloud != null ? tr('home_hint_cloud') : tr('home_hint_local')),
+                      cloud != null ? tr('home_hint_cloud') : (cloudEnabledNotifier.value ? tr('home_hint_local_cloud') : tr('home_hint_local'))),
                   if (cloud != null)
                     _pill(context, cloudProviderIcon(cloud.provider), cloud.displayName,
                         leading: cloudProviderLogo(cloud.provider, size: 15, color: scheme.primary))
@@ -932,9 +994,26 @@ class _EmptyChat extends StatelessWidget {
                   if (mem > 0) _pill(context, Icons.psychology_rounded, mem == 1 ? tr('pill_memory_one') : tr('pill_memories', {'n': '$mem'})),
                 ]),
               ),
-              const SizedBox(height: 26),
+              ListenableBuilder(
+                listenable: ChatStore.instance,
+                builder: (context, _) {
+                  final recent = _recent();
+                  if (recent.isEmpty) return const SizedBox.shrink();
+                  return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const SizedBox(height: 22),
+                    FadeSlideIn(
+                      delay: const Duration(milliseconds: 190),
+                      child: Text(tr('home_recent').toUpperCase(),
+                          style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                    ),
+                    const SizedBox(height: 8),
+                    FadeSlideIn(delay: const Duration(milliseconds: 220), child: _recentCard(context, recent)),
+                  ]);
+                },
+              ),
+              const SizedBox(height: 22),
               FadeSlideIn(
-                delay: const Duration(milliseconds: 200),
+                delay: const Duration(milliseconds: 250),
                 child: Text(tr('home_suggestions').toUpperCase(),
                     style: text.labelMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
               ),
@@ -947,7 +1026,7 @@ class _EmptyChat extends StatelessWidget {
                     SizedBox(
                       width: w,
                       child: FadeSlideIn(
-                        delay: Duration(milliseconds: 240 + i * 70),
+                        delay: Duration(milliseconds: 280 + i * 60),
                         child: Material(
                           color: scheme.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(26),

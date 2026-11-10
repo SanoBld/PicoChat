@@ -21,6 +21,7 @@ import '../services/attachments.dart';
 import '../services/chat_store.dart';
 import '../services/cloud/cloud_store.dart';
 import '../services/device_data.dart';
+import '../services/file_output.dart';
 import '../services/inference_engine.dart';
 import '../services/model_manager.dart';
 import '../services/prefs.dart';
@@ -28,6 +29,8 @@ import '../services/voice_input.dart';
 import '../supported_locales.dart';
 import '../theme/m3_motion.dart';
 import '../widgets/assist_fx.dart';
+import '../widgets/error_card.dart';
+import '../widgets/markdown_lite.dart';
 import '../widgets/pc_motion.dart';
 import 'settings/cloud_page.dart' show cloudProviderLogo;
 import '../widgets/skeleton.dart' show M3Spinner;
@@ -67,6 +70,8 @@ enum _Phase { listening, thinking, answered }
 class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMixin {
   final _ctrl = TextEditingController();
   final _focus = FocusNode();
+  final _scroll = ScrollController();
+  bool _sent = false; // a question is being answered
   final _chat = ChatStore.instance.create();
   final _voice = VoiceInput.instance;
   late final AnimationController _pulse =
@@ -100,6 +105,7 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     super.initState();
     // Model chosen for the assistant (setting); falls back to the model of the app.
     _applyChoice(assistModelNotifier.value);
+    ChatService.instance.addListener(_syncPhase);
     _focus.addListener(() {
       if (_focus.hasFocus) _startTyping(); // keyboard opened: stop listening
     });
@@ -135,6 +141,8 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     _enter.dispose();
     _channel.setMethodCallHandler(null);
     _ctrl.dispose();
+    ChatService.instance.removeListener(_syncPhase);
+    _scroll.dispose();
     _focus.dispose();
     super.dispose();
   }
@@ -334,10 +342,45 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
       }
       return;
     }
+    final before = _chat.messages.length;
+    _sent = true;
+    _ctrl.text = text;
     await ChatService.instance.send(_chat, text,
         files: hasImg ? [Attachment('screen.png', '', imagePath: _cropPath)] : const []);
+    _sent = false;
+    if (_chat.messages.length == before) {
+      // Nothing was sent (no model ready, or the AI is busy): go back to the field.
+      if (mounted) {
+        setState(() {
+          _phase = _Phase.listening;
+          _typing = true;
+        });
+      }
+      return;
+    }
     if (hasImg) _cropSent = true;
     _ctrl.text = text;
+    await ChatStore.instance.flush(); // saved in the app history (merged by the app)
+    if (mounted) setState(() => _phase = _Phase.answered);
+  }
+
+  // The answer is complete (the title may still be written): show it as answered at once.
+  void _syncPhase() {
+    if (!mounted || !_sent || _phase != _Phase.thinking) return;
+    final r = _reply;
+    if (r != null && !ChatService.instance.isGenerating && (r.text.isNotEmpty || r.failed)) {
+      setState(() => _phase = _Phase.answered);
+      ChatStore.instance.flush();
+    }
+  }
+
+  Future<void> _retry() async {
+    if (_phase == _Phase.thinking) return;
+    setState(() => _phase = _Phase.thinking);
+    _sent = true;
+    await ChatService.instance.regenerate(_chat);
+    _sent = false;
+    await ChatStore.instance.flush();
     if (mounted) setState(() => _phase = _Phase.answered);
   }
 
@@ -357,6 +400,9 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
       await anim;
     } catch (_) {}
     try {
+      await ChatStore.instance.flush(); // keep the conversation in the app history
+    } catch (_) {}
+    try {
       await _channel.invokeMethod('close');
     } catch (_) {}
   }
@@ -367,16 +413,20 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
       await InferenceService.engine.unload();
     } catch (_) {}
     try {
+      await ChatStore.instance.flush();
+    } catch (_) {}
+    try {
       await _channel.invokeMethod('openApp');
     } catch (_) {}
   }
 
-  String get _answer {
-    for (final m in _chat.messages.reversed) {
-      if (m.role == ChatRole.assistant) return m.text;
-    }
-    return '';
+  // The answer to the LAST question only (an older answer must not show while a new one is written).
+  ChatMessage? get _reply {
+    final m = _chat.messages;
+    return (m.isNotEmpty && m.last.role == ChatRole.assistant) ? m.last : null;
   }
+
+  String get _answer => _reply?.text ?? '';
 
   // ── Animated pieces ─────────────────────────────────────────────────────
   Widget _fade(Widget child, String key) => AnimatedSize(
@@ -449,10 +499,14 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
     if (!canChat) return Text(tr('no_installed'), style: text.bodyLarge);
     if (micOn) return _listeningView(scheme, text);
     if (_phase == _Phase.listening) return const SizedBox(width: double.infinity);
+    final r = _reply;
+    final generating = ChatService.instance.isGenerating;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(_ctrl.text, style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
       const SizedBox(height: 10),
-      if (_answer.isEmpty)
+      if (r != null && r.failed && r.text.isEmpty)
+        ErrorCard(kind: r.errorKind, detail: r.error, onRetry: _retry)
+      else if (_answer.isEmpty)
         Row(children: [
           const SizedBox(width: 18, height: 18, child: M3Spinner()),
           const SizedBox(width: 12),
@@ -461,9 +515,27 @@ class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMi
       else
         ConstrainedBox(
           constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.4),
-          child: SingleChildScrollView(child: SelectableText(_answer, style: text.bodyLarge)),
+          child: SelectionArea(
+            child: SingleChildScrollView(
+              controller: _scroll,
+              child: _AnswerText(
+                key: const ValueKey('answer'),
+                text: generating ? _answer : FileOutput.hide(_answer),
+                style: text.bodyLarge,
+                linkColor: scheme.primary,
+                onGrow: _followEnd,
+              ),
+            ),
+          ),
         ),
     ]);
+  }
+
+  // While the answer is written, keep the end in view (unless the person scrolled up).
+  void _followEnd() {
+    if (!_scroll.hasClients) return;
+    final p = _scroll.position;
+    if (p.maxScrollExtent - p.pixels < 80) _scroll.jumpTo(p.maxScrollExtent);
   }
 
   @override
@@ -683,4 +755,19 @@ class _BouncyState extends State<_Bouncy> {
           child: widget.child,
         ),
       );
+}
+
+// Formatted answer. Tells the card when the text grew so it can follow the end.
+class _AnswerText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  final Color linkColor;
+  final VoidCallback onGrow;
+  const _AnswerText({super.key, required this.text, required this.style, required this.linkColor, required this.onGrow});
+
+  @override
+  Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => onGrow());
+    return SizedBox(width: double.infinity, child: MarkdownLite(text: text, style: style, linkColor: linkColor));
+  }
 }

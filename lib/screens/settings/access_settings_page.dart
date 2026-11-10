@@ -81,7 +81,7 @@ class _AccessSettingsPageState extends State<AccessSettingsPage> with WidgetsBin
             ]),
             Padding(
               padding: const EdgeInsets.fromLTRB(8, 12, 8, 0),
-              child: Text(tr('acc_note'), style: Theme.of(context).textTheme.bodySmall),
+              child: Text(tr(cloudEnabledNotifier.value ? 'acc_note_cloud' : 'acc_note'), style: Theme.of(context).textTheme.bodySmall),
             ),
           ]),
         ),

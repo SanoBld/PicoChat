@@ -238,6 +238,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onMenu: wide ? null : () => _scaffoldKey.currentState?.openDrawer(),
       onNewChat: _newChat,
       onOpenModels: () => _push(const _ModelsPage()),
+      onOpenChat: _select,
       onToggleSidebar: wide
           ? () {
               _hover = false;
