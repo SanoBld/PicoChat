@@ -117,6 +117,17 @@ class _AppearancePageState extends State<AppearancePage> {
               },
             ),
             SettingSwitchRow(
+              icon: Icons.movie_filter_rounded,
+              title: tr('open_anim'),
+              subtitle: tr('open_anim_sub'),
+              value: openingAnimNotifier.value,
+              onChanged: (v) {
+                openingAnimNotifier.value = v;
+                savePref('pc_opening_anim', v);
+                setState(() {});
+              },
+            ),
+            SettingSwitchRow(
               icon: Icons.battery_saver_rounded,
               title: tr('eco_mode'),
               subtitle: tr('eco_mode_sub'),

@@ -69,6 +69,7 @@ class _AboutPageState extends State<_AboutPage> {
             ),
             SettingActionRow(
               icon: Icons.hub_rounded,
+              leadingWidget: const BrandIcon('assets/icons/huggingface.svg', Icons.hub_rounded),
               title: 'Hugging Face',
               subtitle: 'huggingface.co',
               onTap: () => _open(HfService.base),

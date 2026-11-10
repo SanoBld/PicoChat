@@ -40,6 +40,7 @@ final autoCommandsNotifier     = ValueNotifier<bool>(true);                   //
 final searchEngineNotifier     = ValueNotifier<String>('duckduckgo');         // pc_search_engine
 final sidebarCollapsedNotifier = ValueNotifier<bool>(false);                  // pc_sidebar_collapsed
 final sidebarWidthNotifier     = ValueNotifier<double>(300);                  // pc_sidebar_width
+final openingAnimNotifier     = ValueNotifier<bool>(true);                   // pc_opening_anim: splash at launch
 final ecoModeNotifier          = ValueNotifier<bool>(false);                  // pc_eco_mode: no animations
 final voiceEngineNotifier      = ValueNotifier<String>('whisper');            // pc_voice_engine: whisper | system
 final voiceModelNotifier       = ValueNotifier<String>('base');               // pc_voice_model: tiny | base | small

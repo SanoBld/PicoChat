@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'app_state.dart';
+import 'widgets/opening_splash.dart';
 import 'screens/assist_overlay.dart';
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
@@ -101,6 +102,7 @@ Future<SharedPreferences> _loadState() async {
   sidebarCollapsedNotifier.value = p.getBool('pc_sidebar_collapsed') ?? false;
   sidebarWidthNotifier.value = (p.getDouble('pc_sidebar_width') ?? 300).clamp(220.0, 520.0);
   ecoModeNotifier.value = p.getBool('pc_eco_mode') ?? false;
+  openingAnimNotifier.value = p.getBool('pc_opening_anim') ?? true;
   voiceEngineNotifier.value = p.getString('pc_voice_engine') ?? 'whisper';
   voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'base';
   reasoningModeNotifier.value = p.getString('pc_reasoning') ?? 'auto';
@@ -221,6 +223,7 @@ class PicoChatApp extends StatelessWidget {
               themeMode: themeModeNotifier.value,
               builder: (context, child) {
                 Widget w = PcPointerTracker(child: AppTextScale(child: DesktopTitleBarShell(child: child!)));
+                if (onboarded) w = OpeningGate(child: w); // launch animation
                 // Energy saving: turn off animations everywhere.
                 if (ecoModeNotifier.value) {
                   w = MediaQuery(data: MediaQuery.of(context).copyWith(disableAnimations: true), child: w);

@@ -42,6 +42,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _takeDraft();
       _voiceRequested();
+      _trackLoc();
     });
     _focus.addListener(() {
       if (_focus.hasFocus) _followEnd();
@@ -67,6 +68,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     draftNotifier.removeListener(_takeDraft);
     voiceRequestNotifier.removeListener(_voiceRequested);
     _follow?.cancel();
+    _locTimer?.cancel();
     _showJump.dispose();
     ChatStore.instance.removeListener(_onChange);
     ChatService.instance.removeListener(_onChange);
@@ -83,8 +85,26 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  // The place chip shows for a few seconds, then hides.
+  bool _locVisible = true;
+  String? _lastLoc;
+  Timer? _locTimer;
+
+  void _trackLoc() {
+    final loc = locationEnabledNotifier.value ? LocationService.instance.label : null;
+    if (loc == _lastLoc) return;
+    _lastLoc = loc;
+    if (loc == null) return;
+    _locVisible = true;
+    _locTimer?.cancel();
+    _locTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _locVisible = false);
+    });
+  }
+
   void _onChange() {
     if (!mounted) return;
+    _trackLoc();
     setState(() {});
     final gen = ChatService.instance.isGeneratingIn(widget.chat);
     if (gen) {
@@ -498,12 +518,20 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                 Offstage(
                   offstage: dictating,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-              AnimatedSize(
-                duration: const Duration(milliseconds: 260),
-                curve: Curves.easeOutCubic,
-                alignment: Alignment.topLeft,
-                child: (locationEnabledNotifier.value && LocationService.instance.label != null)
+              AnimatedSwitcher(
+                duration: M3Motion.reduced(context) ? Duration.zero : const Duration(milliseconds: 450),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (c, a) => FadeTransition(
+                  opacity: a,
+                  child: SlideTransition(
+                    position: Tween(begin: const Offset(-0.2, 0), end: Offset.zero).animate(a),
+                    child: SizeTransition(sizeFactor: a, axisAlignment: -1, child: c),
+                  ),
+                ),
+                child: (locationEnabledNotifier.value && LocationService.instance.label != null && _locVisible)
                     ? Align(
+                        key: const ValueKey('loc'),
                         alignment: Alignment.centerLeft,
                         child: FadeSlideIn(
                           child: Padding(
@@ -535,7 +563,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                           ),
                         ),
                       )
-                    : const SizedBox(width: double.infinity),
+                    : const SizedBox(key: ValueKey('noloc'), width: double.infinity),
               ),
               if (_files.isNotEmpty)
                 Align(
@@ -722,7 +750,17 @@ class _EmptyChat extends StatelessWidget {
     }
     if (topic != null) ctx.add(_Sug(Icons.history_rounded, tr('s_topic', {'topic': topic})));
     if (webSearchNotifier.value) ctx.add(_Sug(Icons.newspaper_rounded, tr('s_news')));
-    if (hasMemory) ctx.add(_Sug(Icons.psychology_rounded, tr('s_memory')));
+    if (hasMemory) {
+      ctx.add(_Sug(Icons.psychology_rounded, tr('s_memory')));
+      // One saved fact, different each day.
+      final facts = MemoryStore.instance.items
+          .where((e) => e.length > 12 && !e.toLowerCase().startsWith('name'))
+          .toList();
+      if (facts.isNotEmpty) {
+        final f = facts[seed % facts.length];
+        ctx.add(_Sug(Icons.lightbulb_rounded, tr('s_fact', {'fact': f.length > 60 ? '${f.substring(0, 57)}…' : f})));
+      }
+    }
 
     // Always-available ideas, rotated every day so the screen does not look the same.
     const generic = [
@@ -756,19 +794,25 @@ class _EmptyChat extends StatelessWidget {
     return out;
   }
 
+  // Subtitle changes every day.
+  String _subtitle() {
+    final d = DateTime.now().difference(DateTime(DateTime.now().year)).inDays % 3;
+    return d == 0 ? tr('empty_title') : tr('home_sub_$d');
+  }
+
   String _greeting() {
     final h = DateTime.now().hour;
     final key = (h >= 23 || h < 5) ? 'greet_night' : (h < 12 ? 'greet_morning' : (h < 18 ? 'greet_afternoon' : 'greet_evening'));
     return tr(key);
   }
 
-  Widget _pill(BuildContext context, IconData icon, String label) {
+  Widget _pill(BuildContext context, IconData icon, String label, {Widget? leading}) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.fromLTRB(9, 5, 12, 5),
       decoration: BoxDecoration(color: scheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 15, color: scheme.primary),
+        leading ?? Icon(icon, size: 15, color: scheme.primary),
         const SizedBox(width: 6),
         Flexible(
           child: Text(label,
@@ -866,7 +910,7 @@ class _EmptyChat extends StatelessWidget {
             FadeSlideIn(
               delay: const Duration(milliseconds: 110),
               child: Text(
-                canChat ? tr('empty_title') : tr('no_model_sub'),
+                canChat ? _subtitle() : tr('no_model_sub'),
                 style: text.titleMedium?.copyWith(color: scheme.onSurfaceVariant, fontWeight: FontWeight.w500),
               ),
             ),
@@ -878,7 +922,8 @@ class _EmptyChat extends StatelessWidget {
                   _pill(context, cloud != null ? Icons.cloud_rounded : Icons.lock_rounded,
                       cloud != null ? tr('home_hint_cloud') : tr('home_hint_local')),
                   if (cloud != null)
-                    _pill(context, cloudProviderIcon(cloud.provider), cloud.displayName)
+                    _pill(context, cloudProviderIcon(cloud.provider), cloud.displayName,
+                        leading: cloudProviderLogo(cloud.provider, size: 15, color: scheme.primary))
                   else if (model != null)
                     _pill(context, Icons.smartphone_rounded, model.fileName.replaceAll('.gguf', '')),
                   if (webSearchNotifier.value) _pill(context, Icons.public_rounded, tr('pill_web')),

@@ -13,7 +13,7 @@
 
 import 'dart:convert';
 
-enum CloudProvider { anthropic, gemini, openai, custom }
+enum CloudProvider { anthropic, gemini, openai, mistral, deepseek, xai, custom }
 
 CloudProvider cloudProviderFromId(String? id) =>
     CloudProvider.values.firstWhere((p) => p.name == id, orElse: () => CloudProvider.custom);
@@ -23,6 +23,9 @@ extension CloudProviderInfo on CloudProvider {
         CloudProvider.anthropic => 'Claude',
         CloudProvider.gemini => 'Gemini',
         CloudProvider.openai => 'ChatGPT',
+        CloudProvider.mistral => 'Mistral',
+        CloudProvider.deepseek => 'DeepSeek',
+        CloudProvider.xai => 'Grok',
         CloudProvider.custom => 'Compatible',
       };
 
@@ -30,6 +33,9 @@ extension CloudProviderInfo on CloudProvider {
         CloudProvider.anthropic => 'Claude (Anthropic)',
         CloudProvider.gemini => 'Gemini (Google)',
         CloudProvider.openai => 'ChatGPT (OpenAI)',
+        CloudProvider.mistral => 'Mistral AI',
+        CloudProvider.deepseek => 'DeepSeek',
+        CloudProvider.xai => 'Grok (xAI)',
         CloudProvider.custom => 'OpenAI-compatible',
       };
 
@@ -37,6 +43,9 @@ extension CloudProviderInfo on CloudProvider {
         CloudProvider.anthropic => 'https://api.anthropic.com',
         CloudProvider.gemini => 'https://generativelanguage.googleapis.com/v1beta',
         CloudProvider.openai => 'https://api.openai.com/v1',
+        CloudProvider.mistral => 'https://api.mistral.ai/v1',
+        CloudProvider.deepseek => 'https://api.deepseek.com/v1',
+        CloudProvider.xai => 'https://api.x.ai/v1',
         CloudProvider.custom => '',
       };
 
@@ -45,6 +54,9 @@ extension CloudProviderInfo on CloudProvider {
         CloudProvider.anthropic => 'https://platform.claude.com/settings/keys',
         CloudProvider.gemini => 'https://aistudio.google.com/apikey',
         CloudProvider.openai => 'https://platform.openai.com/api-keys',
+        CloudProvider.mistral => 'https://console.mistral.ai/api-keys',
+        CloudProvider.deepseek => 'https://platform.deepseek.com/api_keys',
+        CloudProvider.xai => 'https://console.x.ai',
         CloudProvider.custom => '',
       };
 
@@ -272,6 +284,9 @@ CloudRequest buildChatRequest({
 
     case CloudProvider.openai:
     case CloudProvider.custom:
+    case CloudProvider.mistral:
+    case CloudProvider.deepseek:
+    case CloudProvider.xai:
       final official = provider == CloudProvider.openai;
       final body = <String, dynamic>{
         'model': modelId,
@@ -410,6 +425,9 @@ StreamPiece parseStreamData(CloudProvider provider, String data) {
 
     case CloudProvider.openai:
     case CloudProvider.custom:
+    case CloudProvider.mistral:
+    case CloudProvider.deepseek:
+    case CloudProvider.xai:
       if (j['error'] != null) {
         final e = j['error'];
         final t = e is Map ? '${e['type']} ${e['code']}' : '';
@@ -483,6 +501,9 @@ CloudRequest buildListRequest({
       );
     case CloudProvider.openai:
     case CloudProvider.custom:
+    case CloudProvider.mistral:
+    case CloudProvider.deepseek:
+    case CloudProvider.xai:
       return CloudRequest(
         'GET',
         Uri.parse('$base/models'),
@@ -567,6 +588,9 @@ List<CloudModelInfo> parseModelList(CloudProvider provider, Object? json) {
       out.addAll(rows.map((r) => r.$2));
 
     case CloudProvider.custom:
+    case CloudProvider.mistral:
+    case CloudProvider.deepseek:
+    case CloudProvider.xai:
       for (final m in (json['data'] as List?) ?? const []) {
         if (m is! Map || m['id'] is! String) continue;
         final id = m['id'] as String;
@@ -646,6 +670,9 @@ CloudRequest buildImageRequest({
       );
     case CloudProvider.openai:
     case CloudProvider.custom:
+    case CloudProvider.mistral:
+    case CloudProvider.deepseek:
+    case CloudProvider.xai:
       return CloudRequest(
         'POST',
         Uri.parse('$base/images/generations'),

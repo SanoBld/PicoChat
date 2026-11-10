@@ -13,15 +13,35 @@ import '../../services/cloud/cloud_store.dart';
 import '../../services/prefs.dart';
 import '../../theme/m3_motion.dart';
 import '../../theme/m3_shapes.dart';
+import '../../widgets/brand_icon.dart';
 import '../../widgets/m3_components.dart';
 import 'settings_helpers.dart';
 import 'settings_rows.dart';
 import '../../widgets/skeleton.dart' show M3Spinner;
 
+String cloudProviderAsset(CloudProvider p) => switch (p) {
+      CloudProvider.anthropic => 'assets/icons/claude.svg',
+      CloudProvider.gemini => 'assets/icons/gemini.svg',
+      CloudProvider.openai => 'assets/icons/chatgpt.svg',
+      CloudProvider.mistral => 'assets/icons/mistral.svg',
+      CloudProvider.deepseek => 'assets/icons/deepseek.svg',
+      CloudProvider.xai => 'assets/icons/grok.svg',
+      CloudProvider.custom => '',
+    };
+
+/// Brand logo of a provider (Material icon if the file is missing).
+Widget cloudProviderLogo(CloudProvider p, {double size = 24, Color? color}) =>
+    p == CloudProvider.custom
+        ? Icon(Icons.dns_rounded, size: size, color: color)
+        : BrandIcon(cloudProviderAsset(p), cloudProviderIcon(p), size: size, color: color);
+
 IconData cloudProviderIcon(CloudProvider p) => switch (p) {
       CloudProvider.anthropic => Icons.auto_awesome_rounded,
       CloudProvider.gemini => Icons.stars_rounded,
       CloudProvider.openai => Icons.bubble_chart_rounded,
+      CloudProvider.mistral => Icons.air_rounded,
+      CloudProvider.deepseek => Icons.water_rounded,
+      CloudProvider.xai => Icons.close_rounded,
       CloudProvider.custom => Icons.dns_rounded,
     };
 
@@ -154,6 +174,7 @@ class _CloudPageState extends State<CloudPage> {
               for (final a in accounts)
                 SettingActionRow(
                   icon: cloudProviderIcon(a.provider),
+                  leadingWidget: cloudProviderLogo(a.provider),
                   title: a.name,
                   subtitle: [
                     a.provider.shortName,
@@ -311,7 +332,7 @@ class _CloudAccountPageState extends State<CloudAccountPage> {
   }
 
   Widget _modelTile(CloudModelInfo m, bool active, ColorScheme scheme) => SettingTile(
-        leading: Icon(active ? Icons.check_rounded : (m.imageOnly ? Icons.palette_rounded : cloudProviderIcon(_a.provider))),
+        leading: active || m.imageOnly ? Icon(active ? Icons.check_rounded : Icons.palette_rounded) : cloudProviderLogo(_a.provider),
         title: Text(m.name, maxLines: 1, overflow: TextOverflow.ellipsis),
         subtitle: Text([
           if (m.name != m.id) m.id,

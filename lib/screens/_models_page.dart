@@ -246,14 +246,12 @@ class _InstalledTabState extends State<_InstalledTab> {
                   M3CookieBadge(
                     size: 44,
                     color: c.id == activeCloud?.id ? scheme.primary : (c.info.imageOnly ? scheme.secondaryContainer : scheme.tertiaryContainer),
-                    child: Icon(
-                      c.id == activeCloud?.id
-                          ? Icons.check_rounded
-                          : (c.info.imageOnly ? Icons.palette_rounded : cloudProviderIcon(c.provider)),
-                      color: c.id == activeCloud?.id
-                          ? scheme.onPrimary
-                          : (c.info.imageOnly ? scheme.onSecondaryContainer : scheme.onTertiaryContainer),
-                    ),
+    child: (c.id == activeCloud?.id || c.info.imageOnly)
+                        ? Icon(
+                            c.id == activeCloud?.id ? Icons.check_rounded : Icons.palette_rounded,
+                            color: c.id == activeCloud?.id ? scheme.onPrimary : scheme.onSecondaryContainer,
+                          )
+                        : cloudProviderLogo(c.provider, color: scheme.onTertiaryContainer),
                   ),
                   const SizedBox(width: 14),
                   Expanded(

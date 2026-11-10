@@ -200,8 +200,10 @@ class SettingActionRow extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? trailing;
   final bool danger;
+  final Widget? leadingWidget; // brand logo instead of the icon
   const SettingActionRow({
     super.key,
+    this.leadingWidget,
     required this.icon,
     required this.title,
     this.subtitle,
@@ -212,7 +214,7 @@ class SettingActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SettingTile(
-        leading: Icon(icon),
+        leading: leadingWidget ?? Icon(icon),
         danger: danger,
         title: Text(title),
         subtitle: subtitle == null || subtitle!.isEmpty ? null : Text(subtitle!),
