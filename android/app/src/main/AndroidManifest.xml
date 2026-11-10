@@ -71,6 +71,8 @@
         <activity
             android:name=".AssistActivity"
             android:exported="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:theme="@style/AssistTheme"
             android:launchMode="singleTask"
             android:taskAffinity=""

@@ -75,7 +75,11 @@ class ChatService extends ChangeNotifier {
   /// Cloud model in use (Claude, Gemini, ChatGPT…), or null. Only when the
   /// optional cloud AI is switched on, and never while the assistant overlay
   /// forces a local model.
+  /// External AI chosen by the assistant card (null = none).
+  CloudModel? cloudOverride;
+
   CloudModel? get currentCloud {
+    if (cloudOverride != null) return cloudOverride;
     if (!cloudEnabledNotifier.value || modelOverride != null) return null;
     return CloudStore.instance.byId(activeCloudNotifier.value);
   }

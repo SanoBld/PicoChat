@@ -3,6 +3,10 @@
 // starts the microphone right away (Whisper, offline) or lets the person
 // write, shows which AI answers (tap to change) and animates every change.
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'dart:ui' show PlatformDispatcher;
 
 import 'package:flutter/material.dart';
@@ -13,13 +17,18 @@ import '../app_state.dart';
 import '../l10n/l10n.dart';
 import '../models/chat_models.dart';
 import '../services/chat_service.dart';
+import '../services/attachments.dart';
 import '../services/chat_store.dart';
+import '../services/cloud/cloud_store.dart';
+import '../services/device_data.dart';
 import '../services/inference_engine.dart';
 import '../services/model_manager.dart';
 import '../services/prefs.dart';
 import '../services/voice_input.dart';
 import '../supported_locales.dart';
+import '../widgets/assist_fx.dart';
 import '../widgets/pc_motion.dart';
+import 'settings/cloud_page.dart' show cloudProviderLogo;
 import '../widgets/skeleton.dart' show M3Spinner;
 
 const _channel = MethodChannel('picochat/assist_overlay');
@@ -54,12 +63,25 @@ class _AssistScreen extends StatefulWidget {
 
 enum _Phase { listening, thinking, answered }
 
-class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderStateMixin {
+class _AssistScreenState extends State<_AssistScreen> with TickerProviderStateMixin {
   final _ctrl = TextEditingController();
   final _chat = ChatStore.instance.create();
   final _voice = VoiceInput.instance;
   late final AnimationController _pulse =
       AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+  // Opening / closing animation of the card (instant in energy saving).
+  late final AnimationController _enter = AnimationController(
+    vsync: this,
+    duration: Duration(milliseconds: ecoModeNotifier.value ? 1 : 520),
+    reverseDuration: Duration(milliseconds: ecoModeNotifier.value ? 1 : 260),
+  );
+  bool _closing = false;
+  bool _locked = false; // lock screen: no screenshot, no phone data
+  Uint8List? _shot; // picture of the screen given by Android
+  bool _selecting = false; // the person circles something on the screenshot
+  Uint8List? _cropBytes;
+  String? _cropPath;
+  bool _cropSent = false;
   _Phase _phase = _Phase.listening;
   bool _micFailed = false;
   bool _typing = false; // the person writes: no automatic send
@@ -70,7 +92,12 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
   void initState() {
     super.initState();
     // Model chosen for the assistant (setting); falls back to the model of the app.
-    ChatService.instance.modelOverride = ModelManager.instance.byId(assistModelNotifier.value);
+    _applyChoice(assistModelNotifier.value);
+    _enter.forward();
+    _channel.setMethodCallHandler((c) async {
+      if (c.method == 'screenshot') _gotShot(c.arguments as String?);
+    });
+    _initDevice();
     _voice.transcript.addListener(() => _lastChange = DateTime.now());
     // Send by itself after a short silence, once something was said.
     _silence = Timer.periodic(const Duration(milliseconds: 400), (_) {
@@ -90,6 +117,8 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
   void dispose() {
     _silence?.cancel();
     _pulse.dispose();
+    _enter.dispose();
+    _channel.setMethodCallHandler(null);
     _ctrl.dispose();
     super.dispose();
   }
@@ -119,32 +148,143 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
     _ctrl.value = TextEditingValue(text: keep, selection: TextSelection.collapsed(offset: keep.length));
   }
 
+  // Local model or external AI (cloud): the choice is saved for the next time.
+  void _applyChoice(String id) {
+    final chat = ChatService.instance;
+    if (id.startsWith(kCloudPrefix)) {
+      chat.cloudOverride = cloudEnabledNotifier.value ? CloudStore.instance.byId(id) : null;
+      chat.modelOverride = chat.cloudOverride == null ? ModelManager.instance.active : null;
+    } else {
+      chat.cloudOverride = null;
+      chat.modelOverride = ModelManager.instance.byId(id);
+    }
+  }
+
   Future<void> _pickModel() async {
     final models = ModelManager.instance.installed;
-    final cur = ChatService.instance.currentModel;
+    final cloud = cloudEnabledNotifier.value ? CloudStore.instance.chatModels : <CloudModel>[];
+    final curId = ChatService.instance.currentCloud?.id ?? ChatService.instance.currentModel?.id;
     final id = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (ctx) => SafeArea(
-        child: ListView(shrinkWrap: true, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: Text(tr('assist_choose_model'), style: Theme.of(ctx).textTheme.titleMedium),
+      isScrollControlled: true,
+      builder: (ctx) {
+        Widget head(String t) => Padding(
+              padding: const EdgeInsets.fromLTRB(24, 10, 24, 4),
+              child: Text(t, style: Theme.of(ctx).textTheme.labelLarge?.copyWith(color: Theme.of(ctx).colorScheme.primary)),
+            );
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
+            child: ListView(shrinkWrap: true, children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 4),
+                child: Text(tr('assist_choose_model'), style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+              if (models.isNotEmpty) head(tr('assist_on_device')),
+              for (final m in models)
+                ListTile(
+                  leading: Icon(m.id == curId ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded),
+                  title: Text(m.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  onTap: () => Navigator.pop(ctx, m.id),
+                ),
+              if (cloud.isNotEmpty) head(tr('assist_cloud')),
+              for (final m in cloud)
+                ListTile(
+                  leading: m.id == curId ? const Icon(Icons.radio_button_checked_rounded) : cloudProviderLogo(m.account.provider),
+                  title: Text(m.displayName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: m.info.vision ? const Icon(Icons.visibility_rounded, size: 18) : null,
+                  onTap: () => Navigator.pop(ctx, m.id),
+                ),
+            ]),
           ),
-          for (final m in models)
-            ListTile(
-              leading: Icon(m.id == cur?.id ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded),
-              title: Text(m.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () => Navigator.pop(ctx, m.id),
-            ),
-        ]),
-      ),
+        );
+      },
     );
-    if (id == null || id == cur?.id) return;
-    ChatService.instance.modelOverride = ModelManager.instance.byId(id);
+    if (id == null || id == curId) return;
+    _applyChoice(id);
     assistModelNotifier.value = id;
     await savePref('pc_assist_model', id);
     if (mounted) setState(() {});
+  }
+
+  // ── Screen picture (circle to search) ────────────────────────────────────
+  Future<void> _initDevice() async {
+    try {
+      _locked = (await _channel.invokeMethod<bool>('locked')) ?? false;
+    } catch (_) {}
+    DeviceData.locked = _locked; // lock screen: phone data stays private
+    if (_locked) return;
+    try {
+      _gotShot(await _channel.invokeMethod<String>('screenshot'));
+    } catch (_) {}
+  }
+
+  Future<void> _gotShot(String? path) async {
+    if (path == null || _locked || _shot != null || _phase != _Phase.listening) return;
+    try {
+      final b = await File(path).readAsBytes();
+      if (mounted) setState(() {
+        _shot = b;
+        _selecting = true;
+      });
+    } catch (_) {}
+  }
+
+  void _retake() => setState(() {
+        _selecting = true;
+        _cropBytes = null;
+        _cropPath = null;
+        _cropSent = false;
+      });
+
+  // Cuts the circled area out of the screenshot (max 1280 px) and keeps it as a PNG.
+  Future<void> _onCircled(Rect r) async {
+    final shot = _shot;
+    if (shot == null) return;
+    setState(() => _selecting = false);
+    try {
+      final img = (await (await ui.instantiateImageCodec(shot)).getNextFrame()).image;
+      final src = Rect.fromLTRB(r.left * img.width, r.top * img.height, r.right * img.width, r.bottom * img.height);
+      final k = math.min(1.0, 1280 / math.max(src.width, src.height));
+      final w = math.max(1, (src.width * k).round());
+      final h = math.max(1, (src.height * k).round());
+      final rec = ui.PictureRecorder();
+      Canvas(rec).drawImageRect(img, src, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..filterQuality = FilterQuality.high);
+      final out = await rec.endRecording().toImage(w, h);
+      final bd = await out.toByteData(format: ui.ImageByteFormat.png);
+      if (bd == null) return;
+      final bytes = bd.buffer.asUint8List();
+      final f = File('${Directory.systemTemp.path}/pico_lens_${DateTime.now().millisecondsSinceEpoch}.png');
+      await f.writeAsBytes(bytes);
+      if (!mounted) return;
+      setState(() {
+        _cropBytes = bytes;
+        _cropPath = f.path;
+        _cropSent = false;
+      });
+    } catch (_) {}
+  }
+
+  // Images need an AI that can see: switch to an external one with vision if needed.
+  Future<bool> _ensureVision() async {
+    final cur = ChatService.instance.currentCloud;
+    if (cur != null) {
+      if (cur.info.vision) return true;
+    } else if (ChatService.instance.currentModel != null && InferenceService.engine.supportsVision) {
+      return true;
+    }
+    if (cloudEnabledNotifier.value) {
+      for (final m in CloudStore.instance.chatModels) {
+        if (m.info.vision) {
+          ChatService.instance.cloudOverride = m;
+          ChatService.instance.modelOverride = null;
+          if (mounted) setState(() {});
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   Future<void> _send() async {
@@ -152,22 +292,42 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
     final typed = _typing ? _ctrl.text.trim() : '';
     setState(() => _phase = _Phase.thinking);
     if (!_typing) await _voice.stop(); // dictation: the final words are written in the field
-    final text = _typing ? typed : _ctrl.text.trim();
+    var text = _typing ? typed : _ctrl.text.trim();
+    final hasImg = _cropPath != null && !_cropSent;
+    if (text.isEmpty && hasImg) text = tr('assist_lens_q');
     if (text.isEmpty) {
       if (mounted) _typing ? setState(() => _phase = _Phase.listening) : _listen();
       return;
     }
     _typing = false;
-    await ChatService.instance.send(_chat, text);
+    if (hasImg && !await _ensureVision()) {
+      if (mounted) {
+        setState(() {
+          _phase = _Phase.listening;
+          _typing = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('assist_need_vision'))));
+      }
+      return;
+    }
+    await ChatService.instance.send(_chat, text,
+        files: hasImg ? [Attachment('screen.png', '', imagePath: _cropPath)] : const []);
+    if (hasImg) _cropSent = true;
     _ctrl.text = text;
     if (mounted) setState(() => _phase = _Phase.answered);
   }
 
   Future<void> _close() async {
+    if (_closing) return;
+    _closing = true;
     await _voice.cancel();
     ChatService.instance.requestStop();
+    final anim = _enter.reverse(); // the card slides away while the model is freed
     try {
       await InferenceService.engine.unload(); // free the RAM
+    } catch (_) {}
+    try {
+      await anim;
     } catch (_) {}
     try {
       await _channel.invokeMethod('close');
@@ -269,16 +429,54 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
       onPopInvokedWithResult: (_, _) => _close(),
       child: Scaffold(
         backgroundColor: Colors.transparent,
-        body: Column(children: [
-          // Tap outside the card to close.
-          Expanded(child: PcGesture(behavior: HitTestBehavior.opaque, onTap: _close)),
-          // The card slides up and fades in when the assistant opens.
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: const Duration(milliseconds: 420),
-            curve: Curves.easeOutCubic,
-            builder: (_, v, child) =>
-                Opacity(opacity: v, child: Transform.translate(offset: Offset(0, 60 * (1 - v)), child: child)),
+        body: Stack(children: [
+          // Screenshot where the person circles what to search.
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: Duration(milliseconds: ecoModeNotifier.value ? 1 : 320),
+              child: (_shot != null && _selecting)
+                  ? LensSelect(
+                      key: const ValueKey('lens'),
+                      shot: _shot!,
+                      onDone: _onCircled,
+                      onCancel: () => setState(() => _selecting = false),
+                      hint: tr('assist_lens_hint'),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('nolens')),
+            ),
+          ),
+          // Dim + coloured glow around the screen, fading in with the card.
+          if (!ecoModeNotifier.value)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([_enter, _pulse]),
+                  builder: (_, _) => AssistGlow(
+                    enter: _enter.value,
+                    t: _pulse.value,
+                    dim: !_selecting,
+                    colors: [scheme.primary, scheme.tertiary, scheme.secondary],
+                  ),
+                ),
+              ),
+            ),
+          Column(children: [
+          // Tap outside the card to close (not while circling).
+          Expanded(child: _selecting ? const IgnorePointer(child: SizedBox.expand()) : PcGesture(behavior: HitTestBehavior.opaque, onTap: _close)),
+          // The card springs up and fades in; on close it slides away.
+          AnimatedBuilder(
+            animation: _enter,
+            builder: (_, child) {
+              final v = _enter.value.clamp(0.0, 1.0);
+              final b = Curves.easeOutBack.transform(v);
+              return Opacity(
+                opacity: v,
+                child: Transform.translate(
+                  offset: Offset(0, 110 * (1 - b)),
+                  child: Transform.scale(scale: 0.94 + 0.06 * v, alignment: Alignment.bottomCenter, child: child),
+                ),
+              );
+            },
             child: Material(
               color: scheme.surfaceContainerHigh,
               borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -300,7 +498,9 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
                             _Bouncy(
                               onTap: _phase == _Phase.thinking ? null : _pickModel,
                               child: Chip(
-                                avatar: const Icon(Icons.memory_rounded, size: 18),
+                                avatar: ChatService.instance.currentCloud != null
+                                    ? cloudProviderLogo(ChatService.instance.currentCloud!.provider, size: 18)
+                                    : const Icon(Icons.memory_rounded, size: 18),
                                 label: ConstrainedBox(
                                   constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.5),
                                   child: Text(ChatService.instance.currentCloud?.displayName ?? ChatService.instance.currentModel?.fileName ?? tr('no_installed'),
@@ -309,10 +509,31 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
                               ),
                             ),
                             const Spacer(),
+                            if (_shot != null && !_selecting && _cropBytes == null)
+                              IconButton(tooltip: tr('assist_retake'), onPressed: _retake, icon: const Icon(Icons.gesture_rounded)),
                             IconButton(tooltip: tr('assist_open'), onPressed: _openApp, icon: const Icon(Icons.open_in_new_rounded)),
                             IconButton(onPressed: _close, icon: const Icon(Icons.close_rounded)),
                           ]),
                           const SizedBox(height: 6),
+                          if (_cropBytes != null)
+                            FadeSlideIn(
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: _Bouncy(
+                                    onTap: _retake,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(maxHeight: 96, maxWidth: 170),
+                                        child: Image.memory(_cropBytes!, fit: BoxFit.cover),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           _fade(_body(scheme, text, canChat, micOn), '${canChat}_${micOn}_${_phase.name}_${_answer.isEmpty}'),
                           const SizedBox(height: 12),
                           if (canChat)
@@ -354,6 +575,7 @@ class _AssistScreenState extends State<_AssistScreen> with SingleTickerProviderS
               ),
             ),
           ),
+        ]),
         ]),
       ),
     );

@@ -81,8 +81,11 @@ class DeviceData {
   static const _denied = 'The user asked about this but did not give PicoChat the Android permission. '
       'Tell them to grant it in PicoChat Settings → Phone access.';
 
+  /// True on the lock screen: phone data (contacts, messages…) is never read.
+  static bool locked = false;
+
   static Future<DeviceResult?> build(String q) async {
-    if (!supported) return null;
+    if (!supported || locked) return null;
     try {
       if (accNotifNotifier.value && _notifRe.hasMatch(q)) {
         if (!await notifAccess()) return const DeviceResult(_denied, 'step_device', 'notifications');

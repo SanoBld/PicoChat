@@ -9,6 +9,7 @@ import 'dart:ui' show PlatformDispatcher;
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemChrome, SystemUiMode;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:window_manager/window_manager.dart';
@@ -157,6 +158,7 @@ Future<SharedPreferences> _loadState() async {
 Future<void> assistMain() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (!kIsWeb) InferenceService.engine = LlamaDartEngine();
+  if (!kIsWeb) SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge); // card + screenshot cover the whole screen
   await _loadState();
   ChatStore.instance.persist = false; // the overlay must not overwrite the saved chats
   if (locationEnabledNotifier.value) LocationService.instance.refresh();
