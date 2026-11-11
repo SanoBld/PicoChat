@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 
 import '../../app_state.dart';
 import '../../l10n/l10n.dart';
-import '../../services/model_manager.dart';
 import '../../services/prefs.dart';
 import '../../services/reset.dart';
 import '../../widgets/m3_components.dart';
