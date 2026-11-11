@@ -50,6 +50,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
       if (_focus.hasFocus) _followEnd();
     });
     ChatStore.instance.addListener(_onChange);
+    SyncService.instance.addListener(_onChange);
     ChatService.instance.addListener(_onChange);
     ModelManager.instance.addListener(_onChange);
     CloudStore.instance.addListener(_onChange);
@@ -73,6 +74,7 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
     _locTimer?.cancel();
     _showJump.dispose();
     ChatStore.instance.removeListener(_onChange);
+    SyncService.instance.removeListener(_onChange);
     ChatService.instance.removeListener(_onChange);
     ModelManager.instance.removeListener(_onChange);
     CloudStore.instance.removeListener(_onChange);
@@ -992,6 +994,17 @@ class _EmptyChat extends StatelessWidget {
                   if (webSearchNotifier.value) _pill(context, Icons.public_rounded, tr('pill_web')),
                   if (loc != null && loc.isNotEmpty) _pill(context, Icons.place_rounded, loc),
                   if (mem > 0) _pill(context, Icons.psychology_rounded, mem == 1 ? tr('pill_memory_one') : tr('pill_memories', {'n': '$mem'})),
+                  // Discreet sync indicator: shows only when sync is set up; dimmed while no device is connected.
+                  if (SyncService.instance.configured)
+                    Opacity(
+                      opacity: SyncService.instance.connectedCount > 0 ? 1 : 0.55,
+                      child: _pill(
+                          context,
+                          SyncService.instance.connectedCount > 0 ? Icons.sync_rounded : Icons.sync_disabled_rounded,
+                          SyncService.instance.connectedCount > 0
+                              ? tr('sync_pill_n', {'n': '${SyncService.instance.connectedCount}'})
+                              : tr('sync_pill_wait')),
+                    ),
                 ]),
               ),
               ListenableBuilder(

@@ -12,6 +12,9 @@ import '../models/chat_models.dart';
 import 'chat_store.dart';
 import 'memory_store.dart';
 import 'prefs.dart';
+import 'sync/sync_data.dart';
+import 'sync/sync_prefs.dart';
+import 'sync/sync_service.dart';
 
 class Backup {
   static Future<bool> _save(String name, Map<String, dynamic> data) async {
@@ -27,6 +30,49 @@ class Backup {
   static Future<bool> exportChat(Conversation c) {
     final safe = (c.title.isEmpty ? 'chat' : c.title).replaceAll(RegExp(r'[\\/:*?"<>|\s]+'), '_');
     return _save('picochat_$safe.json', {'type': 'picochat-chat', 'chat': c.toJson()});
+  }
+
+  /// Backup file with the chosen categories (chats, memory, appearance, behaviour).
+  static Future<bool> exportSelected(Set<String> cats) {
+    final day = DateTime.now().toIso8601String().substring(0, 10);
+    return _save('picochat_backup_$day.json', {
+      'type': 'picochat-backup',
+      'version': 1,
+      'createdAt': DateTime.now().toIso8601String(),
+      'data': SyncData.collect(cats),
+    });
+  }
+
+  /// Reads a backup file and returns its content (older chat / memory files are accepted too).
+  static Future<Map<String, dynamic>?> pickBackup() async {
+    final res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['json'], withData: true);
+    final bytes = res?.files.single.bytes;
+    if (bytes == null) return null;
+    try {
+      final j = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      switch (j['type']) {
+        case 'picochat-backup':
+          return Map<String, dynamic>.from(j['data'] as Map);
+        case 'picochat-chat':
+          return {
+            kCatChats: [j['chat']]
+          };
+        case 'picochat-memory':
+          return {
+            kCatMemory: {'facts': j['facts'] ?? [], 'ts': 0},
+            'prefs': {
+              if (j['name'] is String && (j['name'] as String).isNotEmpty) 'pc_display_name': j['name'],
+              if (j['instructions'] is String && (j['instructions'] as String).isNotEmpty) 'pc_system_prompt': j['instructions'],
+            },
+          };
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<void> restoreSelected(Map<String, dynamic> data, Set<String> cats) async {
+    await SyncData.restore(data, cats);
+    SyncService.instance.resync(); // devices that are connected now get the restored data
   }
 
   static Future<bool> exportMemory() => _save('picochat_memory.json', {

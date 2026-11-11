@@ -19,6 +19,7 @@ import 'screens/assist_overlay.dart';
 import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
 import 'services/chat_store.dart';
+import 'services/sync/sync_service.dart';
 import 'services/cloud/cloud_store.dart';
 import 'services/inference_engine.dart';
 import 'services/llama_engine.dart';
@@ -64,6 +65,7 @@ Future<void> _mainImpl() async {
 
   final p = await _loadState();
   if (locationEnabledNotifier.value) LocationService.instance.refresh();
+  await SyncService.instance.init(); // devices on the same network (if the person set it up)
   runApp(PicoChatApp(onboarded: p.getBool('pc_onboarded') ?? false));
 }
 

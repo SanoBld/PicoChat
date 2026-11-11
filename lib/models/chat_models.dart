@@ -77,6 +77,22 @@ class ChatMessage {
         if (stats.isNotEmpty) 'stats': stats,
       };
 
+  /// Takes the content of [o] (same message seen on another device). Pictures stay local.
+  void copyFrom(ChatMessage o) {
+    text = o.text;
+    stopped = o.stopped;
+    failed = o.failed;
+    error = o.error;
+    errorKind = o.errorKind;
+    context = o.context;
+    files = List.of(o.files);
+    sources = List.of(o.sources);
+    memories = List.of(o.memories);
+    cards = List.of(o.cards);
+    steps = List.of(o.steps);
+    stats = Map.of(o.stats);
+  }
+
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
         id: j['id'] as String?,
         role: ChatRole.values.firstWhere((r) => r.name == j['role'], orElse: () => ChatRole.user),

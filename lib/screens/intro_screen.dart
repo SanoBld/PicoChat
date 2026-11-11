@@ -4,6 +4,9 @@
 // fade + slide-up reveal, progress bar on top).
 
 import 'package:flutter/material.dart';
+import '../services/sync/sync_prefs.dart';
+import '../services/sync/sync_service.dart';
+import 'settings/sync_widgets.dart';
 
 import '../app_state.dart';
 import '../services/device_data.dart';
@@ -31,7 +34,7 @@ class IntroScreen extends StatefulWidget {
 class _IntroScreenState extends State<IntroScreen> {
   final _pageCtrl = PageController();
   int _page = 0;
-  static const _pages = 6;
+  static const _pages = 7;
   final _name = TextEditingController();
   final _work = TextEditingController();
   final _likes = TextEditingController();
@@ -122,6 +125,7 @@ class _IntroScreenState extends State<IntroScreen> {
                   const _PrivacyStep(),
                   _AboutStep(name: _name, work: _work, likes: _likes, aiStyle: _aiStyle),
                   const _AccessStep(),
+                  const _SyncStep(),
                   const _ModelStep(),
                   const _ReadyStep(),
                 ],
@@ -535,5 +539,46 @@ class _AccessStepState extends State<_AccessStep> {
             child: Text(tr('acc_note'), style: Theme.of(context).textTheme.bodySmall),
           ),
         ]),
+      );
+}
+
+
+// ── Optional sync between devices ────────────────────────────────────────────
+
+class _SyncStep extends StatelessWidget {
+  const _SyncStep();
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: SyncService.instance,
+        builder: (context, _) {
+          final s = SyncService.instance;
+          return _Step(
+            icon: Icons.sync_rounded,
+            title: tr('intro_sync_t'),
+            subtitle: tr('intro_sync_s'),
+            child: !s.supported
+                ? Text(tr('sync_unsupported'), style: Theme.of(context).textTheme.bodyMedium)
+                : Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    const SyncPairPanel(),
+                    if (s.secret.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Text(tr('intro_sync_note'), style: Theme.of(context).textTheme.bodyMedium),
+                      const SizedBox(height: 4),
+                      CategoryPicker(
+                        selected: s.cats,
+                        onChanged: (next) {
+                          for (final c in kAllCats) {
+                            if (next.contains(c) != s.cats.contains(c)) s.setCategory(c, next.contains(c));
+                          }
+                        },
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      Text(tr('intro_sync_later'), style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ]),
+          );
+        },
       );
 }

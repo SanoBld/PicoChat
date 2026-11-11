@@ -9,6 +9,7 @@ import '../app_state.dart';
 import '../l10n/l10n.dart';
 import '../supported_locales.dart';
 import 'chat_store.dart';
+import 'sync/sync_service.dart';
 import 'cloud/cloud_store.dart';
 import 'memory_store.dart';
 import 'model_manager.dart';
@@ -81,6 +82,7 @@ class ResetService {
     if (!await confirm(context, tr('reset_all_1'), title: tr('reset_all'))) return false;
     if (!context.mounted || !await confirm(context, tr('reset_all_2'))) return false;
     if (!context.mounted || !await _typeWord(context)) return false;
+    await SyncService.instance.reset(); // first: deleting everything here must not delete it on the other devices
     await appearance();
     final p = await SharedPreferences.getInstance();
     await p.clear();

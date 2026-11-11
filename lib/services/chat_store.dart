@@ -36,6 +36,82 @@ class ChatStore extends ChangeNotifier {
   /// Newest first.
   List<Conversation> get chats => List.unmodifiable(_chats);
 
+  // ── Device sync hooks ───────────────────────────────────────────────────────
+  // SyncService listens here. [onLocal] fires for changes made on this device only
+  // (never for changes that come from another device, so nothing bounces back).
+  void Function(Conversation c, ChatMessage? changed)? onLocal;
+  void Function(String id, DateTime at)? onDeleted;
+
+  void _local(Conversation c, [ChatMessage? m]) => onLocal?.call(c, m);
+
+  /// Another device sent a whole chat: newer wins. The open chat object is updated in place.
+  bool applyRemoteChat(Conversation r) {
+    if (r.messages.isEmpty) return false;
+    final i = _chats.indexWhere((x) => x.id == r.id);
+    if (i < 0) {
+      _chats.add(r);
+    } else {
+      final c = _chats[i];
+      if (!r.updatedAt.isAfter(c.updatedAt)) return false;
+      c.title = r.title;
+      c.autoTitle = r.autoTitle;
+      c.updatedAt = r.updatedAt;
+      c.modelId = r.modelId;
+      // Keep the pictures this device already has for its own messages.
+      final keep = {for (final m in c.messages) m.id: m.images};
+      c.messages
+        ..clear()
+        ..addAll(r.messages);
+      for (final m in c.messages) {
+        final img = keep[m.id];
+        if (img != null && img.isNotEmpty) m.images = img;
+      }
+    }
+    _sort();
+    notifyListeners();
+    _scheduleSave();
+    return true;
+  }
+
+  /// Live update: one message of a chat that another device is writing.
+  void applyRemoteMessage(Map<String, dynamic> meta, ChatMessage m) {
+    final id = '${meta['id']}';
+    var c = _chats.cast<Conversation?>().firstWhere((x) => x!.id == id, orElse: () => null);
+    final at = DateTime.tryParse('${meta['updatedAt']}') ?? DateTime.now();
+    if (c == null) {
+      c = Conversation(
+        id: id,
+        title: '${meta['title'] ?? ''}',
+        autoTitle: meta['autoTitle'] != false,
+        createdAt: DateTime.tryParse('${meta['createdAt']}'),
+        updatedAt: at,
+        modelId: '${meta['modelId'] ?? ''}',
+      );
+      _chats.add(c);
+    }
+    final j = c.messages.indexWhere((x) => x.id == m.id);
+    if (j >= 0) {
+      c.messages[j].copyFrom(m);
+    } else {
+      c.messages.add(m);
+    }
+    if (at.isAfter(c.updatedAt)) c.updatedAt = at;
+    c.title = '${meta['title'] ?? c.title}';
+    _sort();
+    notifyListeners();
+    _scheduleSave();
+  }
+
+  /// Another device deleted this chat (only if it was not used since).
+  bool removeRemote(String id, DateTime at) {
+    final i = _chats.indexWhere((x) => x.id == id);
+    if (i < 0 || _chats[i].updatedAt.isAfter(at)) return false;
+    _chats.removeAt(i);
+    notifyListeners();
+    _scheduleSave();
+    return true;
+  }
+
   Future<void> init() async {
     if (kIsWeb) return; // no real filesystem on the web: in-memory only
     if (assistMode) return initAssist(); // overlay: no history loaded, only the inbox
@@ -172,6 +248,7 @@ class ChatStore extends ChangeNotifier {
     _sort();
     notifyListeners();
     _scheduleSave();
+    _local(c);
   }
 
   void addMessage(Conversation c, ChatMessage m) {
@@ -181,41 +258,54 @@ class ChatStore extends ChangeNotifier {
     _sort();
     notifyListeners();
     _scheduleSave();
+    _local(c, m);
   }
 
   /// Call after editing a message in place (streaming).
   void messageChanged(Conversation c) {
+    c.updatedAt = DateTime.now(); // "newest wins" between devices needs a fresh date
     notifyListeners();
     _scheduleSave();
+    _local(c, c.messages.isEmpty ? null : c.messages.last);
   }
 
   void removeMessage(Conversation c, ChatMessage m) {
     c.messages.remove(m);
+    c.updatedAt = DateTime.now();
     notifyListeners();
     _scheduleSave();
+    _local(c);
   }
 
   void rename(Conversation c, String title) {
     c.title = title.trim();
     c.autoTitle = false;
+    c.updatedAt = DateTime.now();
     notifyListeners();
     _scheduleSave();
+    _local(c);
   }
 
   void setAutoTitle(Conversation c, String title) {
     if (!c.autoTitle) return;
     c.title = title;
+    c.updatedAt = DateTime.now();
     notifyListeners();
     _scheduleSave();
+    _local(c);
   }
 
   void delete(Conversation c) {
     _chats.remove(c);
     notifyListeners();
     _scheduleSave();
+    onDeleted?.call(c.id, DateTime.now());
   }
 
   Future<void> clearAll() async {
+    for (final c in _chats) {
+      onDeleted?.call(c.id, DateTime.now());
+    }
     _chats.clear();
     notifyListeners();
     await flush();

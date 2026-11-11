@@ -103,6 +103,20 @@ class _SettingsPageState extends State<_SettingsPage> {
             'langue language idioma sprache', () => const LanguagePage()),
       ]),
       (tr('set_data'), [
+        _SettingsEntry(
+            Icons.sync_rounded,
+            tr('sync_title'),
+            !SyncService.instance.supported
+                ? tr('sync_unsupported')
+                : SyncService.instance.configured
+                    ? (SyncService.instance.connectedCount > 0
+                        ? tr('sync_status_on', {'n': '${SyncService.instance.connectedCount}'})
+                        : tr('sync_status_wait'))
+                    : tr('sync_sub'),
+            'sync synchronisation appareils devices pc tablette téléphone wifi code groupe',
+            () => const SyncSettingsPage()),
+        _SettingsEntry(Icons.settings_backup_restore_rounded, tr('bk_title'), tr('bk_sub'),
+            'sauvegarde backup export import restaurer restore', () => const BackupPage()),
         _SettingsEntry(Icons.storage_rounded, tr('set_storage'), tr('set_storage_sub'),
             'stockage storage espace cache export', () => const StoragePage()),
         _SettingsEntry(Icons.lock_rounded, tr('set_privacy'), tr('set_privacy_sub'),

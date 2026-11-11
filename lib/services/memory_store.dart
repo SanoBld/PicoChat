@@ -10,15 +10,34 @@ class MemoryStore extends ChangeNotifier {
 
   List<String> items = [];
 
+  /// When the list last changed on any device (ms). Used by device sync: newest list wins.
+  int modifiedAt = 0;
+  VoidCallback? onLocalChange; // fires for changes made on this device only
+
   Future<void> init() async {
     final p = await SharedPreferences.getInstance();
     items = p.getStringList(_key) ?? [];
+    modifiedAt = p.getInt('pc_memories_ts') ?? 0;
   }
 
-  Future<void> _save() async {
+  Future<void> _save({bool remote = false}) async {
     final p = await SharedPreferences.getInstance();
     await p.setStringList(_key, items);
+    if (!remote) {
+      modifiedAt = DateTime.now().millisecondsSinceEpoch;
+      await p.setInt('pc_memories_ts', modifiedAt);
+    }
     notifyListeners();
+    if (!remote) onLocalChange?.call();
+  }
+
+  /// A list that comes from another device (or a backup merge).
+  Future<void> applyRemote(List<String> list, int ts) async {
+    items = list;
+    modifiedAt = ts;
+    final p = await SharedPreferences.getInstance();
+    await p.setInt('pc_memories_ts', ts);
+    await _save(remote: true);
   }
 
   /// Returns true when the fact was really added (not empty, not a duplicate).
