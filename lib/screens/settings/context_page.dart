@@ -87,7 +87,7 @@ class _ContextPageState extends State<ContextPage> {
                 setState(() {});
               },
             ),
-            if (voiceEngineNotifier.value == 'whisper') const VoiceModelsRows(),
+            const VoiceModelsRows(),
           ]),
           const SizedBox(height: 20),
           SettingsSection(label: tr('ctx_auto'), children: [

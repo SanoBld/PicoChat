@@ -215,6 +215,7 @@ class VoiceInput {
     if (_whisper) {
       loading.value = true; // last words are being decoded
       await _teardownWhisper(finalize: true);
+      _detach();
       return;
     }
     _wanted = false;
@@ -224,6 +225,15 @@ class VoiceInput {
     await Future<void>.delayed(const Duration(milliseconds: 350));
     _write();
     listening.value = false;
+    _detach();
+  }
+
+  // After the words are in the field, nothing may write into it again (a late result would bring the text back).
+  void _detach() {
+    _ctrl = null;
+    _live = '';
+    _acc = '';
+    transcript.value = '';
   }
 
   /// Cancel: restore the field as it was.
@@ -242,5 +252,6 @@ class VoiceInput {
     }
     transcript.value = '';
     listening.value = false;
+    _detach();
   }
 }

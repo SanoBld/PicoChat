@@ -7,7 +7,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../app_state.dart';
 import '../l10n/l10n.dart';
+import '../services/cloud/cloud_store.dart';
+import '../services/model_manager.dart';
 import '../models/chat_models.dart';
 import '../services/chat_service.dart';
 import '../services/voice.dart';
@@ -29,6 +32,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
   late final AnimationController _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))
     ..repeat(reverse: true);
   Timer? _poll;
+  final _sc = ScrollController();
   _VState _state = _VState.starting;
   bool _active = true;
   bool _interrupted = false;
@@ -48,6 +52,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
   void dispose() {
     _shutdown();
     _pulse.dispose();
+    _sc.dispose();
     // _ctrl is not disposed here: the recognizer may still write its last words into it while it closes.
     super.dispose();
   }
@@ -134,7 +139,15 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
       final fresh = chat.messages.length > before && chat.messages.last.role == ChatRole.assistant;
       final clean = fresh ? _speakable(chat.messages.last.text) : '';
       if (spoken > clean.length) spoken = clean.length;
-      if (mounted && clean != _reply) setState(() => _reply = clean);
+      if (mounted && clean != _reply) {
+        final atEnd = !_sc.hasClients || _sc.position.maxScrollExtent - _sc.offset < 40; // follow only if not reading above
+        setState(() => _reply = clean);
+        if (atEnd) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (_sc.hasClients) _sc.jumpTo(_sc.position.maxScrollExtent);
+          });
+        }
+      }
       final rest = clean.substring(spoken);
       // A sentence is complete when something follows its end mark (so "3.5" is not cut).
       final m = RegExp(r'^[\s\S]*?[.!?…:\n](?=\s)').firstMatch(rest);
@@ -205,12 +218,40 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
         _ => tr('voice_loading'),
       };
 
+  // Model choice (local models and cloud models).
+  Widget _modelMenu(ColorScheme s) {
+    final cloud = CloudStore.instance.chatModels;
+    final local = ModelManager.instance.installed;
+    return PopupMenuButton<String>(
+      tooltip: tr('vm_model'),
+      icon: const Icon(Icons.memory_rounded),
+      onSelected: (id) async {
+        if (id.startsWith(kCloudPrefix)) {
+          await CloudStore.instance.select(id);
+        } else {
+          await CloudStore.instance.clearActive();
+          await ModelManager.instance.setActive(id);
+        }
+        if (mounted) setState(() {});
+      },
+      itemBuilder: (_) => [
+        for (final m in cloud)
+          CheckedPopupMenuItem(
+              value: m.id, checked: activeCloudNotifier.value == m.id, child: Text('${m.displayName} · ${m.subtitle}')),
+        for (final m in local)
+          CheckedPopupMenuItem(
+              value: m.id,
+              checked: activeCloudNotifier.value.isEmpty && activeModelNotifier.value == m.id,
+              child: Text(m.fileName)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
-    final shown = _reply.length > 260 ? '…${_reply.substring(_reply.length - 260)}' : _reply;
-    return Scaffold(
+      return Scaffold(
       backgroundColor: s.surface,
       body: SafeArea(
         child: Column(children: [
@@ -219,6 +260,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
             child: Row(children: [
               IconButton(icon: const Icon(Icons.close_rounded), tooltip: tr('vm_end'), onPressed: _end),
               Expanded(child: Text(tr('vm_title'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800))),
+              _modelMenu(s),
             ]),
           ),
           const Spacer(),
@@ -250,10 +292,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
                         ],
                       ),
                       alignment: Alignment.center,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 350),
-                        child: PicoFace(key: ValueKey(_mood), mood: _mood, size: 110, color: s.onPrimaryContainer),
-                      ),
+                      child: PicoFace(mood: _mood, size: 110, color: s.onPrimaryContainer),
                     ),
                   );
                 },
@@ -286,19 +325,21 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
                             overflow: TextOverflow.ellipsis,
                             style: t.bodyLarge?.copyWith(color: s.onSurfaceVariant, fontStyle: FontStyle.italic)),
                   ),
-                  if (shown.isNotEmpty) ...[
+                  if (_reply.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Text(shown, textAlign: TextAlign.center, maxLines: 6, overflow: TextOverflow.ellipsis, style: t.bodyLarge),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 240),
+                      child: SingleChildScrollView(
+                        controller: _sc,
+                        child: Text(_reply, textAlign: TextAlign.center, style: t.bodyLarge),
+                      ),
+                    ),
                   ],
                 ]),
               ),
             ),
           ),
           const Spacer(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: Text(tr('vm_hint'), textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: s.onSurfaceVariant)),
-          ),
           Padding(
             padding: const EdgeInsets.only(bottom: 24, top: 8),
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [

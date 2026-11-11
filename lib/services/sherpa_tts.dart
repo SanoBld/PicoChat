@@ -30,8 +30,12 @@ void _main(_Init i) {
   i.out.send(rc.sendPort);
   rc.listen((m) {
     final msg = m as List;
-    final a = tts.generate(text: msg[1] as String, sid: 0, speed: 1.0);
-    i.out.send([msg[0], a.samples, a.sampleRate]);
+    try {
+      final a = tts.generate(text: msg[1] as String, sid: 0, speed: 1.0);
+      i.out.send([msg[0], a.samples, a.sampleRate]);
+    } catch (_) {
+      i.out.send([msg[0], Float32List(0), 22050]); // a bad sentence is skipped, the worker stays alive
+    }
   });
 }
 
@@ -60,7 +64,8 @@ class SherpaTts {
         ready.complete(m);
       } else if (m is List) {
         final w = _wait.remove(m[0] as int);
-        w?.complete(await _wav(m[1] as Float32List, m[2] as int));
+        final smp = m[1] as Float32List;
+        w?.complete(smp.isEmpty ? null : await _wav(smp, m[2] as int));
       }
     });
     _iso = await Isolate.spawn(
@@ -106,7 +111,12 @@ class SherpaTts {
     final c = Completer<File?>();
     _wait[id] = c;
     _tx?.send([id, text]);
-    return c.future;
+    // A worker that never answers is restarted at the next call, not replaced by the system voice.
+    return c.future.timeout(const Duration(seconds: 25), onTimeout: () {
+      _wait.remove(id);
+      close();
+      return null;
+    });
   }
 
   /// Says the sentences one after the other. The next one is made while the current one plays.
@@ -117,7 +127,8 @@ class SherpaTts {
     for (var k = 0; k < parts.length; k++) {
       final f = await next;
       next = k + 1 < parts.length ? _make(parts[k + 1]) : null;
-      if (f == null || _stopped || !alive()) break;
+      if (_stopped || !alive()) break;
+      if (f == null) continue; // skip this sentence
       _playing = Completer<void>();
       late StreamSubscription<void> sub;
       sub = _player.onPlayerComplete.listen((_) {

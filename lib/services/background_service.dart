@@ -5,19 +5,22 @@
 //    the sync, and for an answer that is being written. A notification shows while it runs.
 //  • Windows / Linux / Mac: the window's close button reduces the window instead of quitting.
 //  • iPhone: iOS suspends apps, so there is nothing to keep alive.
-import 'dart:io' show Platform;
+import 'dart:io' show Platform, exit;
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../app_state.dart';
 import '../l10n/l10n.dart';
 import 'chat_service.dart';
 import 'notif_service.dart';
+import 'sherpa_stt.dart';
+import 'sherpa_tts.dart';
 import 'sync/sync_service.dart';
 
-class BackgroundService with WindowListener {
+class BackgroundService with WindowListener, TrayListener {
   BackgroundService._();
   static final BackgroundService instance = BackgroundService._();
   static const _ch = MethodChannel('picochat/download'); // the foreground service of the downloads
@@ -46,17 +49,69 @@ class BackgroundService with WindowListener {
         await windowManager.ensureInitialized();
         await windowManager.setPreventClose(true);
         windowManager.addListener(this);
+        trayManager.addListener(this);
+        await trayManager.setIcon(_icon(false));
+        await trayManager.setToolTip('PicoChat');
+        await trayManager.setContextMenu(Menu(items: [
+          MenuItem(key: 'open', label: tr('tray_open')),
+          MenuItem.separator(),
+          MenuItem(key: 'quit', label: tr('tray_quit')),
+        ]));
       } catch (_) {}
     }
   }
 
+  String _icon(bool bg) =>
+      'assets/tray/${bg ? 'tray_bg' : 'tray'}.${Platform.isWindows ? 'ico' : 'png'}';
+
+  Future<void> _showWindow() async {
+    await windowManager.setSkipTaskbar(false);
+    await windowManager.show();
+    await windowManager.focus();
+    try {
+      await trayManager.setIcon(_icon(false)); // back to the normal icon
+    } catch (_) {}
+  }
+
+  /// Quit at once: the window disappears first, the rest is cleaned up in the background.
+  Future<void> quit() async {
+    try {
+      await windowManager.hide();
+    } catch (_) {}
+    try {
+      SherpaStt.instance.close();
+      SherpaTts.instance.close();
+      await trayManager.destroy();
+    } catch (_) {}
+    exit(0);
+  }
+
   @override
   Future<void> onWindowClose() async {
-    final keep = bgCloseNotifier.value; // the person's choice: minimize or quit
-    if (keep) {
-      await windowManager.minimize();
+    if (bgCloseNotifier.value) {
+      // The person chose to keep PicoChat running: hide it, an icon stays near the clock.
+      await windowManager.setSkipTaskbar(true);
+      await windowManager.hide();
+      try {
+        await trayManager.setIcon(_icon(true)); // the icon changes while it runs in the background
+      } catch (_) {}
     } else {
-      await windowManager.destroy();
+      await quit();
+    }
+  }
+
+  @override
+  void onTrayIconMouseDown() => _showWindow();
+
+  @override
+  void onTrayIconRightMouseDown() => trayManager.popUpContextMenu();
+
+  @override
+  void onTrayMenuItemClick(MenuItem item) {
+    if (item.key == 'open') {
+      _showWindow();
+    } else if (item.key == 'quit') {
+      quit();
     }
   }
 
