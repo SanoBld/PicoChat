@@ -1,6 +1,6 @@
 // lib/services/voice_input.dart
-// Live dictation. Default engine: Whisper (offline, on the device, via
-// whisper.cpp). Fallback: the system speech recognizer.
+// Live dictation. Default engine: sherpa-onnx (voice detector + small Whisper,
+// offline, fast). Fallback: the system speech recognizer.
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -8,10 +8,10 @@ import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart';
-import 'package:whisper_ggml/whisper_ggml.dart';
 
 import '../app_state.dart';
-import 'whisper_bundle.dart';
+import 'sherpa_models.dart';
+import 'sherpa_stt.dart';
 
 class VoiceInput {
   VoiceInput._();
@@ -26,15 +26,6 @@ class VoiceInput {
   String _original = ''; // field text before dictation
   String _acc = ''; // system engine: words of earlier sessions
   String _live = ''; // words of the current session
-
-  // ── Whisper ────────────────────────────────────────────────────────────
-  final AudioRecorder _rec = AudioRecorder();
-  WhisperController? _wc;
-  dynamic _session;
-  StreamSubscription<Uint8List>? _pcmSub;
-  StreamSubscription<String>? _partialSub;
-  StreamController<Uint8List>? _pipe;
-  bool _whisper = false;
 
   // ── System recognizer ──────────────────────────────────────────────────
   final SpeechToText _stt = SpeechToText();
@@ -54,15 +45,17 @@ class VoiceInput {
       try {
         if (await _startWhisper()) return true;
       } catch (e) {
-        debugPrint('Whisper failed, using the system recognizer: $e');
+        debugPrint('Fast engine failed, using the system recognizer: $e');
       }
       await _teardownWhisper(finalize: false);
     }
     return _startSystem();
   }
 
-  // tiny and base (multilingual) are bundled in assets/whisper/; "small" uses base.
-  WhisperModel _model() => voiceModelNotifier.value == 'tiny' ? WhisperModel.tiny : WhisperModel.base;
+  // ── Fast offline engine ────────────────────────────────────────────────
+  final AudioRecorder _rec = AudioRecorder();
+  StreamSubscription<Uint8List>? _pcmSub;
+  bool _whisper = false; // true while the fast engine runs
 
   void _level(Uint8List b) {
     final n = b.lengthInBytes ~/ 2;
@@ -78,27 +71,21 @@ class VoiceInput {
   }
 
   Future<bool> _startWhisper() async {
+    if (!await SherpaModels.hasAsr()) return false; // not downloaded: use the system engine
     if (!await _rec.hasPermission()) return false;
     loading.value = true;
-    listening.value = true; // show the panel while the model loads
-    _pipe = StreamController<Uint8List>(); // buffers audio until Whisper is ready
+    listening.value = true;
+    final st = SherpaStt.instance;
+    await st.open(localeNotifier.value);
+    st.onText = (t) {
+      _live = '$_live $t'.trim(); // phrases add up
+      _write();
+    };
     final pcm = await _rec.startStream(
         const RecordConfig(encoder: AudioEncoder.pcm16bits, sampleRate: 16000, numChannels: 1));
     _pcmSub = pcm.listen((bytes) {
-      _pipe?.add(bytes);
+      st.feed(bytes);
       _level(bytes);
-    });
-    // Model loading too slow or missing: use the system recognizer instead.
-    await (() async {
-      await WhisperBundle.ensure(_model()); // copy the bundled model, no download
-      _wc = WhisperController();
-      _session = await _wc!.transcribeLive(model: _model(), pcm16Stream: _pipe!.stream, lang: localeNotifier.value);
-    })()
-        .timeout(const Duration(seconds: 30));
-    _partialSub = (_session.partials as Stream<String>).listen((t) {
-      loading.value = false;
-      _live = t.trim();
-      _write();
     });
     loading.value = false;
     _whisper = true;
@@ -111,20 +98,12 @@ class VoiceInput {
     } catch (_) {}
     await _pcmSub?.cancel();
     _pcmSub = null;
-    try {
-      await _pipe?.close();
-    } catch (_) {}
-    _pipe = null;
-    try {
-      final t = await _session?.stop();
-      if (finalize && t is String && t.trim().isNotEmpty) {
-        _live = t.trim();
-        _write();
-      }
-    } catch (_) {}
-    await _partialSub?.cancel();
-    _partialSub = null;
-    _session = null;
+    if (finalize) {
+      try {
+        await SherpaStt.instance.flush(); // decode the last phrase
+      } catch (_) {}
+    }
+    SherpaStt.instance.onText = null;
     _whisper = false;
     loading.value = false;
     listening.value = false;

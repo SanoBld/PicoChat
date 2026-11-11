@@ -3,10 +3,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import '../app_state.dart';
+import 'sherpa_tts.dart';
 
 class VoiceService {
   VoiceService._();
   static final VoiceService instance = VoiceService._();
+
+  /// Natural offline voice (pref pc_voice_neural). Used when its voice file is downloaded.
+  static final neural = ValueNotifier<bool>(true);
 
   final FlutterTts _tts = FlutterTts();
   final ValueNotifier<String?> speakingId = ValueNotifier(null);
@@ -72,11 +76,11 @@ class VoiceService {
       .trim();
 
   // Sentence groups: natural pauses, and under Android's 4000-character limit.
-  List<String> _chunks(String s) {
+  List<String> _chunks(String s, [int max = 400]) {
     final out = <String>[];
     var cur = StringBuffer();
     for (final part in s.split(RegExp(r'(?<=[.!?…])\s+'))) {
-      if (cur.length + part.length > 400 && cur.isNotEmpty) {
+      if (cur.length + part.length > max && cur.isNotEmpty) {
         out.add(cur.toString());
         cur = StringBuffer();
       }
@@ -92,9 +96,22 @@ class VoiceService {
       if (speakingId.value == id) return stop();
       speakingId.value = null;
       await _tts.stop();
-      await _pickVoice(localeNotifier.value);
+      await SherpaTts.instance.stop();
       final clean = _plain(text);
       if (clean.isEmpty) return;
+      if (neural.value) {
+        try {
+          if (await SherpaTts.instance.open(localeNotifier.value)) {
+            speakingId.value = id;
+            await SherpaTts.instance.speakAll(_chunks(clean, 180), () => speakingId.value == id);
+            if (speakingId.value == id) speakingId.value = null;
+            return;
+          }
+        } catch (e) {
+          debugPrint('Neural voice failed, using the system voice: $e');
+        }
+      }
+      await _pickVoice(localeNotifier.value);
       speakingId.value = id;
       for (final c in _chunks(clean)) {
         if (speakingId.value != id) break;
@@ -112,5 +129,6 @@ class VoiceService {
     try {
       await _tts.stop();
     } catch (_) {}
+    await SherpaTts.instance.stop();
   }
 }

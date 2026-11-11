@@ -1,4 +1,5 @@
 // lib/main.dart
+import 'services/voice.dart';
 import 'services/location_service.dart';
 import 'widgets/pc_pointer.dart';
 import 'services/memory_store.dart';
@@ -109,6 +110,7 @@ Future<SharedPreferences> _loadState() async {
   openingAnimNotifier.value = p.getBool('pc_opening_anim') ?? true;
   voiceEngineNotifier.value = p.getString('pc_voice_engine') ?? 'whisper';
   voiceModelNotifier.value = p.getString('pc_voice_model') ?? 'base';
+  VoiceService.neural.value = p.getBool('pc_voice_neural') ?? true;
   reasoningModeNotifier.value = p.getString('pc_reasoning') ?? 'auto';
   showStepsNotifier.value = p.getBool('pc_show_steps') ?? true;
   stepsOpenNotifier.value = p.getBool('pc_steps_open') ?? true;

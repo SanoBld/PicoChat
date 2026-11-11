@@ -28,7 +28,8 @@ class CloudStoreTab extends StatefulWidget {
 
 class _CloudStoreTabState extends State<CloudStoreTab> {
   final Map<String, _Listing> _lists = {};
-  int _filter = 0; // 0 all, 1 chat, 2 images, 3 vision
+  int _filter = 0; // 0 all, 1 chat, 2 images, 3 vision, 4 added only
+  String? _acc; // account shown (null = all)
 
   @override
   void initState() {
@@ -74,7 +75,8 @@ class _CloudStoreTabState extends State<CloudStoreTab> {
     if (mounted) setState(() => l.loading = false);
   }
 
-  bool _keep(CloudModelInfo m) => switch (_filter) {
+  bool _keep(CloudAccount a, CloudModelInfo m) => switch (_filter) {
+        4 => a.models.any((x) => x.id == m.id),
         1 => !m.imageOnly,
         2 => m.image,
         3 => m.vision,
@@ -171,7 +173,8 @@ class _CloudStoreTabState extends State<CloudStoreTab> {
         ),
       );
     }
-    final labels = [tr('cst_all'), tr('cst_chat'), tr('cst_images'), tr('cst_vision')];
+    final labels = [tr('cst_all'), tr('cst_chat'), tr('cst_images'), tr('cst_vision'), tr('cst_added_only')];
+    final shownAccounts = [for (final a in accounts) if (_acc == null || _acc == a.id) a];
     return ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), children: [
       if (!cloudEnabledNotifier.value)
         Container(
@@ -192,8 +195,16 @@ class _CloudStoreTabState extends State<CloudStoreTab> {
         for (var i = 0; i < labels.length; i++)
           M3Chip(label: Text(labels[i]), selected: _filter == i, onSelected: (_) => setState(() => _filter = i)),
       ]),
+      if (accounts.length > 1) ...[
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          M3Chip(label: Text(tr('cst_all_accounts')), selected: _acc == null, onSelected: (_) => setState(() => _acc = null)),
+          for (final a in accounts)
+            M3Chip(label: Text(a.name), selected: _acc == a.id, onSelected: (_) => setState(() => _acc = a.id)),
+        ]),
+      ],
       const SizedBox(height: 12),
-      for (final a in accounts) ...[
+      for (final a in shownAccounts) ...[
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 8, 0, 8),
           child: Row(children: [
@@ -211,7 +222,7 @@ class _CloudStoreTabState extends State<CloudStoreTab> {
             child: Text(_lists[a.id]!.error!, style: t.bodyMedium?.copyWith(color: s.error)),
           )
         else
-          for (final m in _lists[a.id]!.models.where(_keep)) _tile(context, a, m),
+          for (final m in _lists[a.id]!.models.where((m) => _keep(a, m))) _tile(context, a, m),
       ],
     ]);
   }

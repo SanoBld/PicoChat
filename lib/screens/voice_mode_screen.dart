@@ -89,7 +89,7 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
         _prev = t;
         _lastChange = DateTime.now();
         if (mounted) setState(() => _heard = t);
-      } else if (t.isNotEmpty && DateTime.now().difference(_lastChange).inMilliseconds > 1500) {
+      } else if (t.isNotEmpty && DateTime.now().difference(_lastChange).inMilliseconds > 900) {
         _endTurn();
       }
     });
@@ -234,7 +234,9 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
                   final scale = 1 + level * 0.3 + breathe;
                   return Transform.scale(
                     scale: scale,
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 450),
+                      curve: Curves.easeInOut,
                       width: 200,
                       height: 200,
                       decoration: BoxDecoration(
@@ -248,7 +250,10 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
                         ],
                       ),
                       alignment: Alignment.center,
-                      child: PicoFace(mood: _mood, size: 110, color: s.onPrimaryContainer),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 350),
+                        child: PicoFace(key: ValueKey(_mood), mood: _mood, size: 110, color: s.onPrimaryContainer),
+                      ),
                     ),
                   );
                 },
@@ -256,24 +261,37 @@ class _VoiceModeScreenState extends State<VoiceModeScreen> with SingleTickerProv
             ),
           ),
           const SizedBox(height: 28),
-          Text(_label, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(_label, key: ValueKey(_label), style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          ),
           const SizedBox(height: 14),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
-              child: Column(children: [
-                if (_heard.isNotEmpty)
-                  Text('“$_heard”',
-                      textAlign: TextAlign.center,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: t.bodyLarge?.copyWith(color: s.onSurfaceVariant, fontStyle: FontStyle.italic)),
-                if (shown.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(shown, textAlign: TextAlign.center, maxLines: 6, overflow: TextOverflow.ellipsis, style: t.bodyLarge),
-                ],
-              ]),
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                alignment: Alignment.topCenter,
+                child: Column(children: [
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _heard.isEmpty
+                        ? const SizedBox.shrink(key: ValueKey('h0'))
+                        : Text('“$_heard”',
+                            key: const ValueKey('h1'),
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: t.bodyLarge?.copyWith(color: s.onSurfaceVariant, fontStyle: FontStyle.italic)),
+                  ),
+                  if (shown.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(shown, textAlign: TextAlign.center, maxLines: 6, overflow: TextOverflow.ellipsis, style: t.bodyLarge),
+                  ],
+                ]),
+              ),
             ),
           ),
           const Spacer(),

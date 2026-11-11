@@ -9,6 +9,7 @@ import '../../services/prefs.dart';
 import '../../widgets/m3_components.dart';
 import 'settings_helpers.dart';
 import 'settings_rows.dart';
+import 'voice_models_rows.dart';
 
 class ContextPage extends StatefulWidget {
   const ContextPage({super.key});
@@ -86,19 +87,7 @@ class _ContextPageState extends State<ContextPage> {
                 setState(() {});
               },
             ),
-            if (voiceEngineNotifier.value == 'whisper')
-              SettingChoiceRow(
-                icon: Icons.mic_rounded,
-                title: tr('voice_model'),
-                description: tr('voice_model_sub'),
-                options: const [('tiny', 'Tiny', null), ('base', 'Base', null), ('small', 'Small', null)],
-                value: voiceModelNotifier.value,
-                onChanged: (v) {
-                  voiceModelNotifier.value = v;
-                  savePref('pc_voice_model', v);
-                  setState(() {});
-                },
-              ),
+            if (voiceEngineNotifier.value == 'whisper') const VoiceModelsRows(),
           ]),
           const SizedBox(height: 20),
           SettingsSection(label: tr('ctx_auto'), children: [

@@ -669,19 +669,22 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                   ),
                 ),
                 IconButton(
-                  tooltip: tr('vm_title'),
-                  icon: const Icon(Icons.graphic_eq_rounded),
-                  onPressed: canChat
-                      ? () => Navigator.of(context)
-                          .push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => VoiceModeScreen(chat: widget.chat)))
-                      : null,
-                ),
-                IconButton(
                   tooltip: tr('tools_power'),
                   icon: const Icon(Icons.tune_rounded),
                   onPressed: () => showChatToolsSheet(context),
                 ),
                 const Spacer(),
+              IconButton(
+                tooltip: tr('vm_title'),
+                icon: const Icon(Icons.graphic_eq_rounded),
+                onPressed: canChat
+                    ? () => Navigator.of(context).push(PageRouteBuilder<void>(
+                        opaque: true,
+                        transitionDuration: const Duration(milliseconds: 350),
+                        pageBuilder: (_, _, _) => VoiceModeScreen(chat: widget.chat),
+                        transitionsBuilder: (_, a, _, c) => FadeTransition(opacity: a, child: c)))
+                    : null,
+              ),
               AnimatedSwitcher(
                 duration: M3Motion.effectsDefaultDuration,
                 switchInCurve: M3Motion.spatialFast,

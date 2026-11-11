@@ -52,7 +52,7 @@ class BackgroundService with WindowListener {
 
   @override
   Future<void> onWindowClose() async {
-    final keep = bgCloseNotifier.value || _wantSync;
+    final keep = bgCloseNotifier.value; // the person's choice: minimize or quit
     if (keep) {
       await windowManager.minimize();
     } else {
