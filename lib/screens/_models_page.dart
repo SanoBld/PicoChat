@@ -11,7 +11,7 @@ class _ModelsPage extends StatefulWidget {
 }
 
 class _ModelsPageState extends State<_ModelsPage> with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 3, vsync: this);
+  late final TabController _tabs = TabController(length: 4, vsync: this);
 
   @override
   void initState() {
@@ -69,16 +69,18 @@ class _ModelsPageState extends State<_ModelsPage> with SingleTickerProviderState
             tr('tab_discover'),
             tr('tab_installed'),
             activeDownloads > 0 ? '${tr('tab_downloads')} ($activeDownloads)' : tr('tab_downloads'),
+            tr('cst_tab'),
           ],
         ),
         Expanded(
-          child: kIsWeb
-              ? M3EmptyState(icon: Icons.desktop_windows_rounded, message: tr('web_unsupported'))
-              : TabBarView(controller: _tabs, children: [
-                  const _DiscoverTab(),
-                  _InstalledTab(onDiscover: () => _tabs.animateTo(0)),
-                  const _DownloadsTab(),
-                ]),
+          child: TabBarView(controller: _tabs, children: [
+            kIsWeb ? M3EmptyState(icon: Icons.desktop_windows_rounded, message: tr('web_unsupported')) : const _DiscoverTab(),
+            kIsWeb
+                ? M3EmptyState(icon: Icons.desktop_windows_rounded, message: tr('web_unsupported'))
+                : _InstalledTab(onDiscover: () => _tabs.animateTo(0)),
+            kIsWeb ? M3EmptyState(icon: Icons.desktop_windows_rounded, message: tr('web_unsupported')) : const _DownloadsTab(),
+            const CloudStoreTab(),
+          ]),
         ),
       ]),
     );

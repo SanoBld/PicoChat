@@ -2,6 +2,7 @@
 // Pieces shared by the sync page, the backup page and the first-launch intro.
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/l10n.dart';
 import '../../services/sync/sync_prefs.dart';
@@ -58,9 +59,16 @@ class CategoryPicker extends StatelessWidget {
   }
 }
 
-/// The group code, big, with a copy button.
-class SyncCodeCard extends StatelessWidget {
+/// The group code, big, with a copy button and a QR code that opens below it.
+class SyncCodeCard extends StatefulWidget {
   const SyncCodeCard({super.key});
+
+  @override
+  State<SyncCodeCard> createState() => _SyncCodeCardState();
+}
+
+class _SyncCodeCardState extends State<SyncCodeCard> {
+  bool _qr = false;
 
   @override
   Widget build(BuildContext context) {
@@ -68,29 +76,68 @@ class SyncCodeCard extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final code = SyncService.instance.formattedSecret;
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 14, 8, 14),
+      padding: const EdgeInsets.fromLTRB(18, 14, 8, 8),
       decoration: BoxDecoration(color: s.primaryContainer, borderRadius: BorderRadius.circular(24)),
-      child: Row(children: [
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(tr('sync_code_t'), style: t.labelLarge?.copyWith(color: s.onPrimaryContainer, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            SelectableText(code,
-                style: t.titleLarge?.copyWith(
-                    color: s.onPrimaryContainer, fontWeight: FontWeight.w800, fontFamily: 'monospace', letterSpacing: 1.5)),
-            const SizedBox(height: 6),
-            Text(tr('sync_code_s'), style: t.bodySmall?.copyWith(color: s.onPrimaryContainer.withValues(alpha: 0.8))),
-          ]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(tr('sync_code_t'), style: t.labelLarge?.copyWith(color: s.onPrimaryContainer, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              SelectableText(code,
+                  style: t.titleLarge?.copyWith(
+                      color: s.onPrimaryContainer, fontWeight: FontWeight.w800, fontFamily: 'monospace', letterSpacing: 1.5)),
+              const SizedBox(height: 6),
+              Text(tr('sync_code_s'), style: t.bodySmall?.copyWith(color: s.onPrimaryContainer.withValues(alpha: 0.8))),
+            ]),
+          ),
+          IconButton(
+            tooltip: tr('sync_copy'),
+            icon: Icon(Icons.copy_rounded, color: s.onPrimaryContainer),
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: code));
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('sync_copied'))));
+              }
+            },
+          ),
+        ]),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: _qr
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 12, 10, 8),
+                  child: Center(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+                        child: QrImageView(
+                          data: SyncService.instance.secret,
+                          version: QrVersions.auto,
+                          size: 190,
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(tr('sync_qr_hint'),
+                          textAlign: TextAlign.center,
+                          style: t.bodySmall?.copyWith(color: s.onPrimaryContainer.withValues(alpha: 0.8))),
+                    ]),
+                  ),
+                )
+              : const SizedBox(width: double.infinity),
         ),
-        IconButton(
-          tooltip: tr('sync_copy'),
-          icon: Icon(Icons.copy_rounded, color: s.onPrimaryContainer),
-          onPressed: () async {
-            await Clipboard.setData(ClipboardData(text: code));
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('sync_copied'))));
-            }
-          },
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: s.onPrimaryContainer),
+            onPressed: () => setState(() => _qr = !_qr),
+            icon: Icon(_qr ? Icons.expand_less_rounded : Icons.qr_code_2_rounded),
+            label: Text(_qr ? tr('sync_qr_hide') : tr('sync_qr_show')),
+          ),
         ),
       ]),
     );
@@ -159,6 +206,14 @@ class _SyncPairPanelState extends State<SyncPairPanel> {
               decoration: InputDecoration(
                 hintText: 'XXXX-XXXX-XXXX-XXXX',
                 errorText: _error,
+                suffixIcon: IconButton(
+                  tooltip: tr('sync_paste'),
+                  icon: const Icon(Icons.content_paste_rounded),
+                  onPressed: () async {
+                    final d = await Clipboard.getData(Clipboard.kTextPlain);
+                    if (d?.text != null) setState(() => _code.text = d!.text!.trim());
+                  },
+                ),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
               onSubmitted: (_) => _doJoin(),

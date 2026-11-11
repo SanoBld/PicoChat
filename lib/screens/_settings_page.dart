@@ -90,11 +90,15 @@ class _SettingsPageState extends State<_SettingsPage> {
               'contacts sms messages agenda calendar', () => const AccessSettingsPage()),
           _SettingsEntry(Icons.notifications_rounded, tr('n_title'), tr('n_sub'),
               'notification progression download arrière-plan', () => const NotificationsSettingsPage()),
+          _SettingsEntry(Icons.layers_rounded, tr('bg_title'), tr('bg_sub'),
+              'arrière-plan background tray réduire minimiser notification batterie', () => const BackgroundPage()),
         ])
       else
         (tr('set_phone'), [
           _SettingsEntry(Icons.notifications_rounded, tr('n_title'), tr('n_sub'),
               'notification progression download', () => const NotificationsSettingsPage()),
+          _SettingsEntry(Icons.layers_rounded, tr('bg_title'), tr('bg_sub'),
+              'arrière-plan background tray réduire minimiser notification batterie', () => const BackgroundPage()),
         ]),
       (tr('set_personal'), [
         _SettingsEntry(Icons.palette_rounded, tr('set_appearance'), tr('set_appearance_sub'),

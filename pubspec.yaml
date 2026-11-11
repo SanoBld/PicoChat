@@ -37,6 +37,7 @@ dependencies:
   flutter_map: ^7.0.2
   latlong2: ^0.9.1
   cryptography: ^2.7.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

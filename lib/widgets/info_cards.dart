@@ -10,6 +10,7 @@ import 'm3_components.dart' show M3CookieBadge;
 import 'map_card.dart';
 import 'pc_motion.dart';
 import 'pico_face.dart';
+import '../services/chat_service.dart';
 import 'skeleton.dart' show M3Spinner;
 
 class InfoCard extends StatelessWidget {
@@ -596,6 +597,15 @@ class _GenImageCardState extends State<_GenImageCard> with SingleTickerProviderS
                 const SizedBox(height: 2),
                 Text(error, style: t.bodySmall?.copyWith(color: s.onErrorContainer.withValues(alpha: 0.85))),
               ],
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: s.onErrorContainer, visualDensity: VisualDensity.compact),
+                  onPressed: () => ChatService.instance.retryImage(widget.d),
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(tr('img_retry')),
+                ),
+              ),
             ]),
           ),
         ]),

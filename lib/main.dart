@@ -20,6 +20,7 @@ import 'screens/home_screen.dart';
 import 'screens/intro_screen.dart';
 import 'services/chat_store.dart';
 import 'services/sync/sync_service.dart';
+import 'services/background_service.dart';
 import 'services/cloud/cloud_store.dart';
 import 'services/inference_engine.dart';
 import 'services/llama_engine.dart';
@@ -66,6 +67,7 @@ Future<void> _mainImpl() async {
   final p = await _loadState();
   if (locationEnabledNotifier.value) LocationService.instance.refresh();
   await SyncService.instance.init(); // devices on the same network (if the person set it up)
+  await BackgroundService.instance.attach(); // only what the person chose to keep running
   runApp(PicoChatApp(onboarded: p.getBool('pc_onboarded') ?? false));
 }
 
@@ -134,6 +136,9 @@ Future<SharedPreferences> _loadState() async {
   notifProgressNotifier.value = p.getBool('pc_n_progress') ?? true;
   notifDoneNotifier.value = p.getBool('pc_n_done') ?? true;
   notifBackgroundNotifier.value = p.getBool('pc_n_bg') ?? true;
+  bgSyncNotifier.value = p.getBool('pc_bg_sync') ?? false;
+  bgAnswersNotifier.value = p.getBool('pc_bg_answers') ?? true;
+  bgCloseNotifier.value = p.getBool('pc_bg_close') ?? false;
 
   activeModelNotifier.value = p.getString('pc_active_model') ?? '';
   hfTokenNotifier.value = p.getString('pc_hf_token') ?? '';

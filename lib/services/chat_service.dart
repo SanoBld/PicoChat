@@ -607,8 +607,59 @@ class ChatService extends ChangeNotifier {
   }
 
   /// Makes one picture and saves it; the card [card] goes loading → done / error.
+  /// True when the provider refuses pictures because of where the person is.
+  static bool _regionBlocked(Object e) =>
+      e is CloudException && ['country', 'region', 'location', 'territor', 'not available in'].any(e.mentions);
+
+  /// Tries the chosen picture model, then the other picture models of the connected accounts
+  /// (at most 3 in all): one provider refusing is not the end of the picture.
   Future<void> _paint(Map<String, dynamic> card, CloudModel painter, void Function() push) async {
-    try {
+    final candidates = <CloudModel>[painter, ...CloudStore.instance.imageModels.where((m) => m.id != painter.id)];
+    Object? last;
+    var blocked = false;
+    for (final m in candidates.take(3)) {
+      try {
+        await _paintWith(card, m);
+        card['state'] = 'done';
+        card.remove('error');
+        push();
+        return;
+      } catch (e) {
+        debugPrint('Picture failed with ${m.displayName}: $e');
+        last = e;
+        if (_regionBlocked(e)) blocked = true;
+      }
+    }
+    card['state'] = 'error';
+    card['error'] = blocked ? tr('img_region') : cloudErrorText(last ?? const CloudException(CloudErrorKind.other, ''));
+    push();
+  }
+
+  /// The picture button on a failed card: same prompt, one more try.
+  Future<void> retryImage(Map<String, dynamic> card) async {
+    final cloud = currentCloud;
+    final painter = (cloud == null ? null : CloudStore.instance.painterFor(cloud)) ??
+        (CloudStore.instance.imageModels.isEmpty ? null : CloudStore.instance.imageModels.first);
+    if (painter == null) return;
+    Conversation? chat;
+    for (final c in ChatStore.instance.chats) {
+      for (final m in c.messages) {
+        if (m.cards.any((x) => identical(x, card) || (x['type'] == 'genimg' && x['prompt'] == card['prompt']))) chat = c;
+      }
+    }
+    final target = chat;
+    void push() {
+      if (target != null) ChatStore.instance.messageChanged(target);
+    }
+
+    card['state'] = 'loading';
+    card.remove('error');
+    push();
+    await _paint(card, painter, push);
+  }
+
+  Future<void> _paintWith(Map<String, dynamic> card, CloudModel painter) async {
+    {
       final pic = await cloudGenerateImage(painter, card['prompt'] as String);
       Uint8List bytes;
       if (pic.base64 != null) {
@@ -627,12 +678,6 @@ class ChatService extends ChangeNotifier {
         await f.writeAsBytes(bytes);
         card['path'] = f.path;
       }
-      card['state'] = 'done';
-    } catch (e) {
-      debugPrint('Picture failed: $e');
-      card['state'] = 'error';
-      card['error'] = cloudErrorText(e);
     }
-    push();
   }
 }

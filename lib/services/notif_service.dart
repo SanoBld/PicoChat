@@ -9,6 +9,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../app_state.dart';
 import '../l10n/l10n.dart';
+import 'background_service.dart';
 import 'model_manager.dart';
 
 class NotifService {
@@ -18,6 +19,7 @@ class NotifService {
   static bool get supported => !kIsWeb && Platform.isAndroid;
 
   bool _running = false;
+  bool get downloading => _running;
   DateTime _last = DateTime.fromMillisecondsSinceEpoch(0);
   final Map<String, String> _prev = {}; // task id → file name, while downloading
   int _installedCount = 0;
@@ -65,7 +67,7 @@ class NotifService {
     if (active.isEmpty || !notifBackgroundNotifier.value) {
       if (_running) {
         _running = false;
-        await _call('stop');
+        if (!BackgroundService.instance.wantsKeepAlive) await _call('stop'); // sync / answer may still need it
       }
       return;
     }

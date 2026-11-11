@@ -669,6 +669,14 @@ class _ChatViewState extends State<_ChatView> with WidgetsBindingObserver {
                   ),
                 ),
                 IconButton(
+                  tooltip: tr('vm_title'),
+                  icon: const Icon(Icons.graphic_eq_rounded),
+                  onPressed: canChat
+                      ? () => Navigator.of(context)
+                          .push(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => VoiceModeScreen(chat: widget.chat)))
+                      : null,
+                ),
+                IconButton(
                   tooltip: tr('tools_power'),
                   icon: const Icon(Icons.tune_rounded),
                   onPressed: () => showChatToolsSheet(context),
