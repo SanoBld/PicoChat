@@ -1,0 +1,8 @@
+{
+  "files.exclude": { "**/.gradle": true, "**/build": true, "**/.cxx": true },
+  "editor.formatOnSave": true,
+  "editor.rulers": [140],
+  "[kotlin]": { "editor.defaultFormatter": "fwcd.kotlin" },
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "kotlin.languageServer.enabled": true
+}

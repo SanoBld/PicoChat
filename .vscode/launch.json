@@ -1,0 +1,6 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "type": "kotlin", "request": "launch", "name": "Kotlin: current file", "projectRoot": "${workspaceFolder}", "mainClass": "" }
+  ]
+}

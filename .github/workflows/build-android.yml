@@ -1,140 +1,74 @@
 name: Build Android
 
-# Reusable: called by build-all.yml / release.yml, also runnable manually.
-# Language: Gradle (Kotlin DSL) -> android/ci.gradle.kts renames the APKs.
-# One job per target: a universal APK + one smaller APK per CPU architecture.
-# File names are what the in-app updater looks for, so don't rename them.
+# Reusable (called by build-all.yml / release.yml) and runnable by hand.
+# Builds once, then uploads the universal APK and one APK per CPU architecture.
+# File names are what the in-app updater looks for: do not rename them.
 on:
   workflow_call:
     inputs:
       version:
-        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        description: 'Version to build (e.g. 1.0.0). Empty = dev build'
         required: false
         type: string
         default: ''
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g. 2.7.0). Empty = dev build'
+        description: 'Version to build (e.g. 1.0.0). Empty = dev build'
         required: false
         type: string
         default: ''
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - abi: universal
-            flags: ''
-            src: app-release.apk
-            apk: app-universal-release.apk
-          - abi: arm64-v8a                      # most modern phones (2018+)
-            flags: '--split-per-abi --target-platform android-arm64'
-            src: app-arm64-v8a-release.apk
-            apk: app-arm64-v8a-release.apk
-          - abi: armeabi-v7a                    # older 32-bit phones
-            flags: '--split-per-abi --target-platform android-arm'
-            src: app-armeabi-v7a-release.apk
-            apk: app-armeabi-v7a-release.apk
-          - abi: x86_64                         # emulators / x86 tablets
-            flags: '--split-per-abi --target-platform android-x64'
-            src: app-x86_64-release.apk
-            apk: app-x86_64-release.apk
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@v4
 
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      # whisper_ggml (offline voice) compiles native code with NDK 29: accept the
-      # SDK licenses and install it before Gradle runs, otherwise the build stops
-      # with "LicenceNotAcceptedException".
-      - name: Accept Android licenses and install NDK 29
+      # llama.cpp is compiled with NDK 29 (see llama/build.gradle.kts).
+      - name: Accept licenses and install NDK / CMake
         shell: bash
         run: |
           SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           SDKM="$SDK/cmdline-tools/latest/bin/sdkmanager"
           yes | "$SDKM" --licenses > /dev/null || true
-          "$SDKM" "ndk;29.0.13113456" "platforms;android-36" "build-tools;36.0.0" > /dev/null || true
+          "$SDKM" "ndk;29.0.13113456" "cmake;3.22.1" "platforms;android-36" "build-tools;36.0.0" > /dev/null
 
-      # services.gradle.org redirects to GitHub releases, which sometimes answers
-      # 504 for minutes. Try the official URL, then public mirrors, and point the
-      # wrapper at the first valid zip. If none works the wrapper keeps its URL.
-      - name: Pre-download Gradle (mirrors)
-        shell: bash
-        run: |
-          ZIP="$RUNNER_TEMP/gradle.zip"
-          ok=0
-          for url in \
-            https://services.gradle.org/distributions/gradle-8.14-bin.zip \
-            https://mirrors.cloud.tencent.com/gradle/gradle-8.14-bin.zip \
-            https://mirrors.huaweicloud.com/gradle/gradle-8.14-bin.zip; do
-            echo "Trying $url"
-            if curl -fL --retry 2 --retry-all-errors --retry-delay 10 --max-time 300 -o "$ZIP" "$url" \
-               && [ "$(stat -c %s "$ZIP")" -gt 50000000 ] && unzip -tq "$ZIP" >/dev/null; then
-              ok=1; break
-            fi
-            rm -f "$ZIP"
-          done
-          if [ "$ok" = 1 ]; then
-            props=android/gradle/wrapper/gradle-wrapper.properties
-            grep -v '^distributionUrl=' "$props" > "$props.tmp"
-            printf 'distributionUrl=file\\:%s\n' "$ZIP" >> "$props.tmp"
-            mv "$props.tmp" "$props"
-            cat "$props"
-          else
-            echo "::warning::Could not pre-download Gradle, the wrapper will try by itself"
-          fi
-
-      - name: Get dependencies
-        shell: bash
-        run: |
-          # Network hiccups (GitHub / pub.dev 5xx) should not fail the build: up to 3 tries.
-          for attempt in 1 2 3; do
-            if flutter pub get; then exit 0; fi
-            echo "Attempt $attempt failed, retrying in 20 s..."
-            sleep 20
-          done
-          exit 1
-      - name: Generate launcher icons
-        run: dart run flutter_launcher_icons
-
-      # No version given = dev build: never claim to be a real release.
-      - name: Build Android (${{ matrix.abi }})
+      - name: Build release APKs
         shell: bash
         env:
           IN_VERSION: ${{ inputs.version }}
         run: |
           VERSION="${IN_VERSION:-0.0.0-dev.${{ github.run_number }}}"
           for attempt in 1 2 3; do
-            if flutter build apk --release ${{ matrix.flags }} --build-name="$VERSION" --build-number=${{ github.run_number }}; then exit 0; fi
+            if ./gradlew assembleRelease -PversionName="$VERSION" -PversionCode=${{ github.run_number }} --no-daemon --stacktrace; then exit 0; fi
             echo "Attempt $attempt failed, retrying in 20 s..."
             sleep 20
           done
           exit 1
 
-      # Gradle (Kotlin DSL) task: copy + rename the APK into dist/
-      - name: Collect APK with Gradle
+      - name: Collect APKs
         shell: bash
         run: |
-          cd android
-          chmod +x gradlew 2>/dev/null || true
-          ./gradlew collectApk -PapkSrc=${{ matrix.src }} -PapkName=${{ matrix.apk }} --no-daemon -q
+          mkdir -p dist
+          ls -la app/build/outputs/apk/release
+          for abi in universal arm64-v8a armeabi-v7a x86_64; do
+            ./gradlew collectApk -PapkSrc=app-$abi-release.apk -PapkName=app-$abi-release.apk --no-daemon -q
+          done
+          ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.apk }}
-          path: dist/${{ matrix.apk }}
+          name: android-apks
+          path: dist/*.apk
+          if-no-files-found: error

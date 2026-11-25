@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Build debug APK", "type": "shell", "command": "./gradlew assembleDebug", "group": "build" },
+    { "label": "Install on device", "type": "shell", "command": "./gradlew installDebug" },
+    { "label": "Unit tests", "type": "shell", "command": "./gradlew testDebugUnitTest", "group": "test" },
+    { "label": "Detekt", "type": "shell", "command": "./gradlew detekt" }
+  ]
+}

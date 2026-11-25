@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from the Flutter app tables. {name} placeholders are filled by tr(). -->
+<resources>
+    <string name="app_tagline" formatted="false">Un chat de IA privado que funciona al 100 % en tu dispositivo.</string>
+    <string name="cancel" formatted="false">Cancelar</string>
+    <string name="save" formatted="false">Guardar</string>
+    <string name="apply" formatted="false">Aplicar</string>
+    <string name="retry" formatted="false">Reintentar</string>
+    <string name="delete" formatted="false">Eliminar</string>
+    <string name="rename" formatted="false">Renombrar</string>
+    <string name="restart_hint" formatted="false">Reinicia la app para aplicar este cambio.</string>
+    <string name="cp_title" formatted="false">Elige un color</string>
+    <string name="cp_invalid" formatted="false">Código no válido</string>
+    <string name="cp_hue" formatted="false">Tono</string>
+    <string name="cp_sat" formatted="false">Saturación</string>
+    <string name="cp_bright" formatted="false">Brillo</string>
+    <string name="cp_quick" formatted="false">Colores rápidos</string>
+    <string name="a11y_loading" formatted="false">Cargando</string>
+    <string name="new_chat" formatted="false">Nuevo chat</string>
+    <string name="search_chats" formatted="false">Buscar chats</string>
+    <string name="no_chats" formatted="false">Aún no hay chats.\nEmpieza con el botón de arriba.</string>
+    <string name="no_results" formatted="false">Sin resultados</string>
+    <string name="nav_models" formatted="false">Modelos</string>
+    <string name="nav_settings" formatted="false">Ajustes</string>
+    <string name="select_model" formatted="false">Elegir modelo</string>
+    <string name="delete_chat_q" formatted="false">¿Eliminar este chat?</string>
+    <string name="delete_chat_body" formatted="false">La conversación se borrará de este dispositivo.</string>
+    <string name="demo_banner" formatted="false">Modo demo: aún no hay un motor de IA conectado, las respuestas son de prueba.</string>
+    <string name="stop" formatted="false">Detener</string>
+    <string name="send" formatted="false">Enviar</string>
+    <string name="chat_hint" formatted="false">Escribe a PicoChat</string>
+    <string name="no_model_hint" formatted="false">Descarga un modelo para chatear</string>
+    <string name="empty_title" formatted="false">¿En qué puedo ayudar?</string>
+    <string name="empty_title_name" formatted="false">¿En qué puedo ayudar, {name}?</string>
+    <string name="empty_sub" formatted="false">Todo funciona en tu dispositivo. Nada sale de él.</string>
+    <string name="no_model_title" formatted="false">Elige un modelo para empezar</string>
+    <string name="no_model_sub" formatted="false">PicoChat descarga modelos de IA abiertos desde Hugging Face y los ejecuta en local.</string>
+    <string name="get_model" formatted="false">Obtener un modelo</string>
+    <string name="suggest_1" formatted="false">Explica la computación cuántica de forma simple</string>
+    <string name="suggest_2" formatted="false">Escribe un correo educado a mi casero</string>
+    <string name="suggest_3" formatted="false">Dame 5 ideas para cenar</string>
+    <string name="suggest_4" formatted="false">Ayúdame a aprender Python</string>
+    <string name="loading_model" formatted="false">Cargando modelo…</string>
+    <string name="thinking" formatted="false">Pensando…</string>
+    <string name="stopped" formatted="false">Detenida</string>
+    <string name="gen_failed" formatted="false">La respuesta falló. Inténtalo de nuevo.</string>
+    <string name="err_t_auth" formatted="false">Clave API rechazada</string>
+    <string name="err_b_auth" formatted="false">El servicio rechazó tu clave API. Revísala en Ajustes > IA en la nube.</string>
+    <string name="err_t_rateLimit" formatted="false">Demasiadas solicitudes</string>
+    <string name="err_b_rateLimit" formatted="false">Se alcanzó el límite o se agotó el crédito. Espera un momento o revisa tu plan con el proveedor.</string>
+    <string name="err_t_notFound" formatted="false">Modelo no encontrado</string>
+    <string name="err_b_notFound" formatted="false">No se encontró el modelo o la dirección del servidor. Revisa el identificador del modelo y la dirección.</string>
+    <string name="err_t_badRequest" formatted="false">Solicitud rechazada</string>
+    <string name="err_b_badRequest" formatted="false">El servicio rechazó esta solicitud. Prueba con un mensaje más corto u otro modelo.</string>
+    <string name="err_t_server" formatted="false">Servicio no disponible</string>
+    <string name="err_b_server" formatted="false">El servicio está saturado o caído ahora mismo. Suele ser temporal: inténtalo de nuevo en un momento.</string>
+    <string name="err_t_network" formatted="false">Sin conexión</string>
+    <string name="err_b_network" formatted="false">No se pudo contactar con el servicio. Revisa tu conexión a internet y la dirección del servidor.</string>
+    <string name="err_t_blocked" formatted="false">Respuesta bloqueada</string>
+    <string name="err_b_blocked" formatted="false">El proveedor bloqueó esta respuesta. Reformula tu mensaje e inténtalo de nuevo.</string>
+    <string name="err_t_empty" formatted="false">Respuesta vacía</string>
+    <string name="err_b_empty" formatted="false">El modelo no devolvió texto. Quizá su razonamiento agotó todo el límite: aumenta «Tokens máx.» en Ajustes > Chat.</string>
+    <string name="err_t_local" formatted="false">La respuesta falló</string>
+    <string name="err_b_local" formatted="false">El modelo no pudo terminar. Quizá le falta memoria: prueba con un modelo más pequeño o un contexto menor en los ajustes.</string>
+    <string name="err_t_other" formatted="false">Algo salió mal</string>
+    <string name="err_b_other" formatted="false">No se pudo escribir la respuesta. Inténtalo de nuevo.</string>
+    <string name="err_details" formatted="false">Detalles</string>
+    <string name="err_hide" formatted="false">Ocultar</string>
+    <string name="copy" formatted="false">Copiar</string>
+    <string name="copied" formatted="false">Copiado</string>
+    <string name="regenerate" formatted="false">Regenerar</string>
+    <string name="demo_reply" formatted="false">Esta es una respuesta de demostración: PicoChat aún no está conectado a un motor de IA. Escribiste: \"{msg}\". Cuando se conecte un motor, tu modelo responderá aquí.</string>
+    <string name="models_sub" formatted="false">Modelos de IA guardados en este dispositivo</string>
+    <string name="import_gguf" formatted="false">Importar un archivo .gguf</string>
+    <string name="import_bad" formatted="false">Este archivo no es un modelo GGUF válido.</string>
+    <string name="import_ok" formatted="false">Modelo importado.</string>
+    <string name="tab_installed" formatted="false">Instalados</string>
+    <string name="tab_discover" formatted="false">Descubrir</string>
+    <string name="tab_downloads" formatted="false">Descargas</string>
+    <string name="web_unsupported" formatted="false">Los modelos solo funcionan en las apps de escritorio y móvil.</string>
+    <string name="delete_model_q" formatted="false">¿Eliminar este modelo?</string>
+    <string name="delete_model_body" formatted="false">{name} ({size}) se borrará de este dispositivo.</string>
+    <string name="no_installed" formatted="false">Aún no hay ningún modelo instalado.</string>
+    <string name="in_use" formatted="false">En uso</string>
+    <string name="hf_search_hint" formatted="false">Buscar en Hugging Face (GGUF)</string>
+    <string name="rec_title" formatted="false">Recomendados</string>
+    <string name="hf_popular" formatted="false">Populares en Hugging Face</string>
+    <string name="download" formatted="false">Descargar</string>
+    <string name="download_started" formatted="false">Descarga iniciada</string>
+    <string name="gated" formatted="false">acceso restringido</string>
+    <string name="open_hf" formatted="false">Abrir en Hugging Face</string>
+    <string name="files_hint" formatted="false">Elige un archivo. Q4_K_M ofrece un buen equilibrio entre tamaño y calidad.</string>
+    <string name="no_gguf" formatted="false">No hay archivos GGUF en este repositorio.</string>
+    <string name="recommended" formatted="false">recomendado</string>
+    <string name="no_downloads" formatted="false">No hay descargas en curso.</string>
+    <string name="pause" formatted="false">Pausar</string>
+    <string name="resume" formatted="false">Reanudar</string>
+    <string name="paused" formatted="false">En pausa</string>
+    <string name="err_offline" formatted="false">No se puede conectar con Hugging Face. Revisa tu conexión.</string>
+    <string name="err_auth" formatted="false">Acceso denegado. Añade un token de Hugging Face en Ajustes.</string>
+    <string name="err_notFound" formatted="false">Archivo no encontrado en Hugging Face.</string>
+    <string name="err_rateLimit" formatted="false">Demasiadas solicitudes. Inténtalo en un momento.</string>
+    <string name="err_server" formatted="false">Hugging Face devolvió un error.</string>
+    <string name="err_parse" formatted="false">Respuesta inesperada de Hugging Face.</string>
+    <string name="err_incomplete" formatted="false">El archivo está incompleto. Reanuda para terminarlo.</string>
+    <string name="err_invalid" formatted="false">El archivo no es un modelo GGUF válido.</string>
+    <string name="rec_tiny" formatted="false">Diminuto y muy rápido</string>
+    <string name="rec_fast" formatted="false">Rápido en móviles</string>
+    <string name="rec_balanced" formatted="false">Equilibrado</string>
+    <string name="rec_smart" formatted="false">Más listo, necesita más memoria</string>
+    <string name="set_general" formatted="false">General</string>
+    <string name="set_appearance" formatted="false">Apariencia</string>
+    <string name="set_appearance_sub" formatted="false">Tema, colores, fuente, diseño</string>
+    <string name="set_language" formatted="false">Idioma</string>
+    <string name="set_ai" formatted="false">IA</string>
+    <string name="set_chat" formatted="false">Comportamiento del chat</string>
+    <string name="set_chat_sub" formatted="false">Prompt del sistema, creatividad, longitud</string>
+    <string name="set_hf" formatted="false">Hugging Face</string>
+    <string name="set_hf_sub" formatted="false">Token y servidor</string>
+    <string name="set_data" formatted="false">Datos</string>
+    <string name="set_storage" formatted="false">Almacenamiento</string>
+    <string name="set_storage_sub" formatted="false">Modelos y chats en este dispositivo</string>
+    <string name="set_privacy" formatted="false">Privacidad</string>
+    <string name="set_privacy_sub" formatted="false">Lo que se queda en tu dispositivo</string>
+    <string name="set_about" formatted="false">Acerca de</string>
+    <string name="about_info" formatted="false">Info</string>
+    <string name="about_engine" formatted="false">Motor de IA</string>
+    <string name="about_engine_demo" formatted="false">Demo (aún sin modelo real)</string>
+    <string name="about_models_dir" formatted="false">Carpeta de modelos</string>
+    <string name="about_links" formatted="false">Enlaces</string>
+    <string name="about_licenses" formatted="false">Licencias de código abierto</string>
+    <string name="language_note" formatted="false">Las traducciones se hicieron con IA y pueden contener errores.</string>
+    <string name="ap_theme" formatted="false">Tema</string>
+    <string name="ap_system" formatted="false">Sistema</string>
+    <string name="ap_light" formatted="false">Claro</string>
+    <string name="ap_dark" formatted="false">Oscuro</string>
+    <string name="ap_oled" formatted="false">Negro puro (OLED)</string>
+    <string name="ap_oled_sub" formatted="false">Tema oscuro en negro real</string>
+    <string name="im_title" formatted="false">Import memory from another AI</string>
+    <string name="im_step1" formatted="false">Copy this prompt into a chat with your other AI</string>
+    <string name="im_step2" formatted="false">Paste its answer here</string>
+    <string name="im_copy" formatted="false">Copy</string>
+    <string name="im_copied" formatted="false">Prompt copied</string>
+    <string name="im_hint" formatted="false">Paste the information here…</string>
+    <string name="im_add" formatted="false">Add to memory</string>
+    <string name="im_done" formatted="false">{n} facts added to memory</string>
+    <string name="im_btn" formatted="false">Import from another AI</string>
+    <string name="im_prompt" formatted="false">You will help me move context from one AI assistant to another. Go through our previous conversations and summarize everything you know about me: identity, work or studies, interests, projects, tastes, answer preferences. Write one fact per line, short and factual, without first-person pronouns (use \"the user\"). Do not invent anything and do not add an introduction or conclusion.</string>
+    <string name="eco_mode" formatted="false">Energy saving</string>
+    <string name="eco_mode_sub" formatted="false">Turns off all animations</string>
+    <string name="cloud_imagegen" formatted="false">Generación de imágenes</string>
+    <string name="assist_lens_hint" formatted="false">Circle what you want to understand</string>
+    <string name="assist_lens_q" formatted="false">What is this? Explain what I circled.</string>
+    <string name="assist_on_device" formatted="false">On this device</string>
+    <string name="assist_cloud" formatted="false">External AIs</string>
+    <string name="assist_need_vision" formatted="false">This AI cannot see images. Pick an external AI with vision.</string>
+    <string name="assist_retake" formatted="false">Circle again</string>
+    <string name="open_anim" formatted="false">Opening animation</string>
+    <string name="open_anim_sub" formatted="false">When the app starts (off in energy saving)</string>
+    <string name="home_sub_1" formatted="false">What are you working on?</string>
+    <string name="home_sub_2" formatted="false">Got something in mind?</string>
+    <string name="s_fact" formatted="false">Give me an idea related to: {fact}</string>
+    <string name="ap_accent" formatted="false">Color de acento</string>
+    <string name="ap_dynamic" formatted="false">Colores del fondo</string>
+    <string name="ap_dynamic_sub" formatted="false">Usar colores Material You (Android 12+)</string>
+    <string name="ap_harmony" formatted="false">Armonía de color</string>
+    <string name="harmony_mono" formatted="false">Un solo tono</string>
+    <string name="harmony_tinted" formatted="false">Teñido</string>
+    <string name="harmony_classic" formatted="false">Clásico</string>
+    <string name="harmony_vivid" formatted="false">Vivo</string>
+    <string name="harmony_soft" formatted="false">Suave</string>
+    <string name="accent_purple" formatted="false">Morado</string>
+    <string name="accent_blue" formatted="false">Azul</string>
+    <string name="accent_green" formatted="false">Verde</string>
+    <string name="accent_red" formatted="false">Rojo</string>
+    <string name="accent_orange" formatted="false">Naranja</string>
+    <string name="accent_pink" formatted="false">Rosa</string>
+    <string name="accent_teal" formatted="false">Turquesa</string>
+    <string name="accent_neutral" formatted="false">Neutro</string>
+    <string name="ap_text" formatted="false">Texto</string>
+    <string name="ap_font" formatted="false">Fuente</string>
+    <string name="ap_text_size" formatted="false">Tamaño del texto</string>
+    <string name="ap_layout" formatted="false">Diseño</string>
+    <string name="ap_layout_sub" formatted="false">Barra lateral en ventanas grandes, cajón en pequeñas.</string>
+    <string name="ap_layout_auto" formatted="false">Automático</string>
+    <string name="ap_layout_sidebar" formatted="false">Siempre barra lateral</string>
+    <string name="ap_layout_drawer" formatted="false">Siempre cajón</string>
+    <string name="ap_haptic" formatted="false">Vibración</string>
+    <string name="ap_name" formatted="false">Tu nombre</string>
+    <string name="ap_name_hint" formatted="false">Se muestra en el mensaje de bienvenida</string>
+    <string name="cs_behaviour" formatted="false">Respuestas</string>
+    <string name="cs_system_prompt" formatted="false">Instrucciones para la IA</string>
+    <string name="cs_system_prompt_hint" formatted="false">p. ej. Responde breve y amable</string>
+    <string name="cs_temperature" formatted="false">Creatividad</string>
+    <string name="cs_max_tokens" formatted="false">Longitud máx. de respuesta</string>
+    <string name="cs_max_tokens_sub" formatted="false">En tokens. Las respuestas largas tardan más.</string>
+    <string name="cs_context" formatted="false">Tamaño del contexto</string>
+    <string name="cs_context_sub" formatted="false">Cuánto del chat recuerda el modelo. Más grande usa más memoria.</string>
+    <string name="cs_interface" formatted="false">Interfaz</string>
+    <string name="cs_stream" formatted="false">Respuestas en directo</string>
+    <string name="cs_stream_sub" formatted="false">Mostrar la respuesta mientras se escribe</string>
+    <string name="cs_auto_title" formatted="false">Títulos automáticos</string>
+    <string name="cs_auto_title_sub" formatted="false">Nombrar los chats nuevos con el primer mensaje</string>
+    <string name="cs_enter" formatted="false">Intro envía</string>
+    <string name="cs_enter_sub" formatted="false">Escritorio: Mayús+Intro hace un salto de línea</string>
+    <string name="cs_reset" formatted="false">Restablecer</string>
+    <string name="cs_reset_sub" formatted="false">Restaurar todos los ajustes del chat</string>
+    <string name="hf_info" formatted="false">Un token solo hace falta para modelos con acceso restringido o privados. Se queda en este dispositivo y solo se envía a Hugging Face.</string>
+    <string name="hf_access" formatted="false">Acceso</string>
+    <string name="hf_token" formatted="false">Token de acceso</string>
+    <string name="hf_get_token" formatted="false">Crear un token en Hugging Face</string>
+    <string name="hf_remove_token" formatted="false">Quitar token</string>
+    <string name="hf_advanced" formatted="false">Avanzado</string>
+    <string name="hf_endpoint" formatted="false">Dirección del servidor</string>
+    <string name="st_usage" formatted="false">Espacio usado</string>
+    <string name="st_chats" formatted="false">Chats</string>
+    <string name="st_clean" formatted="false">Limpiar</string>
+    <string name="st_clear_partials" formatted="false">Eliminar descargas incompletas</string>
+    <string name="st_clear_partials_sub" formatted="false">Libera el espacio de descargas pausadas o fallidas</string>
+    <string name="st_clear_chats" formatted="false">Eliminar todos los chats</string>
+    <string name="st_clear_chats_sub" formatted="false">Borra todas las conversaciones de este dispositivo</string>
+    <string name="st_clear_chats_q" formatted="false">Se eliminarán todas las conversaciones. No se puede deshacer.</string>
+    <string name="pv_1_t" formatted="false">Los chats se quedan en tu dispositivo</string>
+    <string name="pv_1_s" formatted="false">Las conversaciones se guardan solo en la carpeta privada de la app.</string>
+    <string name="pv_2_t" formatted="false">Sin IA en la nube</string>
+    <string name="pv_2_s" formatted="false">Las respuestas las escribe un modelo que funciona en tu propio equipo.</string>
+    <string name="pv_3_t" formatted="false">Descargas de Hugging Face</string>
+    <string name="pv_3_s" formatted="false">Internet solo se usa para buscar y descargar modelos de Hugging Face.</string>
+    <string name="pv_4_t" formatted="false">Sin cuenta, sin seguimiento</string>
+    <string name="pv_4_s" formatted="false">PicoChat no pide registro y no envía analíticas.</string>
+    <string name="intro_skip" formatted="false">Omitir</string>
+    <string name="intro_back" formatted="false">Atrás</string>
+    <string name="intro_next" formatted="false">Siguiente</string>
+    <string name="intro_start" formatted="false">Empezar</string>
+    <string name="intro1_t" formatted="false">Bienvenido a PicoChat</string>
+    <string name="intro1_s" formatted="false">Un asistente de chat que vive por completo en tu dispositivo.</string>
+    <string name="intro2_t" formatted="false">Privado por diseño</string>
+    <string name="intro2_s" formatted="false">Tus palabras nunca salen de tu dispositivo.</string>
+    <string name="intro3_t" formatted="false">Consigue tu primer modelo</string>
+    <string name="intro3_s" formatted="false">Los modelos se descargan de Hugging Face. Tú eliges cuál.</string>
+    <string name="intro3_download" formatted="false">Descargar este modelo</string>
+    <string name="intro3_done" formatted="false">Modelo listo</string>
+    <string name="intro3_later" formatted="false">Puedes omitir este paso y elegir otros modelos más tarde en la página Modelos.</string>
+    <string name="intro4_t" formatted="false">Todo listo</string>
+    <string name="intro4_s" formatted="false">Empieza una conversación cuando quieras.</string>
+    <string name="intro4_a_t" formatted="false">Chatear</string>
+    <string name="intro4_a_s" formatted="false">Haz preguntas, escribe, genera ideas y aprende.</string>
+    <string name="intro4_b_t" formatted="false">Personalízalo</string>
+    <string name="intro4_b_s" formatted="false">Cambia el aspecto, el idioma y el comportamiento en Ajustes.</string>
+    <string name="store_featured" formatted="false">Destacados</string>
+    <string name="store_get" formatted="false">Obtener</string>
+    <string name="store_installed" formatted="false">Instalado</string>
+    <string name="cat_all" formatted="false">Todos</string>
+    <string name="cat_light" formatted="false">Ligero</string>
+    <string name="cat_balanced" formatted="false">Equilibrado</string>
+    <string name="cat_power" formatted="false">Potente</string>
+    <string name="searching" formatted="false">Buscando en Hugging Face…</string>
+    <string name="attach_file" formatted="false">Adjuntar archivo</string>
+    <string name="web_search" formatted="false">Búsqueda web</string>
+    <string name="searching_web" formatted="false">Buscando en la web…</string>
+    <string name="tools_power" formatted="false">Opciones</string>
+    <string name="power_eco" formatted="false">Eco</string>
+    <string name="power_balanced" formatted="false">Equilibrado</string>
+    <string name="power_max" formatted="false">Máx</string>
+    <string name="tools_context" formatted="false">Memoria (contexto)</string>
+    <string name="tools_auto_speak" formatted="false">Leer respuestas en voz alta</string>
+    <string name="voice_read" formatted="false">Leer en voz alta</string>
+    <string name="voice_stop" formatted="false">Detener lectura</string>
+    <string name="file_saved" formatted="false">Archivo guardado</string>
+    <string name="img_copy" formatted="false">Copiar imagen</string>
+    <string name="img_save" formatted="false">Descargar imagen</string>
+    <string name="img_copied" formatted="false">Imagen copiada</string>
+    <string name="img_copied_link" formatted="false">Enlace copiado (la imagen no se puede copiar aquí)</string>
+    <string name="img_saved" formatted="false">Imagen guardada</string>
+    <string name="img_failed" formatted="false">No se pudo cargar la imagen</string>
+    <string name="img_region" formatted="false">Este proveedor bloquea la generación de imágenes en tu país. Añade otro proveedor que dibuje (Nube → Añadir cuenta) o elige otro modelo de imagen.</string>
+    <string name="img_retry" formatted="false">Reintentar</string>
+    <string name="img_source" formatted="false">Fuente</string>
+    <string name="img_open_source" formatted="false">Abrir la fuente</string>
+    <string name="img_close" formatted="false">Cerrar</string>
+    <string name="memory_saved" formatted="false">Guardado en memoria</string>
+    <string name="file_unsupported" formatted="false">Formato no compatible</string>
+    <string name="export" formatted="false">Exportar</string>
+    <string name="import" formatted="false">Importar</string>
+    <string name="imported" formatted="false">Importado</string>
+    <string name="import_failed" formatted="false">Archivo inválido o cancelado</string>
+    <string name="ai_style" formatted="false">Instrucciones para la IA</string>
+    <string name="onb_title" formatted="false">Sobre ti</string>
+    <string name="onb_sub" formatted="false">Opcional. Se guarda en tu memoria personal, en tu dispositivo. Puedes omitir todo.</string>
+    <string name="onb_q_name" formatted="false">¿Cómo te llamas?</string>
+    <string name="onb_q_work" formatted="false">¿Quién eres? (trabajo, estudios…)</string>
+    <string name="onb_q_likes" formatted="false">¿Qué te gusta?</string>
+    <string name="onb_q_ai" formatted="false">¿Qué instrucción debe seguir siempre la IA?</string>
+    <string name="ap_shapes" formatted="false">Formas Material</string>
+    <string name="ap_shapes_sub" formatted="false">Tarjetas de archivos, respuesta final enmarcada, bloques de código</string>
+    <string name="reset_appearance" formatted="false">Restablecer apariencia</string>
+    <string name="reset_appearance_sub" formatted="false">Tema, colores, fuentes y formas por defecto</string>
+    <string name="confirm_title" formatted="false">¿Seguro?</string>
+    <string name="confirm_yes" formatted="false">Restablecer</string>
+    <string name="reset_settings_body" formatted="false">Esto restaura los valores por defecto de esta página.</string>
+    <string name="set_danger" formatted="false">Zona de peligro</string>
+    <string name="reset_all" formatted="false">Restablecer toda la app</string>
+    <string name="reset_all_sub" formatted="false">Elimina chats, memoria, modelos y ajustes</string>
+    <string name="reset_all_1" formatted="false">Se borrará todo: chats, memoria personal, modelos descargados y todos los ajustes. No se puede deshacer.</string>
+    <string name="reset_all_2" formatted="false">Última oportunidad: exporta antes tus chats y memoria si quieres conservarlos. ¿Continuar?</string>
+    <string name="reset_all_3" formatted="false">Escribe RESET para confirmar</string>
+    <string name="rec_best" formatted="false">El más capaz en móviles (8 GB+ de RAM)</string>
+    <string name="rec_pc" formatted="false">Muy capaz, para PC o 12 GB+ de RAM</string>
+    <string name="rec_reliable" formatted="false">El más fiable en general</string>
+    <string name="set_context" formatted="false">Web y contexto</string>
+    <string name="set_context_sub" formatted="false">Búsqueda automática, ubicación, fecha</string>
+    <string name="ctx_web" formatted="false">Búsqueda web</string>
+    <string name="ctx_web_auto" formatted="false">Búsqueda web automática</string>
+    <string name="ctx_web_auto_sub" formatted="false">Busca en la web por sí sola: tiempo, noticias, precios, resultados…</string>
+    <string name="ctx_device" formatted="false">Contexto del dispositivo</string>
+    <string name="ctx_location" formatted="false">Usar mi ubicación</string>
+    <string name="ctx_location_sub" formatted="false">Ciudad aproximada según tu IP (sin GPS). Se usa para el tiempo y preguntas cercanas.</string>
+    <string name="ctx_location_now" formatted="false">Detectado: {place}</string>
+    <string name="ctx_location_none" formatted="false">Aún no detectado</string>
+    <string name="ctx_refresh" formatted="false">Actualizar</string>
+    <string name="ctx_time" formatted="false">Fecha, hora y zona horaria</string>
+    <string name="ctx_time_sub" formatted="false">La IA conoce la fecha y hora de hoy</string>
+    <string name="power_ultra" formatted="false">Ultra</string>
+    <string name="ultra_hint" formatted="false">Ultra: varias búsquedas web, un análisis privado y una respuesta detallada. Más lento pero mucho más profundo.</string>
+    <string name="steps_title" formatted="false">Razonamiento</string>
+    <string name="steps_running" formatted="false">Pensando…</string>
+    <string name="step_analyze" formatted="false">Analizando la petición</string>
+    <string name="step_files" formatted="false">Leyendo tus archivos</string>
+    <string name="step_load" formatted="false">Cargando el modelo</string>
+    <string name="step_plan" formatted="false">Plan de búsqueda</string>
+    <string name="step_search" formatted="false">Buscando en la web</string>
+    <string name="step_read" formatted="false">Leyendo las fuentes</string>
+    <string name="step_reason" formatted="false">Análisis profundo</string>
+    <string name="step_write" formatted="false">Redactando la respuesta</string>
+    <string name="step_calc" formatted="false">Cálculo exacto</string>
+    <string name="step_weather" formatted="false">Datos del tiempo</string>
+    <string name="step_score" formatted="false">Marcadores en directo</string>
+    <string name="voice_listening" formatted="false">Te escucho…</string>
+    <string name="voice_validate" formatted="false">Validar</string>
+    <string name="score_live" formatted="false">EN VIVO</string>
+    <string name="score_final" formatted="false">Final</string>
+    <string name="wx_clear" formatted="false">Despejado</string>
+    <string name="wx_partly" formatted="false">Parcialmente nublado</string>
+    <string name="wx_cloudy" formatted="false">Nublado</string>
+    <string name="wx_fog" formatted="false">Niebla</string>
+    <string name="wx_drizzle" formatted="false">Llovizna</string>
+    <string name="wx_rain" formatted="false">Lluvia</string>
+    <string name="wx_snow" formatted="false">Nieve</string>
+    <string name="wx_showers" formatted="false">Chubascos</string>
+    <string name="wx_storm" formatted="false">Tormenta</string>
+    <string name="wx_feels" formatted="false">Sensación</string>
+    <string name="wx_today" formatted="false">Hoy</string>
+    <string name="ctx_city" formatted="false">Ciudad (manual)</string>
+    <string name="ctx_city_hint" formatted="false">Déjalo vacío para detectar automáticamente</string>
+    <string name="step_command" formatted="false">Comando entendido</string>
+    <string name="cmd_mode" formatted="false">Modo de potencia: {mode}</string>
+    <string name="cmd_web_on" formatted="false">Búsqueda web activada</string>
+    <string name="cmd_web_off" formatted="false">Búsqueda web desactivada</string>
+    <string name="ctx_auto" formatted="false">Acciones automáticas</string>
+    <string name="ctx_auto_cmd" formatted="false">Entender mis comandos</string>
+    <string name="ctx_auto_cmd_sub" formatted="false">Di «ponlo al máximo», «al mínimo», «ultra» o «desactiva la búsqueda web» y la IA cambia el ajuste sola</string>
+    <string name="opt_reasoning" formatted="false">Razonamiento</string>
+    <string name="opt_reason_auto" formatted="false">Auto</string>
+    <string name="opt_reason_on" formatted="false">Siempre</string>
+    <string name="opt_reason_off" formatted="false">Nunca</string>
+    <string name="opt_reason_sub" formatted="false">Pensar antes de responder, en cualquier modo. Auto: solo en Max y Ultra.</string>
+    <string name="opt_show_steps" formatted="false">Mostrar los pasos</string>
+    <string name="opt_show_steps_sub" formatted="false">Lo que hizo la IA, paso a paso</string>
+    <string name="opt_steps_open" formatted="false">Desplegar mientras piensa</string>
+    <string name="voice_loading" formatted="false">Preparando el modelo de voz…</string>
+    <string name="voice_section" formatted="false">Voz</string>
+    <string name="voice_engine" formatted="false">Motor Whisper sin conexión</string>
+    <string name="voice_engine_sub" formatted="false">Mucho más preciso que el reconocimiento del sistema. Descarga un modelo la primera vez.</string>
+    <string name="voice_model" formatted="false">Modelo Whisper</string>
+    <string name="voice_model_sub" formatted="false">Tiny es el más rápido, Small el más preciso</string>
+    <string name="inst_none" formatted="false">Sin instrucciones personalizadas. La IA usa su comportamiento por defecto.</string>
+    <string name="inst_sub" formatted="false">La IA lo sigue en todos los chats.</string>
+    <string name="inst_reset" formatted="false">Restablecer</string>
+    <string name="inst_s1" formatted="false">Responde breve</string>
+    <string name="inst_s2" formatted="false">Sé detallado y didáctico</string>
+    <string name="inst_s3" formatted="false">Háblame de tú</string>
+    <string name="inst_s4" formatted="false">Usa un tono formal</string>
+    <string name="inst_s5" formatted="false">Explica con ejemplos</string>
+    <string name="mem_section" formatted="false">Lo que recuerdo</string>
+    <string name="engine_title" formatted="false">Motor de búsqueda</string>
+    <string name="engine_sub" formatted="false">Se usa para las búsquedas web. Si no devuelve nada, se usa DuckDuckGo.</string>
+    <string name="sidebar_hide" formatted="false">Ocultar panel</string>
+    <string name="sidebar_show" formatted="false">Mostrar panel</string>
+    <string name="st_total" formatted="false">Total usado por PicoChat</string>
+    <string name="st_models_list" formatted="false">Modelos descargados</string>
+    <string name="st_top_chats" formatted="false">Chats más grandes</string>
+    <string name="st_memory" formatted="false">Memoria</string>
+    <string name="st_delete_model_q" formatted="false">¿Eliminar este modelo del dispositivo?</string>
+    <string name="st_other" formatted="false">Otros</string>
+    <string name="memory_title" formatted="false">Memoria</string>
+    <string name="memory_sub" formatted="false">Lo que la IA recuerda de ti</string>
+    <string name="memory_enable" formatted="false">Usar memoria</string>
+    <string name="memory_enable_sub" formatted="false">La IA puede guardar datos sobre ti y usarlos en los chats</string>
+    <string name="memory_empty" formatted="false">Nada guardado. La IA guarda datos duraderos que le cuentes, o añade uno tú.</string>
+    <string name="memory_add" formatted="false">Añadir un recuerdo</string>
+    <string name="memory_clear" formatted="false">Borrar todo</string>
+    <string name="sources_title" formatted="false">Fuentes</string>
+    <string name="tools_web_max" formatted="false">Fuentes web por búsqueda (∞ = sin límite)</string>
+    <string name="voice_input" formatted="false">Hablar</string>
+    <string name="voice_unavailable" formatted="false">La entrada de voz no está disponible en este dispositivo</string>
+    <string name="store_for_you" formatted="false">Recomendado para tu dispositivo</string>
+    <string name="store_ram" formatted="false">{gb} GB de RAM detectados</string>
+    <string name="store_fits" formatted="false">Funciona bien en tu dispositivo</string>
+    <string name="store_tight" formatted="false">Puede ir lento en tu dispositivo</string>
+    <string name="store_toobig" formatted="false">Demasiado pesado para tu dispositivo</string>
+    <string name="tag_vision" formatted="false">Visión</string>
+    <string name="tag_thinking" formatted="false">Razonamiento</string>
+    <string name="tag_fast" formatted="false">Rápido</string>
+    <string name="tag_multi" formatted="false">Multilingüe</string>
+    <string name="tag_code" formatted="false">Código</string>
+    <string name="detail_needs" formatted="false">RAM recomendada: {gb} GB · Archivo: ~{size}</string>
+    <string name="detail_vision_opt" formatted="false">Añadir visión (leer imágenes)</string>
+    <string name="detail_choose_quant" formatted="false">Elegir cuantización</string>
+    <string name="rec_vision" formatted="false">Lee imágenes, muy versátil (6 GB+ de RAM)</string>
+    <string name="rec_vision_small" formatted="false">Modelo de visión pequeño: describe fotos y capturas</string>
+    <string name="see_more" formatted="false">Ver más</string>
+    <string name="assist_listening" formatted="false">Te escucho…</string>
+    <string name="assist_thinking" formatted="false">Pensando…</string>
+    <string name="assist_open" formatted="false">Abrir PicoChat</string>
+    <string name="assist_send" formatted="false">Enviar</string>
+    <string name="dev_tps" formatted="false">tok/s</string>
+    <string name="dev_tokens" formatted="false">tokens</string>
+    <string name="dev_first" formatted="false">1er token</string>
+    <string name="dev_prompt_tok" formatted="false">prompt</string>
+    <string name="dev_view_prompt" formatted="false">Ver prompt</string>
+    <string name="dev_prompt_title" formatted="false">Todo lo que se envía a la IA</string>
+    <string name="cs_developer" formatted="false">Desarrollador</string>
+    <string name="cs_dev" formatted="false">Modo detallado (desarrollador)</string>
+    <string name="cs_dev_sub" formatted="false">Muestra tokens por segundo, tiempos y el prompt completo bajo cada respuesta.</string>
+    <string name="cs_assistant" formatted="false">Asistente Android</string>
+    <string name="cs_assist_model" formatted="false">IA usada por el asistente</string>
+    <string name="cs_assist_model_sub" formatted="false">Modelo cargado al abrir el asistente.</string>
+    <string name="cs_assist_same" formatted="false">Igual que la app</string>
+    <string name="assist_choose_model" formatted="false">Elegir la IA</string>
+    <string name="assist_type_hint" formatted="false">Escribe un mensaje…</string>
+    <string name="step_map" formatted="false">Buscando en el mapa</string>
+    <string name="step_device" formatted="false">Leyendo datos del teléfono</string>
+    <string name="acc_title" formatted="false">Acceso al teléfono</string>
+    <string name="acc_sub" formatted="false">Contactos, mensajes, notificaciones, calendario</string>
+    <string name="acc_section" formatted="false">Permitir que la IA lea (opcional)</string>
+    <string name="acc_contacts" formatted="false">Contactos</string>
+    <string name="acc_contacts_sub" formatted="false">«¿Cuál es el número de Marie?»</string>
+    <string name="acc_sms" formatted="false">Mensajes (SMS)</string>
+    <string name="acc_sms_sub" formatted="false">«Lee mis últimos mensajes»</string>
+    <string name="acc_notif" formatted="false">Notificaciones</string>
+    <string name="acc_notif_sub" formatted="false">«¿Cuáles son mis notificaciones?» (requiere acceso a notificaciones)</string>
+    <string name="acc_cal" formatted="false">Calendario</string>
+    <string name="acc_cal_sub" formatted="false">«¿Qué tengo en mi calendario?»</string>
+    <string name="acc_denied" formatted="false">Permiso denegado. Puedes permitirlo en los ajustes de Android.</string>
+    <string name="acc_android_only" formatted="false">Estas opciones solo funcionan en Android.</string>
+    <string name="acc_note" formatted="false">Todo queda en tu dispositivo. Los datos solo se leen si tu pregunta los menciona y si lo activaste aquí.</string>
+    <string name="intro_acc_t" formatted="false">Acceso al teléfono</string>
+    <string name="intro_acc_s" formatted="false">Todo es opcional, puedes cambiarlo en Ajustes.</string>
+    <string name="n_title" formatted="false">Notificaciones</string>
+    <string name="n_sub" formatted="false">Progreso de descargas y segundo plano</string>
+    <string name="n_downloads" formatted="false">Descargas</string>
+    <string name="n_background" formatted="false">Descargar en segundo plano</string>
+    <string name="n_background_sub" formatted="false">Sigue descargando con la pantalla apagada o la app cerrada.</string>
+    <string name="n_progress" formatted="false">Notificación de progreso</string>
+    <string name="n_progress_sub" formatted="false">Muestra porcentaje y velocidad durante una descarga.</string>
+    <string name="n_done" formatted="false">Notificación de fin / error</string>
+    <string name="n_done_sub" formatted="false">Avisa cuando un modelo está listo o falló la descarga.</string>
+    <string name="n_downloading" formatted="false">Descargando</string>
+    <string name="n_waiting" formatted="false">Esperando…</string>
+    <string name="n_done_title" formatted="false">Modelo listo</string>
+    <string name="n_failed_title" formatted="false">Descarga fallida</string>
+    <string name="net_title" formatted="false">¿Permitir acceso a Internet?</string>
+    <string name="net_body" formatted="false">PicoChat quiere conectarse a Internet para responder:</string>
+    <string name="net_note" formatted="false">Solo esta solicitud sale de tu dispositivo, nunca tus conversaciones ni datos del teléfono. Puedes desactivar esta pregunta en Ajustes → Chat.</string>
+    <string name="net_allow" formatted="false">Permitir</string>
+    <string name="net_deny" formatted="false">Rechazar</string>
+    <string name="net_what_web" formatted="false">Una búsqueda web:</string>
+    <string name="net_what_data" formatted="false">Tiempo / resultados (Open-Meteo, ESPN):</string>
+    <string name="net_what_map" formatted="false">Datos de mapa de OpenStreetMap (lugares, rutas).</string>
+    <string name="cs_internet" formatted="false">Internet</string>
+    <string name="cs_web_ask" formatted="false">Preguntar siempre antes de usar Internet</string>
+    <string name="cs_web_ask_sub" formatted="false">Búsqueda web, tiempo, resultados y mapas. Los datos locales nunca lo necesitan.</string>
+    <string name="map_point" formatted="false">Punto</string>
+    <string name="map_car" formatted="false">Ruta en coche</string>
+    <string name="map_foot" formatted="false">Ruta a pie</string>
+    <string name="map_bike" formatted="false">Ruta en bici</string>
+    <string name="map_clear" formatted="false">Borrar puntos</string>
+    <string name="map_fit" formatted="false">Centrar</string>
+    <string name="map_hint" formatted="false">Mantén pulsado el mapa para añadir un punto, toca un punto para quitarlo y elige el tipo de ruta.</string>
+    <string name="map_need_two" formatted="false">Añade al menos dos puntos.</string>
+    <string name="map_no_route" formatted="false">No se encontró ruta.</string>
+    <string name="answer_len" formatted="false">Answer length</string>
+    <string name="answer_len_sub" formatted="false">Short, medium or detailed: the AI adapts the size of its answers.</string>
+    <string name="len_auto" formatted="false">Auto</string>
+    <string name="len_short" formatted="false">Short</string>
+    <string name="len_medium" formatted="false">Medium</string>
+    <string name="len_long" formatted="false">Detailed</string>
+    <string name="mem_limit" formatted="false">Memories used</string>
+    <string name="mem_limit_sub" formatted="false">How many memories are sent to the AI (most recent first). Fewer = faster.</string>
+    <string name="mem_all" formatted="false">All</string>
+    <string name="unlimited" formatted="false">Unlimited mode</string>
+    <string name="unlimited_sub" formatted="false">Removes the limits: answer length, reasoning, memories, web sources.</string>
+    <string name="greet_morning" formatted="false">Buenos días</string>
+    <string name="greet_afternoon" formatted="false">Buenas tardes</string>
+    <string name="greet_evening" formatted="false">Buenas noches</string>
+    <string name="greet_night" formatted="false">Todavía despierto</string>
+    <string name="home_hint_local" formatted="false">Todo se queda en tu dispositivo.</string>
+    <string name="foryou_refresh" formatted="false">Nuevas ideas</string>
+    <string name="home_suggestions" formatted="false">Para ti</string>
+    <string name="pill_web" formatted="false">Búsqueda web</string>
+    <string name="pill_memories" formatted="false">{n} recuerdos</string>
+    <string name="pill_memory_one" formatted="false">1 recuerdo</string>
+    <string name="s_morning_plan" formatted="false">Ayúdame a organizar mi día</string>
+    <string name="s_afternoon_focus" formatted="false">Consejos para concentrarme esta tarde</string>
+    <string name="s_evening_relax" formatted="false">Una idea para relajarme esta noche</string>
+    <string name="s_night_story" formatted="false">Cuéntame un cuento corto para dormir</string>
+    <string name="s_weekend" formatted="false">Ideas de actividades para este fin de semana</string>
+    <string name="s_place" formatted="false">¿Qué hacer hoy en {city}?</string>
+    <string name="s_weather" formatted="false">¿Qué tiempo hace en {city}?</string>
+    <string name="s_memory" formatted="false">¿Qué sabes de mí?</string>
+    <string name="s_topic" formatted="false">Profundiza en este tema: {topic}</string>
+    <string name="s_news" formatted="false">Resume las noticias de hoy</string>
+    <string name="s_image" formatted="false">Muéstrame una foto de {city}</string>
+    <string name="clip_summarize" formatted="false">Resumir el portapapeles</string>
+    <string name="clip_translate" formatted="false">Traducir el portapapeles</string>
+    <string name="clip_explain" formatted="false">Explicar el portapapeles</string>
+    <string name="clip_summarize_p" formatted="false">Resume este texto:</string>
+    <string name="clip_translate_p" formatted="false">Traduce este texto:</string>
+    <string name="clip_explain_p" formatted="false">Explica este texto de forma sencilla:</string>
+    <string name="cloud_title" formatted="false">IA en la nube (opcional)</string>
+    <string name="cloud_sub" formatted="false">Claude, Gemini, ChatGPT o cualquier servicio compatible</string>
+    <string name="cloud_info" formatted="false">Desactivado por defecto. Al activarlo, los mensajes que envías a un modelo en la nube, junto con el contexto que permitas abajo, viajan por internet a esa empresa. Los modelos locales siguen 100 % en tu dispositivo. Necesitas tu propia clave API; el uso de la API lo factura el proveedor, aparte de cualquier suscripción de chat.</string>
+    <string name="cloud_enable" formatted="false">Activar la IA en la nube</string>
+    <string name="cloud_enable_sub" formatted="false">Permite añadir cuentas y elegir modelos en la nube</string>
+    <string name="cloud_enable_q" formatted="false">¿Activar la IA en la nube?</string>
+    <string name="cloud_enable_body" formatted="false">Con un modelo en la nube, tus mensajes y el contexto permitido se envían al proveedor (Anthropic, Google, OpenAI…) y se tratan según sus condiciones. No se envía nada mientras uses un modelo local. ¿Continuar?</string>
+    <string name="cloud_enable_yes" formatted="false">Activar</string>
+    <string name="cloud_accounts" formatted="false">Cuentas</string>
+    <string name="cloud_add" formatted="false">Añadir una cuenta</string>
+    <string name="cloud_add_pick" formatted="false">Elige un servicio</string>
+    <string name="cloud_custom_sub" formatted="false">Mistral, DeepSeek, Groq, OpenRouter, Ollama, LM Studio…</string>
+    <string name="cloud_no_accounts" formatted="false">Aún no hay cuentas. Añade una con tu clave API.</string>
+    <string name="cloud_models_count" formatted="false">{n} modelo(s)</string>
+    <string name="cloud_key_missing_short" formatted="false">falta la clave</string>
+    <string name="cloud_ctx" formatted="false">Contexto enviado a la IA en la nube</string>
+    <string name="cloud_ctx_info" formatted="false">Una IA en la nube solo conoce lo que la app le envía. Elige lo que recibe para que responda con tu contexto. Tus instrucciones y la propia conversación siempre se envían.</string>
+    <string name="cloud_ctx_memory" formatted="false">Memoria</string>
+    <string name="cloud_ctx_memory_sub" formatted="false">Lo que PicoChat recuerda de ti</string>
+    <string name="cloud_ctx_time" formatted="false">Fecha y hora</string>
+    <string name="cloud_ctx_time_sub" formatted="false">Fecha, hora y zona horaria actuales</string>
+    <string name="cloud_ctx_location" formatted="false">Ubicación aproximada</string>
+    <string name="cloud_ctx_location_sub" formatted="false">La ciudad obtenida por el ajuste de ubicación</string>
+    <string name="cloud_ctx_files" formatted="false">Archivos e imágenes adjuntos</string>
+    <string name="cloud_ctx_files_sub" formatted="false">Texto de los archivos e imágenes que adjuntas</string>
+    <string name="cloud_ctx_web" formatted="false">Resultados web</string>
+    <string name="cloud_ctx_web_sub" formatted="false">Páginas encontradas al usar la búsqueda web</string>
+    <string name="cloud_ctx_device" formatted="false">Datos del teléfono</string>
+    <string name="cloud_ctx_device_sub" formatted="false">Contactos, mensajes, calendario… solo cuando los pides</string>
+    <string name="cloud_history" formatted="false">Mensajes de historial enviados</string>
+    <string name="cloud_history_sub" formatted="false">Cuánta conversación ve la IA cada vez</string>
+    <string name="cloud_hist_all" formatted="false">Todos</string>
+    <string name="cloud_acc_name" formatted="false">Nombre</string>
+    <string name="cloud_acc_key" formatted="false">Clave API</string>
+    <string name="cloud_acc_get_key" formatted="false">Obtener una clave API</string>
+    <string name="cloud_acc_url" formatted="false">Dirección del servidor</string>
+    <string name="cloud_acc_models" formatted="false">Modelos</string>
+    <string name="cloud_key_note" formatted="false">La clave se queda en este dispositivo y solo se envía al servidor de este servicio. No se incluye en las exportaciones de chats o memoria.</string>
+    <string name="cloud_key_missing" formatted="false">Añade primero la clave API.</string>
+    <string name="cloud_url_missing" formatted="false">Añade primero la dirección del servidor.</string>
+    <string name="cloud_fetch" formatted="false">Obtener la lista de modelos del servicio</string>
+    <string name="cloud_fetch_sub" formatted="false">También comprueba que la clave funciona</string>
+    <string name="cloud_fetching" formatted="false">Cargando…</string>
+    <string name="cloud_fetch_none" formatted="false">El servicio no devolvió ningún modelo utilizable.</string>
+    <string name="cloud_add_manual" formatted="false">Añadir un ID de modelo a mano</string>
+    <string name="cloud_model_id" formatted="false">ID del modelo</string>
+    <string name="cloud_no_models" formatted="false">Aún no hay modelos. Obtén la lista del servicio o añade un ID.</string>
+    <string name="cloud_vision" formatted="false">Lee imágenes (toca para cambiar)</string>
+    <string name="cloud_now_using" formatted="false">Usando {name}</string>
+    <string name="cloud_added" formatted="false">{n} modelo(s) añadido(s). Toca uno para usarlo.</string>
+    <string name="cloud_remove" formatted="false">Eliminar esta cuenta</string>
+    <string name="cloud_remove_q" formatted="false">¿Eliminar esta cuenta?</string>
+    <string name="cloud_remove_body" formatted="false">La clave API y sus modelos se eliminan de este dispositivo.</string>
+    <string name="cloud_pick_title" formatted="false">Elige los modelos a añadir</string>
+    <string name="cloud_pick_add" formatted="false">Añadir</string>
+    <string name="cloud_pick_filter" formatted="false">Filtrar</string>
+    <string name="cloud_section" formatted="false">IA en la nube</string>
+    <string name="cloud_manage" formatted="false">Gestionar la IA en la nube</string>
+    <string name="home_hint_cloud" formatted="false">IA en la nube: los mensajes van al proveedor.</string>
+    <string name="home_hint_local_cloud" formatted="false">Modelo local: no sale nada (nube activada)</string>
+    <string name="home_recent" formatted="false">Continuar</string>
+    <string name="vm_title" formatted="false">Modo de voz</string>
+    <string name="vm_listening" formatted="false">Te escucho…</string>
+    <string name="vm_thinking" formatted="false">Pensando…</string>
+    <string name="vm_speaking" formatted="false">Respondiendo…</string>
+    <string name="vm_paused" formatted="false">Micrófono silenciado</string>
+    <string name="vm_mic" formatted="false">Silenciar / activar el micrófono</string>
+    <string name="vm_end" formatted="false">Terminar</string>
+    <string name="vm_hint" formatted="false">Habla con naturalidad: respondo en voz alta en cuanto haces una pausa. Toca el círculo para interrumpirme.</string>
+    <string name="sync_qr_show" formatted="false">Mostrar código QR</string>
+    <string name="sync_qr_hide" formatted="false">Ocultar código QR</string>
+    <string name="sync_qr_hint" formatted="false">Escanéalo con la cámara de otro dispositivo y copia el código en «Unirse a un grupo».</string>
+    <string name="sync_paste" formatted="false">Pegar</string>
+    <string name="bg_title" formatted="false">Segundo plano</string>
+    <string name="bg_sub" formatted="false">Sincronización, respuestas, descargas</string>
+    <string name="bg_on" formatted="false">Hay tareas en segundo plano</string>
+    <string name="bg_off" formatted="false">Nada se ejecuta en segundo plano</string>
+    <string name="bg_status_sub" formatted="false">Elige qué sigue activo cuando la app no está al frente.</string>
+    <string name="bg_what" formatted="false">Qué sigue funcionando</string>
+    <string name="bg_sync" formatted="false">Sincronización</string>
+    <string name="bg_sync_sub" formatted="false">Mantiene la sincronización con la app minimizada o la pantalla apagada. En Android se muestra una notificación.</string>
+    <string name="bg_answers" formatted="false">Respuestas de la IA</string>
+    <string name="bg_answers_sub" formatted="false">Termina de escribir una respuesta aunque salgas de la app.</string>
+    <string name="bg_downloads" formatted="false">Descargas</string>
+    <string name="bg_downloads_sub" formatted="false">Mantiene las descargas de modelos con la pantalla apagada.</string>
+    <string name="bg_close" formatted="false">Cerrar = minimizar</string>
+    <string name="bg_close_sub" formatted="false">En el ordenador, la cruz minimiza la ventana en vez de salir: la app sigue activa.</string>
+    <string name="bg_mobile_only" formatted="false">Solo móviles y tabletas Android</string>
+    <string name="bg_desktop_only" formatted="false">Solo ordenadores</string>
+    <string name="bg_note" formatted="false">iPhone: iOS suspende las apps en segundo plano, la sincronización se reanuda al abrir PicoChat. Android: se muestra una notificación mientras corre una tarea y la batería se usa un poco más.</string>
+    <string name="bg_sync_text" formatted="false">Sincronización activa · {n} dispositivo(s)</string>
+    <string name="bg_answering" formatted="false">La IA está escribiendo una respuesta…</string>
+    <string name="cst_tab" formatted="false">Nube</string>
+    <string name="cst_none" formatted="false">Ninguna cuenta en la nube lista. Añade una clave API (Claude, Gemini, ChatGPT…) para ver todos sus modelos.</string>
+    <string name="cst_add_account" formatted="false">Añadir cuenta</string>
+    <string name="cst_refresh" formatted="false">Actualizar</string>
+    <string name="cst_use" formatted="false">Usar</string>
+    <string name="cst_add" formatted="false">Añadir</string>
+    <string name="cst_added" formatted="false">Añadido</string>
+    <string name="cst_off_banner" formatted="false">La nube está desactivada: actívala para usar estos modelos.</string>
+    <string name="cst_open" formatted="false">Abrir</string>
+    <string name="cst_all" formatted="false">Todos</string>
+    <string name="cst_chat" formatted="false">Chat</string>
+    <string name="cst_images" formatted="false">Imágenes</string>
+    <string name="cst_vision" formatted="false">Visión</string>
+    <string name="cst_image" formatted="false">Imagen</string>
+    <string name="cst_tokens" formatted="false">tokens</string>
+    <string name="sync_title" formatted="false">Sincronización</string>
+    <string name="sync_sub" formatted="false">El mismo contenido en todos tus dispositivos</string>
+    <string name="sync_status_on" formatted="false">Conectado a {n} dispositivo(s)</string>
+    <string name="sync_status_wait" formatted="false">Esperando otro dispositivo</string>
+    <string name="sync_status_off" formatted="false">Sincronización desactivada</string>
+    <string name="sync_status_sub_on" formatted="false">Los cambios pasan en directo.</string>
+    <string name="sync_status_sub_wait" formatted="false">Abre PicoChat en el otro dispositivo, con el mismo Wi-Fi.</string>
+    <string name="sync_status_sub_off" formatted="false">Crea un grupo o únete a uno para empezar.</string>
+    <string name="sync_unsupported" formatted="false">La versión web no puede sincronizar. Usa la app en Android, Windows, Linux o Mac.</string>
+    <string name="sync_setup" formatted="false">Puesta en marcha</string>
+    <string name="sync_create" formatted="false">Crear un grupo</string>
+    <string name="sync_join" formatted="false">Unirse a un grupo</string>
+    <string name="sync_join_go" formatted="false">Unirse</string>
+    <string name="sync_bad_code" formatted="false">Código incorrecto: tiene 16 letras y números.</string>
+    <string name="sync_code_t" formatted="false">Código del grupo</string>
+    <string name="sync_code_s" formatted="false">Introduce este código en tus otros dispositivos. También cifra todo lo que se envía.</string>
+    <string name="sync_copy" formatted="false">Copiar código</string>
+    <string name="sync_copied" formatted="false">Código copiado</string>
+    <string name="sync_this" formatted="false">Este dispositivo</string>
+    <string name="sync_enable" formatted="false">Sincronizar</string>
+    <string name="sync_enable_sub" formatted="false">Solo cuando los dispositivos están conectados entre sí</string>
+    <string name="sync_name" formatted="false">Nombre del dispositivo</string>
+    <string name="sync_devices" formatted="false">Dispositivos</string>
+    <string name="sync_waiting" formatted="false">Ningún otro dispositivo por ahora</string>
+    <string name="sync_connected" formatted="false">Conectado</string>
+    <string name="sync_nearby" formatted="false">Visto en la red, conectando…</string>
+    <string name="sync_what" formatted="false">Qué sincronizar</string>
+    <string name="sync_live" formatted="false">Respuestas en directo</string>
+    <string name="sync_live_sub" formatted="false">Ver cómo escribe la IA en los otros dispositivos</string>
+    <string name="sync_group" formatted="false">Grupo</string>
+    <string name="sync_ip" formatted="false">Conexión por dirección</string>
+    <string name="sync_ip_hint" formatted="false">192.168.1.20 (si falla la detección)</string>
+    <string name="sync_ip_fail" formatted="false">No se pudo conectar. Revisa la dirección y el código.</string>
+    <string name="sync_leave" formatted="false">Salir del grupo</string>
+    <string name="sync_leave_sub" formatted="false">Los datos se quedan en este dispositivo</string>
+    <string name="sync_leave_q" formatted="false">¿Salir del grupo? Este dispositivo dejará de sincronizar, pero sus datos se quedan.</string>
+    <string name="sync_note" formatted="false">Los dispositivos deben estar en la misma red Wi-Fi. Nada pasa por un servidor: todo se cifra con el código del grupo. Puerto usado: {p}.</string>
+    <string name="sync_error" formatted="false">Error de red: {e}</string>
+    <string name="sync_pill_n" formatted="false">{n} dispositivo(s)</string>
+    <string name="sync_pill_wait" formatted="false">Sync en espera</string>
+    <string name="tray_open" formatted="false">Open PicoChat</string>
+    <string name="tray_quit" formatted="false">Quit</string>
+    <string name="vm_model" formatted="false">Model</string>
+    <string name="vm_dl_asr" formatted="false">Fast speech recognition</string>
+    <string name="vm_dl_asr_sub" formatted="false">Offline model (~115 MB). Without it, the system engine is used.</string>
+    <string name="vm_dl_voice" formatted="false">Natural voice</string>
+    <string name="vm_dl_voice_sub" formatted="false">Offline neural voice (~65 MB per language).</string>
+    <string name="vm_dl_btn" formatted="false">Download</string>
+    <string name="vm_dl_fail" formatted="false">Download failed</string>
+    <string name="cst_added_only" formatted="false">Added</string>
+    <string name="cst_all_accounts" formatted="false">All accounts</string>
+    <string name="cat_chats" formatted="false">Conversaciones</string>
+    <string name="cat_chats_sub" formatted="false">Todos tus chats y su historial</string>
+    <string name="cat_memory" formatted="false">Memoria y perfil</string>
+    <string name="cat_memory_sub" formatted="false">Lo que recuerda la IA, tu nombre</string>
+    <string name="cat_appearance" formatted="false">Apariencia</string>
+    <string name="cat_appearance_sub" formatted="false">Tema, colores, fuente, idioma</string>
+    <string name="cat_behavior" formatted="false">Comportamiento de la IA</string>
+    <string name="cat_behavior_sub" formatted="false">Instrucciones, creatividad, web, respuestas</string>
+    <string name="intro_sync_t" formatted="false">Sincroniza tus dispositivos</string>
+    <string name="intro_sync_s" formatted="false">Opcional: encuentra tus chats y ajustes en el móvil, el PC y la tableta.</string>
+    <string name="intro_sync_note" formatted="false">Elige qué se comparte:</string>
+    <string name="intro_sync_later" formatted="false">También podrás hacerlo después en Ajustes → Sincronización.</string>
+    <string name="bk_title" formatted="false">Copia de seguridad</string>
+    <string name="bk_sub" formatted="false">Exporta o restaura lo que elijas</string>
+    <string name="bk_export" formatted="false">Crear una copia</string>
+    <string name="bk_make" formatted="false">Exportar copia</string>
+    <string name="bk_import" formatted="false">Restaurar</string>
+    <string name="bk_choose" formatted="false">Elegir un archivo</string>
+    <string name="bk_import_note" formatted="false">Elige un archivo de copia y luego qué tomar de él. Los chats y la memoria se añaden a los de este dispositivo; los ajustes se reemplazan.</string>
+    <string name="bk_done" formatted="false">Copia creada</string>
+    <string name="bk_invalid" formatted="false">Archivo de copia no válido</string>
+    <string name="bk_restore" formatted="false">Restaurar</string>
+    <string name="bk_restored" formatted="false">Restauración terminada</string>
+    <string name="bk_pick" formatted="false">¿Qué restaurar?</string>
+    <string name="bk_note" formatted="false">Las claves API y el token de Hugging Face nunca se incluyen.</string>
+    <string name="set_search_hint" formatted="false">Buscar ajustes</string>
+    <string name="set_no_result" formatted="false">No se encontró ningún ajuste</string>
+    <string name="set_quick" formatted="false">Ajustes rápidos</string>
+    <string name="set_my_ai" formatted="false">Mi IA</string>
+    <string name="set_phone" formatted="false">Teléfono y asistente</string>
+    <string name="set_personal" formatted="false">Personalización</string>
+    <string name="set_assistant" formatted="false">Asistente de Android</string>
+    <string name="set_assistant_sub" formatted="false">IA usada, activación, pantalla bloqueada</string>
+    <string name="set_installed_n" formatted="false">{n} instalado(s)</string>
+    <string name="set_cloud_on" formatted="false">{n} cuenta(s) · activado</string>
+    <string name="set_off" formatted="false">Desactivado</string>
+    <string name="set_on" formatted="false">Activado</string>
+    <string name="as_howto" formatted="false">Cómo activarlo</string>
+    <string name="as_s1" formatted="false">Abre los ajustes de Android → Aplicaciones → Aplicaciones predeterminadas → Asistente digital y elige PicoChat.</string>
+    <string name="as_s2" formatted="false">Activa «Usar captura de pantalla» para poder rodear lo que quieres entender.</string>
+    <string name="as_s3" formatted="false">Inicia el asistente con el gesto de tu teléfono (mantener pulsado el botón de encendido o deslizar desde una esquina).</string>
+    <string name="as_lens_t" formatted="false">Rodear para buscar</string>
+    <string name="as_lens_s" formatted="false">Rodea una zona de la pantalla y se envía a la IA. La IA debe ver imágenes; si no, el asistente propone un modelo en la nube con visión.</string>
+    <string name="as_lock_t" formatted="false">Pantalla bloqueada</string>
+    <string name="as_lock_s" formatted="false">El asistente se muestra sobre la pantalla de bloqueo. La captura y los datos del teléfono se desactivan, y «Abrir PicoChat» pide tu PIN o huella.</string>
+    <string name="as_hist_t" formatted="false">Historial</string>
+    <string name="as_hist_s" formatted="false">Cada conversación del asistente se guarda en la app. El botón «Abrir PicoChat» continúa la conversación actual.</string>
+    <string name="acc_note_cloud" formatted="false">Los datos solo se leen si tu pregunta los menciona y si lo activaste aquí. Con una IA en la nube, lo que se lee se envía al proveedor con tu mensaje.</string>
+    <string name="pv_cloud_t" formatted="false">La IA en la nube está activada</string>
+    <string name="pv_cloud_s" formatted="false">Con un modelo en la nube, tus mensajes y el contexto permitido en Ajustes > IA en la nube se envían a ese proveedor. Los modelos locales siguen sin enviar nada.</string>
+    <string name="cloud_err_auth" formatted="false">El servicio rechazó la clave API ({detail}). Revísala en Ajustes > IA en la nube.</string>
+    <string name="cloud_err_rateLimit" formatted="false">Demasiadas solicitudes o sin crédito ({detail}). Espera un momento o revisa tu plan con el proveedor.</string>
+    <string name="cloud_err_notFound" formatted="false">Modelo o dirección no encontrados ({detail}). Revisa el ID del modelo y la dirección del servidor.</string>
+    <string name="cloud_err_badRequest" formatted="false">El servicio rechazó la solicitud ({detail}).</string>
+    <string name="cloud_err_server" formatted="false">El servicio tiene un problema ahora ({detail}). Inténtalo de nuevo en un momento.</string>
+    <string name="cloud_err_network" formatted="false">No se pudo contactar con el servicio ({detail}). Revisa tu conexión a internet y la dirección del servidor.</string>
+    <string name="cloud_err_blocked" formatted="false">El proveedor bloqueó esta respuesta ({detail}).</string>
+    <string name="cloud_err_empty" formatted="false">El modelo no devolvió texto. Su razonamiento pudo agotar todo el límite: sube «Tokens máx.» en Ajustes > Chat.</string>
+    <string name="cloud_err_other" formatted="false">Error de la IA en la nube: {detail}</string>
+</resources>
