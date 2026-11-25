@@ -33,14 +33,14 @@ jobs:
             dmg: PicoChat-macos-x64.dmg
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Make gradlew executable
         run: chmod +x gradlew
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Build native llama library
         run: |
@@ -61,7 +61,7 @@ jobs:
           cp "$(find $B/dmg -name '*.dmg' | head -1)" ${{ matrix.dmg }}
           ditto -c -k --keepParent $B/app/PicoChat.app ${{ matrix.zip }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: picochat-macos-${{ matrix.arch }}
           path: |

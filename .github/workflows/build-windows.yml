@@ -36,14 +36,14 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Make gradlew executable
         run: chmod +x gradlew
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # ggml refuses MSVC on ARM ("use clang"): arm64 uses the ClangCL toolset. If the runner has no
       # ClangCL, the step is skipped and the app is still packaged (without the local engine).
@@ -75,7 +75,7 @@ jobs:
           [ -n "$EXE" ] && cp "$EXE" PicoChat-Setup-${{ matrix.arch }}.exe || true
           ls -la
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: picochat-windows-${{ matrix.arch }}
           path: |
