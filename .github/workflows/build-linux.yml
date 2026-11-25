@@ -62,7 +62,7 @@ jobs:
           bash scripts/build-appimage.sh ${{ matrix.arch }} PicoChat-linux-${{ matrix.arch }}.AppImage
           cp scripts/install-linux.sh install-linux.sh
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: picochat-linux-${{ matrix.arch }}
           path: |
@@ -71,7 +71,7 @@ jobs:
             PicoChat-linux-${{ matrix.arch }}.rpm
             PicoChat-linux-${{ matrix.arch }}.AppImage
           if-no-files-found: error
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: matrix.arch == 'x64'
         with:
           name: install-linux-script

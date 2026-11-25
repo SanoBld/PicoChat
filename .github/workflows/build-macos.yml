@@ -59,7 +59,7 @@ jobs:
           cp "$(find $B/dmg -name '*.dmg' | head -1)" ${{ matrix.dmg }}
           ditto -c -k --keepParent $B/app/PicoChat.app ${{ matrix.zip }}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: picochat-macos-${{ matrix.arch }}
           path: |

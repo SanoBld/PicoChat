@@ -25,7 +25,7 @@ jobs:
         run: ./gradlew :shared:desktopTest :shared:testDebugUnitTest --no-daemon
       - name: Android lint
         run: ./gradlew :androidApp:lintDebug --no-daemon
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: reports
