@@ -4,4 +4,4 @@ Release notes are read by .github/workflows/release.yml: add a `## vX.Y.Z` secti
 
 ## v0.1.0
 
-- First Kotlin / Jetpack Compose version: project skeleton, CI and release workflows.
+- First Kotlin Multiplatform version (Compose Multiplatform): project skeleton, CI and release workflows for Android, iOS, Windows, Linux and macOS.

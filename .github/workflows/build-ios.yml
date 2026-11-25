@@ -1,0 +1,55 @@
+name: Build iOS
+
+# Unsigned .ipa: install with AltStore / Sideloadly / TrollStore (or re-sign it yourself).
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 1.0.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 1.0.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Build unsigned app
+        env:
+          IN_VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${IN_VERSION:-0.0.0-dev.${{ github.run_number }}}"
+          MARKETING="${VERSION%%-*}"
+          cd iosApp
+          xcodegen generate
+          xcodebuild -project iosApp.xcodeproj -scheme iosApp -configuration Release -sdk iphoneos \
+            -derivedDataPath build MARKETING_VERSION="$MARKETING" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+
+      - name: Make the .ipa
+        run: |
+          rm -rf Payload && mkdir Payload
+          cp -r iosApp/build/Build/Products/Release-iphoneos/PicoChat.app Payload/
+          zip -qr PicoChat-ios.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picochat-ios-ipa
+          path: PicoChat-ios.ipa
+          if-no-files-found: error

@@ -96,14 +96,38 @@ jobs:
             git push origin HEAD:"$BRANCH"
           fi
 
+  windows:
+    needs: resolve
+    uses: ./.github/workflows/build-windows.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
+  macos:
+    needs: resolve
+    uses: ./.github/workflows/build-macos.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
+  linux:
+    needs: resolve
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
   android:
     needs: resolve
     uses: ./.github/workflows/build-android.yml
     with:
       version: ${{ needs.resolve.outputs.version }}
 
+  ios:
+    needs: resolve
+    uses: ./.github/workflows/build-ios.yml
+    with:
+      version: ${{ needs.resolve.outputs.version }}
+
   publish-release:
-    needs: [ resolve, android ]
+    needs: [ resolve, windows, macos, linux, android, ios ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -143,3 +167,23 @@ jobs:
             | `app-arm64-v8a-release.apk` | Most modern phones (2018+) |
             | `app-armeabi-v7a-release.apk` | Older 32-bit phones |
             | `app-x86_64-release.apk` | Emulators / x86 tablets |
+
+            ### iOS
+            | File | Use case |
+            |------|----------|
+            | `PicoChat-ios.ipa` | Unsigned: install with AltStore / Sideloadly / TrollStore (or re-sign it yourself) |
+
+            ### Desktop
+            | File | Platform |
+            |------|----------|
+            | `PicoChat-Setup-x64.exe` | **Windows (x64) installer** |
+            | `PicoChat-Setup-arm64.exe` | **Windows on ARM installer** |
+            | `picochat-windows.zip` / `picochat-windows-arm64.zip` | Windows, portable |
+            | `PicoChat-linux-x64.deb` / `PicoChat-linux-arm64.deb` | **Linux (Debian/Ubuntu/Mint)** |
+            | `PicoChat-linux-x64.rpm` / `PicoChat-linux-arm64.rpm` | **Linux (Fedora/openSUSE/RHEL)** |
+            | `PicoChat-linux-x64.AppImage` / `PicoChat-linux-arm64.AppImage` | Linux, any distro (portable) |
+            | `install-linux.sh` | Linux, any CPU: picks the right package for your distro |
+            | `picochat-linux.zip` / `picochat-linux-arm64.zip` | Linux, manual install |
+            | `PicoChat-macos-arm64.dmg` | **macOS Apple Silicon** (drag to Applications) |
+            | `PicoChat-macos-x64.dmg` | **macOS Intel** (drag to Applications) |
+            | `picochat-macos-arm64.zip` / `picochat-macos-x64.zip` | macOS, manual install |

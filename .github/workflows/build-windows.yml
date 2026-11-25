@@ -1,0 +1,77 @@
+name: Build Windows
+
+# Native build per CPU. Output: setup .exe (installer), portable zip.
+# NOTE: arm64 uses the hosted "windows-11-arm" runner. If it is not enabled for this
+# repo/plan, remove the arm64 entry from the matrix.
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 1.0.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 1.0.0). Empty = dev build'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-latest
+            zip: picochat-windows.zip          # name kept: used by the updater
+          - arch: arm64
+            runner: windows-11-arm
+            zip: picochat-windows-arm64.zip
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build native llama library
+        run: |
+          OUT="$(pwd)/desktopApp/native-libs/windows-${{ matrix.arch }}"
+          command -v cygpath >/dev/null && OUT="$(cygpath -m "$OUT")"
+          cmake -S native/desktop -B native/build -DCMAKE_BUILD_TYPE=Release -DPICO_OUT="$OUT"
+          cmake --build native/build --config Release -j
+          ls -la desktopApp/native-libs/windows-${{ matrix.arch }}
+
+      - name: Package
+        env:
+          IN_VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${IN_VERSION:-0.0.0-dev.${{ github.run_number }}}"
+          ./gradlew :desktopApp:createDistributable -PversionName="$VERSION" --no-daemon --stacktrace
+          # The installer needs WiX; keep the zip even if it is missing on the runner.
+          ./gradlew :desktopApp:packageExe -PversionName="$VERSION" --no-daemon --stacktrace || echo "::warning::packageExe failed (WiX?)"
+
+      - name: Rename outputs
+        run: |
+          B=desktopApp/build/compose/binaries/main
+          python -m zipfile -c ${{ matrix.zip }} $B/app/PicoChat
+          EXE=$(find $B/exe -name '*.exe' 2>/dev/null | head -1 || true)
+          [ -n "$EXE" ] && cp "$EXE" PicoChat-Setup-${{ matrix.arch }}.exe || true
+          ls -la
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: picochat-windows-${{ matrix.arch }}
+          path: |
+            ${{ matrix.zip }}
+            PicoChat-Setup-${{ matrix.arch }}.exe
+          if-no-files-found: error

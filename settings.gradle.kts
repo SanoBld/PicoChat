@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "PicoChat"
-include(":app", ":llama")
+include(":shared", ":androidApp", ":desktopApp", ":llama")

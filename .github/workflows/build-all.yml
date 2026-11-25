@@ -1,13 +1,17 @@
 name: Build PicoChat
 
-# Runs on every push touching app code: builds the APKs for verification only
+# Runs on every push touching app code: builds all platforms for verification only
 # (no GitHub Release; releases are handled by release.yml).
 on:
   push:
     branches: [ main, master ]
     paths:
-      - 'app/**'
+      - 'shared/**'
+      - 'androidApp/**'
+      - 'desktopApp/**'
+      - 'iosApp/**'
       - 'llama/**'
+      - 'native/**'
       - 'gradle/**'
       - '*.gradle.kts'
       - 'gradle.properties'
@@ -37,3 +41,23 @@ jobs:
     needs: check-skip
     if: needs.check-skip.outputs.skip != 'true'
     uses: ./.github/workflows/build-android.yml
+
+  windows:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-windows.yml
+
+  macos:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-macos.yml
+
+  linux:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-linux.yml
+
+  ios:
+    needs: check-skip
+    if: needs.check-skip.outputs.skip != 'true'
+    uses: ./.github/workflows/build-ios.yml

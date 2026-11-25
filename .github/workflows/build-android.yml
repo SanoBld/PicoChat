@@ -23,17 +23,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
 
       # llama.cpp is compiled with NDK 29 (see llama/build.gradle.kts).
       - name: Accept licenses and install NDK / CMake
@@ -51,7 +46,7 @@ jobs:
         run: |
           VERSION="${IN_VERSION:-0.0.0-dev.${{ github.run_number }}}"
           for attempt in 1 2 3; do
-            if ./gradlew assembleRelease -PversionName="$VERSION" -PversionCode=${{ github.run_number }} --no-daemon --stacktrace; then exit 0; fi
+            if ./gradlew :androidApp:assembleRelease -PversionName="$VERSION" -PversionCode=${{ github.run_number }} --no-daemon --stacktrace; then exit 0; fi
             echo "Attempt $attempt failed, retrying in 20 s..."
             sleep 20
           done
@@ -60,10 +55,9 @@ jobs:
       - name: Collect APKs
         shell: bash
         run: |
-          mkdir -p dist
-          ls -la app/build/outputs/apk/release
+          ls -la androidApp/build/outputs/apk/release
           for abi in universal arm64-v8a armeabi-v7a x86_64; do
-            ./gradlew collectApk -PapkSrc=app-$abi-release.apk -PapkName=app-$abi-release.apk --no-daemon -q
+            ./gradlew collectFile -PfileDir=androidApp/build/outputs/apk/release -PfileSrc=androidApp-$abi-release.apk -PfileName=app-$abi-release.apk --no-daemon -q
           done
           ls -la dist
 

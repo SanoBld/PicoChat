@@ -18,5 +18,5 @@ FetchContent_Declare(llama
     GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(llama)
 
-add_library(picochat_llama SHARED llama_jni.cpp)
+add_library(picochat_llama SHARED ${CMAKE_CURRENT_LIST_DIR}/../../../../native/llama_jni.cpp)
 target_link_libraries(picochat_llama llama ggml android log)

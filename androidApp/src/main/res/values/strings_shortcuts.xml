@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_new_chat">New chat</string>
+    <string name="sc_new_chat_long">New chat</string>
+    <string name="sc_voice">Voice dictation</string>
+    <string name="sc_voice_long">Voice dictation</string>
+    <string name="sc_web">Web search</string>
+    <string name="sc_web_long">Web search</string>
+</resources>

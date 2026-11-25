@@ -1,6 +1,7 @@
+// Native-only Android library: builds libpicochat_llama.so (llama.cpp + JNI bridge).
+// The Kotlin side (LlamaBridge) lives in :shared/jvmCommonMain.
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
 }
 
 android {
@@ -13,7 +14,7 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         externalNativeBuild {
             cmake {
-                arguments += listOf("-DANDROID_STL=c++_shared", "-DCMAKE_BUILD_TYPE=Release", "-DGGML_OPENMP=OFF")
+                arguments += listOf("-DANDROID_STL=c++_shared", "-DCMAKE_BUILD_TYPE=Release")
                 cppFlags += "-std=c++17"
             }
         }
@@ -28,11 +29,4 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
 }
-
-dependencies {
-    implementation(libs.coroutines.android)
-}
-
-kotlin { jvmToolchain(17) }

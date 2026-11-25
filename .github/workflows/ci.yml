@@ -17,23 +17,19 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
-      - name: Install NDK / CMake
-        run: |
-          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          "$SDK/cmdline-tools/latest/bin/sdkmanager" "ndk;29.0.13113456" "cmake;3.22.1" > /dev/null
       - name: Detekt
         run: ./gradlew detekt --no-daemon
       - name: Unit tests
-        run: ./gradlew testDebugUnitTest --no-daemon
+        run: ./gradlew :shared:desktopTest :shared:testDebugUnitTest --no-daemon
       - name: Android lint
-        run: ./gradlew :app:lintDebug --no-daemon
+        run: ./gradlew :androidApp:lintDebug --no-daemon
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: reports
           path: |
-            app/build/reports
+            shared/build/reports
+            androidApp/build/reports
             build/reports

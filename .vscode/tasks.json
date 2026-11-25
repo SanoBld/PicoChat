@@ -1,9 +1,10 @@
 {
   "version": "2.0.0",
   "tasks": [
-    { "label": "Build debug APK", "type": "shell", "command": "./gradlew assembleDebug", "group": "build" },
-    { "label": "Install on device", "type": "shell", "command": "./gradlew installDebug" },
-    { "label": "Unit tests", "type": "shell", "command": "./gradlew testDebugUnitTest", "group": "test" },
+    { "label": "Build debug APK", "type": "shell", "command": "./gradlew :androidApp:assembleDebug", "group": "build" },
+    { "label": "Install on device", "type": "shell", "command": "./gradlew :androidApp:installDebug" },
+    { "label": "Unit tests", "type": "shell", "command": "./gradlew :shared:desktopTest", "group": "test" },
+    { "label": "Run desktop app", "type": "shell", "command": "./gradlew :desktopApp:run" },
     { "label": "Detekt", "type": "shell", "command": "./gradlew detekt" }
   ]
 }

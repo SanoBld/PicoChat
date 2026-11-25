@@ -12,3 +12,12 @@
 captures/
 .externalNativeBuild/
 *.hprof
+/dist/
+/native/build/
+/native/ios/out/
+/native/ios/work/
+/desktopApp/native-libs/*
+!/desktopApp/native-libs/.gitkeep
+/iosApp/iosApp.xcodeproj/
+/iosApp/build/
+xcuserdata/
