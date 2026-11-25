@@ -1,14 +1,19 @@
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
 
+// Set in settings.gradle.kts: false when the Android SDK is not available.
+val androidEnabled = gradle.extra["picoAndroid"] as Boolean
+if (androidEnabled) apply(plugin = "com.android.library")
+
 kotlin {
-    androidTarget {
-        compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
+    if (androidEnabled) {
+        androidTarget {
+            compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
+        }
     }
     jvm("desktop")
     listOf(iosArm64(), iosSimulatorArm64()).forEach {
@@ -21,8 +26,19 @@ kotlin {
     sourceSets {
         // Code shared by Android and desktop (JVM): the JNI bridge to llama.cpp.
         val jvmCommonMain by creating { dependsOn(commonMain.get()) }
-        val androidMain by getting { dependsOn(jvmCommonMain) }
         val desktopMain by getting { dependsOn(jvmCommonMain) }
+        if (androidEnabled) {
+            named("androidMain") {
+                dependsOn(jvmCommonMain)
+                dependencies {
+                    implementation(libs.androidx.activity.compose)
+                    implementation(libs.androidx.core.ktx)
+                    implementation(libs.androidx.work)
+                    implementation(libs.coroutines.android)
+                    implementation(libs.ktor.okhttp)
+                }
+            }
+        }
 
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -39,13 +55,6 @@ kotlin {
             implementation(libs.coil.svg)
             implementation(libs.coil.network)
         }
-        androidMain.dependencies {
-            implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.core.ktx)
-            implementation(libs.androidx.work)
-            implementation(libs.coroutines.android)
-            implementation(libs.ktor.okhttp)
-        }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.coroutines.swing)
@@ -60,13 +69,15 @@ kotlin {
     }
 }
 
-android {
-    namespace = "com.picochat.shared"
-    compileSdk = 36
-    defaultConfig { minSdk = 26 }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+if (androidEnabled) {
+    extensions.configure<com.android.build.api.dsl.LibraryExtension>("android") {
+        namespace = "com.picochat.shared"
+        compileSdk = 36
+        defaultConfig { minSdk = 26 }
+        compileOptions {
+            sourceCompatibility = JavaVersion.VERSION_17
+            targetCompatibility = JavaVersion.VERSION_17
+        }
     }
 }
 

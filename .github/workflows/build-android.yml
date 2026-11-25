@@ -48,7 +48,7 @@ jobs:
         run: |
           VERSION="${IN_VERSION:-0.0.0-dev.${{ github.run_number }}}"
           for attempt in 1 2 3; do
-            if ./gradlew :androidApp:assembleRelease -PversionName="$VERSION" -PversionCode=${{ github.run_number }} --no-daemon --stacktrace; then exit 0; fi
+            if ./gradlew :androidApp:assembleRelease -Ppico.android=true -PversionName="$VERSION" -PversionCode=${{ github.run_number }} --no-daemon --stacktrace; then exit 0; fi
             echo "Attempt $attempt failed, retrying in 20 s..."
             sleep 20
           done

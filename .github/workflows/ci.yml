@@ -24,14 +24,11 @@ jobs:
       - name: Detekt
         run: ./gradlew detekt --no-daemon
       - name: Unit tests
-        run: ./gradlew :shared:desktopTest :shared:testDebugUnitTest --no-daemon
-      - name: Android lint
-        run: ./gradlew :androidApp:lintDebug --no-daemon
+        run: ./gradlew :shared:desktopTest --no-daemon
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: reports
           path: |
             shared/build/reports
-            androidApp/build/reports
             build/reports

@@ -35,6 +35,9 @@ cd iosApp && xcodegen generate && open iosApp.xcodeproj    # macOS only
 ./gradlew detekt :shared:desktopTest
 ```
 
+The Android modules (`androidApp`, `llama`) are only included when `local.properties` has `sdk.dir`
+or with `-Ppico.android=true`; desktop and iOS builds need no Android SDK.
+
 Android debug and release share `androidApp/debug.keystore`: same signature everywhere.
 
 ## Release
