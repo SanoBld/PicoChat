@@ -37,17 +37,24 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+      - name: Make gradlew executable
+        run: chmod +x gradlew
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
 
+      # ggml refuses MSVC on ARM ("use clang"): arm64 uses the ClangCL toolset. If the runner has no
+      # ClangCL, the step is skipped and the app is still packaged (without the local engine).
       - name: Build native llama library
+        continue-on-error: ${{ matrix.arch == 'arm64' }}
         run: |
+          TOOLSET=""
+          [ "${{ matrix.arch }}" = "arm64" ] && TOOLSET="-T ClangCL"
           OUT="$(pwd)/desktopApp/native-libs/windows-${{ matrix.arch }}"
           command -v cygpath >/dev/null && OUT="$(cygpath -m "$OUT")"
-          cmake -S native/desktop -B native/build -DCMAKE_BUILD_TYPE=Release -DPICO_OUT="$OUT"
+          cmake -S native/desktop -B native/build $TOOLSET -DCMAKE_BUILD_TYPE=Release -DPICO_OUT="$OUT"
           cmake --build native/build --config Release -j
           ls -la desktopApp/native-libs/windows-${{ matrix.arch }}
 
