@@ -30,7 +30,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # llama.cpp is compiled with NDK 29 (see llama/build.gradle.kts).
       - name: Accept licenses and install NDK / CMake

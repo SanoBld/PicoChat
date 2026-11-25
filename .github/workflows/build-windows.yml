@@ -43,7 +43,7 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       # ggml refuses MSVC on ARM ("use clang"): arm64 uses the ClangCL toolset. If the runner has no
       # ClangCL, the step is skipped and the app is still packaged (without the local engine).
