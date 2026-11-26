@@ -8,6 +8,7 @@ serialization = "1.9.0"
 datetime = "0.7.1"
 ktor = "3.2.3"
 coil = "3.3.0"
+okio = "3.16.0"
 activity = "1.11.0"
 coreKtx = "1.17.0"
 work = "2.10.5"
@@ -21,6 +22,7 @@ coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-androi
 coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 ktor-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }

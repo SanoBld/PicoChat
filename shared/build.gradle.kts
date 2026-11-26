@@ -49,7 +49,7 @@ kotlin {
             implementation(compose.components.resources)
             implementation(libs.coroutines.core)
             implementation(libs.serialization.json)
-            implementation(libs.datetime)
+            implementation(libs.okio)
             implementation(libs.ktor.core)
             implementation(libs.coil.compose)
             implementation(libs.coil.svg)

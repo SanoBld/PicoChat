@@ -4,5 +4,6 @@
   "editor.rulers": [140],
   "[kotlin]": { "editor.defaultFormatter": "fwcd.kotlin" },
   "java.configuration.updateBuildConfiguration": "automatic",
-  "kotlin.languageServer.enabled": true
+  "kotlin.languageServer.enabled": true,
+  "cmake.sourceDirectory": "C:/Users/noham/Documents/GitHub/PicoChat/native/desktop"
 }
