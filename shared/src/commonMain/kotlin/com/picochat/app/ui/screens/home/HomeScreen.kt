@@ -1,5 +1,10 @@
 package com.picochat.app.ui.screens.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -21,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.picochat.app.ui.screens.chat.ChatScreen
 import com.picochat.app.ui.screens.models.ModelsScreen
 import com.picochat.app.ui.screens.settings.SettingsScreen
+import com.picochat.app.ui.theme.PicoMotion
 import kotlinx.coroutines.launch
 
 enum class Section { CHAT, MODELS, SETTINGS }
@@ -51,16 +57,25 @@ fun HomeScreen() {
         }
         val content: @Composable () -> Unit = {
             val menu = { scope.launch { drawer.open() }; Unit }
-            when (section) {
-                Section.CHAT -> ChatScreen(
-                    chatId = chatId,
-                    showMenu = !wide,
-                    onMenu = menu,
-                    onOpenModels = { section = Section.MODELS },
-                    onChatCreated = { chatId = it },
-                )
-                Section.MODELS -> ModelsScreen(showMenu = !wide, onMenu = menu)
-                Section.SETTINGS -> SettingsScreen(showMenu = !wide, onMenu = menu)
+            AnimatedContent(
+                targetState = section,
+                transitionSpec = {
+                    (fadeIn(PicoMotion.effects()) + scaleIn(animationSpec = PicoMotion.spatial(), initialScale = 0.95f)) togetherWith
+                        fadeOut(PicoMotion.effects())
+                },
+                label = "section",
+            ) { current ->
+                when (current) {
+                    Section.CHAT -> ChatScreen(
+                        chatId = chatId,
+                        showMenu = !wide,
+                        onMenu = menu,
+                        onOpenModels = { section = Section.MODELS },
+                        onChatCreated = { chatId = it },
+                    )
+                    Section.MODELS -> ModelsScreen(showMenu = !wide, onMenu = menu)
+                    Section.SETTINGS -> SettingsScreen(showMenu = !wide, onMenu = menu)
+                }
             }
         }
 

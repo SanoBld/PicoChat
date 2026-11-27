@@ -46,6 +46,11 @@ Add a `## vX.Y.Z` section to `CHANGELOG.md`, then push a tag `vX.Y.Z` (or run *R
 Assets: Android APKs (universal + 3 CPUs), Windows installer + zip (x64, arm64), Linux deb / rpm /
 AppImage / zip (x64, arm64), macOS dmg + zip (arm64, x64), unsigned iOS ipa.
 
+## Design
+
+Material 3 Expressive without experimental APIs: own spring specs (`ui/theme/Motion.kt`), shape scale (`Shapes.kt`),
+Material You colours through `dynamicColorScheme()` (Android 12+, seed colour elsewhere).
+
 ## Languages
 
 `shared/src/commonMain/composeResources/files/strings_{en,fr,es,de}.json`.

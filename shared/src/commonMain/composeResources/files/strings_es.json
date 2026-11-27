@@ -741,5 +741,13 @@
  "cloud_err_network": "No se pudo contactar con el servicio ({detail}). Revisa tu conexión a internet y la dirección del servidor.",
  "cloud_err_blocked": "El proveedor bloqueó esta respuesta ({detail}).",
  "cloud_err_empty": "El modelo no devolvió texto. Su razonamiento pudo agotar todo el límite: sube «Tokens máx.» en Ajustes > Chat.",
- "cloud_err_other": "Error de la IA en la nube: {detail}"
+ "cloud_err_other": "Error de la IA en la nube: {detail}",
+ "chat_tps": "{n} tokens/s",
+ "lang_follow_system": "Usar el idioma del sistema",
+ "priv_local": "Tus chats, memoria y ajustes permanecen en esta carpeta de tu dispositivo:",
+ "priv_net": "El único tráfico de red es hacia Hugging Face, cuando buscas o descargas modelos.",
+ "priv_token": "Tu token de Hugging Face, si añades uno, se guarda en el archivo de ajustes de este dispositivo y solo se envía a Hugging Face.",
+ "search": "Buscar",
+ "set_about_sub": "Versión, motor y enlaces",
+ "set_language_sub": "Idioma de la aplicación"
 }

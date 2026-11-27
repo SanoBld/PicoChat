@@ -43,12 +43,19 @@ private fun picoTypography(): Typography {
     val d = Typography()
     return d.copy(
         displayLarge = d.displayLarge.f(), displayMedium = d.displayMedium.f(), displaySmall = d.displaySmall.f(),
-        headlineLarge = d.headlineLarge.f(), headlineMedium = d.headlineMedium.f(), headlineSmall = d.headlineSmall.f(),
-        titleLarge = d.titleLarge.f(), titleMedium = d.titleMedium.f(), titleSmall = d.titleSmall.f(),
+        headlineLarge = d.headlineLarge.f().copy(fontWeight = FontWeight.Bold),
+        headlineMedium = d.headlineMedium.f().copy(fontWeight = FontWeight.Bold),
+        headlineSmall = d.headlineSmall.f().copy(fontWeight = FontWeight.SemiBold),
+        titleLarge = d.titleLarge.f().copy(fontWeight = FontWeight.SemiBold),
+        titleMedium = d.titleMedium.f().copy(fontWeight = FontWeight.Medium),
+        titleSmall = d.titleSmall.f().copy(fontWeight = FontWeight.Medium),
         bodyLarge = d.bodyLarge.f(), bodyMedium = d.bodyMedium.f(), bodySmall = d.bodySmall.f(),
         labelLarge = d.labelLarge.f(), labelMedium = d.labelMedium.f(), labelSmall = d.labelSmall.f(),
     )
 }
+
+/** True when the device offers Material You colours (the wallpaper switch is hidden otherwise). */
+fun isDynamicColorSupported(): Boolean = dynamicColorScheme(false) != null
 
 @Composable
 fun PicoTheme(content: @Composable () -> Unit) {
@@ -58,7 +65,8 @@ fun PicoTheme(content: @Composable () -> Unit) {
         else -> isSystemInDarkTheme()
     }
     val accent = Color(Prefs.accent.value)
-    val scheme = if (dark) {
+    val dynamic = if (Prefs.dynamicColor.value) dynamicColorScheme(dark) else null
+    val scheme = dynamic ?: if (dark) {
         val base = Color(0xFF101413)
         darkColorScheme(
             primary = lerp(accent, Color.White, 0.35f),
@@ -84,5 +92,5 @@ fun PicoTheme(content: @Composable () -> Unit) {
             surfaceContainer = lerp(Color.White, accent, 0.06f),
         )
     }
-    MaterialTheme(colorScheme = scheme, typography = picoTypography(), content = content)
+    MaterialTheme(colorScheme = scheme, typography = picoTypography(), shapes = PicoShapes, content = content)
 }

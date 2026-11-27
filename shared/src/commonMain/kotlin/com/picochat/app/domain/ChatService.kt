@@ -5,6 +5,7 @@ import com.picochat.app.data.model.ChatRole
 import com.picochat.app.data.model.Conversation
 import com.picochat.app.data.model.InstalledModel
 import com.picochat.app.data.store.ChatStore
+import com.picochat.app.data.store.MemoryStore
 import com.picochat.app.data.store.Prefs
 import com.picochat.app.engine.GenerationOptions
 import com.picochat.app.engine.InferenceEngine
@@ -34,6 +35,9 @@ object ChatService {
     private val _generatingChatId = MutableStateFlow<String?>(null)
     /** Id of the conversation being answered, or null. */
     val generatingChatId: StateFlow<String?> = _generatingChatId
+
+    /** Name of the engine in use, for the About page. */
+    fun engineName(): String = if (isDemo()) "demo" else localEngine.name
 
     /** True when answers are fake because no model is installed. */
     fun isDemo(): Boolean = ModelManager.activeModel() == null || localEngine.isPlaceholder
@@ -81,22 +85,24 @@ object ChatService {
                 val now = nowMillis()
                 if (now - lastUi >= 70) {
                     lastUi = now
-                    val snapshot = text.toString()
+                    val snapshot = MemoryTags.hide(text.toString())
                     ChatStore.updateMessage(chatId, answerId) { it.copy(text = snapshot) }
                 }
             }
-            finishAnswer(chatId, answerId, text.toString(), started, pieces, failedKind = if (text.isBlank() && !userStopped) "empty" else "")
+            val (clean, facts) = MemoryTags.extract(text.toString())
+            val saved = if (Prefs.memoryEnabled.value) facts.filter { MemoryStore.add(it) } else emptyList()
+            finishAnswer(chatId, answerId, clean, started, pieces, failedKind = if (clean.isBlank() && !userStopped) "empty" else "", memories = saved)
         } catch (e: CancellationException) {
-            finishAnswer(chatId, answerId, text.toString(), started, pieces, failedKind = "")
+            finishAnswer(chatId, answerId, MemoryTags.hide(text.toString()), started, pieces, failedKind = "")
             throw e
         } catch (e: Exception) {
-            finishAnswer(chatId, answerId, text.toString(), started, pieces, failedKind = "local", error = e.message ?: "")
+            finishAnswer(chatId, answerId, MemoryTags.hide(text.toString()), started, pieces, failedKind = "local", error = e.message ?: "")
         } finally {
             _generatingChatId.value = null
         }
     }
 
-    private fun finishAnswer(chatId: String, answerId: String, text: String, startedMs: Long, pieces: Int, failedKind: String, error: String = "") {
+    private fun finishAnswer(chatId: String, answerId: String, text: String, startedMs: Long, pieces: Int, failedKind: String, error: String = "", memories: List<String> = emptyList()) {
         val ms = nowMillis() - startedMs
         ChatStore.updateMessage(chatId, answerId) {
             it.copy(
@@ -105,6 +111,7 @@ object ChatService {
                 failed = failedKind.isNotEmpty(),
                 errorKind = failedKind,
                 error = error,
+                memories = memories,
                 stats = buildJsonObject {
                     put("pieces", pieces)
                     put("ms", ms)

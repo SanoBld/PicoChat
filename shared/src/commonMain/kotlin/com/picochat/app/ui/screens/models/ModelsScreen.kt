@@ -1,5 +1,9 @@
 package com.picochat.app.ui.screens.models
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,14 +17,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -28,12 +30,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,30 +58,32 @@ import com.picochat.app.domain.DownloadTask
 import com.picochat.app.domain.ModelManager
 import com.picochat.app.l10n.Strings
 import com.picochat.app.l10n.tr
+import com.picochat.app.ui.components.PicoPage
+import com.picochat.app.ui.theme.PicoMotion
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelsScreen(showMenu: Boolean, onMenu: () -> Unit) {
     var tab by remember { mutableStateOf(0) }
     val tasks by ModelManager.tasks.collectAsState()
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(tr("nav_models")) },
-            navigationIcon = { if (showMenu) IconButton(onClick = onMenu) { Icon(Icons.Default.Menu, contentDescription = null) } },
-        )
-    }) { padding ->
+    PicoPage(title = tr("nav_models"), showMenu = showMenu, onMenu = onMenu) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = tab) {
+            TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
                 listOf(tr("tab_discover"), tr("tab_installed"), tr("tab_downloads")).forEachIndexed { i, label ->
                     Tab(selected = tab == i, onClick = { tab = i }, text = { Text(if (i == 2 && tasks.isNotEmpty()) "$label (${tasks.size})" else label) })
                 }
             }
-            when (tab) {
-                0 -> DiscoverTab()
-                1 -> InstalledTab()
-                else -> DownloadsTab()
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = { fadeIn(PicoMotion.effects()) togetherWith fadeOut(PicoMotion.effects()) },
+                label = "modelsTab",
+            ) { t ->
+                when (t) {
+                    0 -> DiscoverTab()
+                    1 -> InstalledTab()
+                    else -> DownloadsTab()
+                }
             }
         }
     }
@@ -149,7 +151,7 @@ private fun DiscoverTab() {
             if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
         }
         items(results, key = { it.id }) { r ->
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(Modifier.padding(12.dp)) {
                     Text(r.name, style = MaterialTheme.typography.titleMedium)
                     Text("${r.author} · ↓ ${r.downloads}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -188,7 +190,7 @@ private fun DiscoverTab() {
 @Composable
 private fun RecommendedCard(rec: RecommendedModel, installed: Boolean, task: DownloadTask?, onDownload: () -> Unit) {
     val about = rec.about[Strings.lang] ?: rec.about["en"] ?: ""
-    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -229,7 +231,7 @@ private fun InstalledTab() {
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(installed, key = { it.id }) { m ->
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = Prefs.activeModelId.value == m.id, onClick = { ModelManager.setActive(m.id) })
                     Column(Modifier.weight(1f)) {
@@ -263,7 +265,7 @@ private fun DownloadsTab() {
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(tasks.values.toList(), key = { it.key }) { t ->
-            Card(Modifier.fillMaxWidth()) {
+            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(t.fileName, style = MaterialTheme.typography.titleSmall, maxLines = 2)
                     LinearProgressIndicator(progress = { t.progress }, modifier = Modifier.fillMaxWidth())

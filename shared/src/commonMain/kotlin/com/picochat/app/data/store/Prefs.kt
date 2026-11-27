@@ -26,6 +26,8 @@ abstract class Pref<T>(val key: String, val default: T) {
         Prefs.put(key, encode(v))
     }
 
+    fun resetToDefault() = set(default)
+
     internal fun loadFrom(m: Map<String, JsonElement>) {
         value = m[key]?.let { runCatching { decode(it) }.getOrNull() } ?: default
     }
@@ -75,12 +77,20 @@ object Prefs {
     val temperature = reg(DoublePref("temperature", 0.7))
     val maxTokens = reg(IntPref("maxTokens", 1024))
     val contextSize = reg(IntPref("contextSize", 4096))
-    /** "short", "balanced" or "detailed". */
-    val answerLength = reg(StringPref("answerLength", "balanced"))
+    /** "auto", "short", "medium" or "long". */
+    val answerLength = reg(StringPref("answerLength", "auto"))
     val autoTitle = reg(BoolPref("autoTitle", true))
     val activeModelId = reg(StringPref("activeModelId", ""))
     val hfEndpoint = reg(StringPref("hfEndpoint", DEFAULT_HF_ENDPOINT))
     val hfToken = reg(StringPref("hfToken", ""))
+    /** Material You: colours taken from the wallpaper (Android 12+). */
+    val dynamicColor = reg(BoolPref("dynamicColor", true))
+    /** Answers shown in a rounded card, code in boxes. */
+    val boxedAnswers = reg(BoolPref("boxedAnswers", true))
+    val introDone = reg(BoolPref("introDone", false))
+    val memoryEnabled = reg(BoolPref("memoryEnabled", true))
+    /** How many memories are sent to the model (0 = all). */
+    val memoryLimit = reg(IntPref("memoryLimit", 25))
 
     private var loaded = false
 
@@ -92,6 +102,16 @@ object Prefs {
         }
         all.forEach { it.loadFrom(raw) }
     }
+
+    fun resetAppearance() {
+        listOf(themeMode, accent, dynamicColor, boxedAnswers).forEach { it.resetToDefault() }
+    }
+
+    fun resetChatSettings() {
+        listOf(systemPrompt, temperature, maxTokens, contextSize, answerLength).forEach { it.resetToDefault() }
+    }
+
+    fun resetAll() = all.forEach { it.resetToDefault() }
 
     internal fun put(key: String, v: JsonElement) {
         raw[key] = v

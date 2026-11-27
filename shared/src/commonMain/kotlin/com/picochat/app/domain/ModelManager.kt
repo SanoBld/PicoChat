@@ -85,6 +85,26 @@ object ModelManager {
         saveRegistry()
     }
 
+    fun totalBytes(): Long = _installed.value.sumOf { it.sizeBytes }
+
+    /** Deletes unfinished downloads (paused or failed) and their files. */
+    fun clearPartials() {
+        _tasks.value.filterValues { it.state != DownloadState.RUNNING }.keys.toList().forEach { cancel(it) }
+        val keep = _tasks.value.values.map { localName(it.repo, it.fileName) + ".part" }.toSet()
+        Disk.listNames(modelsDir()).filter { it.endsWith(".part") && it !in keep }.forEach { Disk.delete(modelsDir() + "/" + it) }
+    }
+
+    /** Removes every model and download. */
+    fun deleteAll() {
+        jobs.values.forEach { it.cancel() }
+        jobs.clear()
+        _tasks.value = emptyMap()
+        _installed.value.forEach { Disk.delete(it.path) }
+        Disk.listNames(modelsDir()).filter { it.endsWith(".part") }.forEach { Disk.delete(modelsDir() + "/" + it) }
+        _installed.value = emptyList()
+        saveRegistry()
+    }
+
     fun isInstalled(repo: String, file: String): Boolean = _installed.value.any { it.id == key(repo, file) }
 
     /** Downloads the default file of a repo (used by the recommended list). */

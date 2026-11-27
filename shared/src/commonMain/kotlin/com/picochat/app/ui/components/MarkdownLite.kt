@@ -7,8 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -132,14 +138,26 @@ fun MarkdownLite(text: String, modifier: Modifier = Modifier) {
                     Text(b.marker, modifier = Modifier.padding(end = 8.dp, start = 4.dp), style = MaterialTheme.typography.bodyLarge)
                     Text(inline(b.text, codeBg), style = MaterialTheme.typography.bodyLarge)
                 }
-                is Block.Code -> Text(
-                    b.text,
-                    fontFamily = FontFamily.Monospace,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(codeBg)
-                        .horizontalScroll(rememberScrollState()).padding(12.dp),
-                )
+                is Block.Code -> CodeBlock(b.text, codeBg)
             }
         }
+    }
+}
+
+@Composable
+private fun CodeBlock(code: String, background: Color) {
+    val clipboard = LocalClipboardManager.current
+    Column(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(background)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            IconButton(onClick = { clipboard.setText(AnnotatedString(code)) }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
+        }
+        Text(
+            code,
+            fontFamily = FontFamily.Monospace,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.horizontalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 14.dp),
+        )
     }
 }

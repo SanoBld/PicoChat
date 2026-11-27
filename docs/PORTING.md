@@ -1,6 +1,6 @@
 # Porting map: Flutter -> Kotlin
 
-One row per Kotlin file. `[x]` done, `[~]` partly done (see note), `[ ]` not started. Extra files not in the Flutter app: `util/Disk.kt`, `util/Http.kt`, `util/Time.kt`, `data/model/RecommendedModels.kt`, `engine/PlaceholderEngine.kt`.
+One row per Kotlin file. `[x]` done, `[~]` partly done (see note), `[ ]` not started. Extra files not in the Flutter app: `domain/MemoryTags.kt`, `ui/components/BackHandler.kt`, `ui/theme/DynamicColor.kt`, `util/AppInfo.kt`, `util/Disk.kt`, `util/Http.kt`, `util/Time.kt`, `data/model/RecommendedModels.kt`, `engine/PlaceholderEngine.kt`.
 
 | Done | Kotlin file | Flutter source |
 |---|---|---|
@@ -8,8 +8,8 @@ One row per Kotlin file. `[x]` done, `[~]` partly done (see note), `[ ]` not sta
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/data/model/ModelModels.kt` | `lib/models/model_models.dart` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/data/store/Prefs.kt` | `lib/app_state.dart, services/prefs.dart` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/data/store/ChatStore.kt` | `lib/services/chat_store.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/data/store/MemoryStore.kt` | `lib/services/memory_store.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/data/store/ResetManager.kt` | `lib/services/reset.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/data/store/MemoryStore.kt` | `lib/services/memory_store.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/domain/ResetManager.kt` | `lib/services/reset.dart` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/data/hf/HfService.kt` | `lib/services/hf_service.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/data/cloud/CloudProtocol.kt` | `lib/services/cloud/cloud_protocol.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/data/cloud/CloudEngine.kt` | `lib/services/cloud/cloud_engine.dart` |
@@ -41,9 +41,9 @@ One row per Kotlin file. `[x]` done, `[~]` partly done (see note), `[ ]` not sta
 | [ ] | `shared/src/androidMain/kotlin/com/picochat/app/platform/DeviceBridge.kt` | `lib/android/.../DeviceBridge.kt` |
 | [ ] | `shared/src/androidMain/kotlin/com/picochat/app/platform/AssistBridge.kt` | `lib/android/.../AssistBridge.kt` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/theme/Theme.kt` | `lib/main.dart, screens/settings/appearance_page.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/theme/Motion.kt` | `lib/theme/m3_motion.dart, theme/m3_interaction.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/theme/Shapes.kt` | `lib/theme/m3_shapes.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/M3Components.kt` | `lib/widgets/m3_components.dart, widgets/pc_segments.dart, widgets/pc_menu.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/theme/Motion.kt` | `lib/theme/m3_motion.dart, theme/m3_interaction.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/theme/Shapes.kt` | `lib/theme/m3_shapes.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/M3Components.kt` | `lib/widgets/m3_components.dart, widgets/pc_segments.dart, widgets/pc_menu.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/Skeleton.kt` | `lib/widgets/skeleton.dart` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/MarkdownLite.kt` | `lib/widgets/markdown_lite.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/PicoFace.kt` | `lib/widgets/pico_face.dart, widgets/pico_avatar.dart` |
@@ -56,27 +56,27 @@ One row per Kotlin file. `[x]` done, `[~]` partly done (see note), `[ ]` not sta
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/NetConsent.kt` | `lib/widgets/net_consent.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/OpeningSplash.kt` | `lib/widgets/opening_splash.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/components/AssistFx.kt` | `lib/widgets/assist_fx.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/intro/IntroScreen.kt` | `lib/screens/intro_screen.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/intro/IntroScreen.kt` | `lib/screens/intro_screen.dart` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/home/HomeScreen.kt` | `lib/screens/home_screen.dart` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/home/Sidebar.kt` | `lib/screens/_sidebar.dart` |
 | [~] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/chat/ChatScreen.kt` | `lib/screens/_chat_view.dart` | *(chat view without attachments, cards, sources, steps)*
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/chat/ChatViewModel.kt` | `lib/screens/_chat_view.dart` |
 | [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/models/ModelsScreen.kt` | `lib/screens/_models_page.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/models/CloudStoreTab.kt` | `lib/screens/cloud_store_tab.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/about/AboutScreen.kt` | `lib/screens/_about_page.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/about/AboutScreen.kt` | `lib/screens/_about_page.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/voice/VoiceModeScreen.kt` | `lib/screens/voice_mode_screen.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/assist/AssistOverlay.kt` | `lib/screens/assist_overlay.dart` |
-| [~] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/SettingsScreen.kt` | `lib/screens/_settings_page.dart` | *(one page instead of sub pages)*
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/SettingsScreen.kt` | `lib/screens/_settings_page.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/SettingsRows.kt` | `lib/screens/settings/settings_rows.dart, settings_helpers.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/AppearancePage.kt` | `lib/screens/settings/appearance_page.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/ChatSettingsPage.kt` | `lib/screens/settings/chat_settings_page.dart` |
+| [~] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/AppearancePage.kt` | `lib/screens/settings/appearance_page.dart` | *(no font or layout options)*
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/ChatSettingsPage.kt` | `lib/screens/settings/chat_settings_page.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/CloudPage.kt` | `lib/screens/settings/cloud_page.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/ContextPage.kt` | `lib/screens/settings/context_page.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/HfPage.kt` | `lib/screens/settings/hf_page.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/LanguagePage.kt` | `lib/screens/settings/language_page.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/MemoryPage.kt` | `lib/screens/settings/memory_page.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/PrivacyPage.kt` | `lib/screens/settings/privacy_page.dart` |
-| [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/StoragePage.kt` | `lib/screens/settings/storage_page.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/HfPage.kt` | `lib/screens/settings/hf_page.dart` |
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/LanguagePage.kt` | `lib/screens/settings/language_page.dart` |
+| [~] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/MemoryPage.kt` | `lib/screens/settings/memory_page.dart` | *(no import from another assistant)*
+| [x] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/PrivacyPage.kt` | `lib/screens/settings/privacy_page.dart` |
+| [~] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/StoragePage.kt` | `lib/screens/settings/storage_page.dart` | *(no per-model storage list)*
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/BackupPage.kt` | `lib/screens/settings/backup_page.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/SyncPage.kt` | `lib/screens/settings/sync_page.dart, sync_widgets.dart` |
 | [ ] | `shared/src/commonMain/kotlin/com/picochat/app/ui/screens/settings/AssistantPage.kt` | `lib/screens/settings/assistant_page.dart` |

@@ -1,5 +1,6 @@
 package com.picochat.app.domain
 
+import com.picochat.app.data.store.MemoryStore
 import com.picochat.app.data.store.Prefs
 import com.picochat.app.util.localDateTimeString
 
@@ -10,8 +11,9 @@ import com.picochat.app.util.localDateTimeString
 object CorePrompt {
     private fun lengthRule(): String = when (Prefs.answerLength.value) {
         "short" -> "Keep answers very short: one or two sentences unless the user asks for more."
-        "detailed" -> "Give thorough, well-structured answers with explanations and examples."
-        else -> "Keep answers clear and reasonably short; add detail only when it helps."
+        "long" -> "Give thorough, well-structured answers with explanations and examples."
+        "medium" -> "Keep answers clear and reasonably short; add detail only when it helps."
+        else -> "Match the length of your answer to the question: brief for simple ones, more detail for complex ones."
     }
 
     fun build(): String {
@@ -26,6 +28,16 @@ object CorePrompt {
             append("\nIf you do not know something, say so instead of inventing it.")
             append("\nCurrent date and time: ").append(date).append('.')
             if (name.isNotEmpty()) append("\nThe user's name is ").append(name).append('.')
+            if (Prefs.memoryEnabled.value) {
+                val facts = MemoryStore.recent(Prefs.memoryLimit.value)
+                if (facts.isNotEmpty()) {
+                    append("\n\nThings you remember about the user (use them naturally, never list them unless asked):")
+                    facts.forEach { append("\n- ").append(it) }
+                }
+                append("\n\nWhen the user tells you a lasting personal fact (name, job, family, tastes, goals), ")
+                append("end your reply with <remember>short fact in the user's language</remember>, one tag per fact. ")
+                append("Never mention these tags and never save temporary details.")
+            }
         }
     }
 }
