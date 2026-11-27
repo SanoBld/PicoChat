@@ -741,5 +741,13 @@
  "cloud_err_network": "Could not reach the service ({detail}). Check your internet connection and the server address.",
  "cloud_err_blocked": "The provider blocked this answer ({detail}).",
  "cloud_err_empty": "The model returned no text. Its reasoning may have used the whole answer limit: raise “Max tokens” in Settings > Chat.",
- "cloud_err_other": "Cloud AI error: {detail}"
+ "cloud_err_other": "Cloud AI error: {detail}",
+ "chat_tps": "{n} tokens/s",
+ "lang_follow_system": "Follow the system language",
+ "priv_local": "Your chats, memory and settings stay in this folder on your device:",
+ "priv_net": "The only network traffic is to Hugging Face, when you search for or download models.",
+ "priv_token": "Your Hugging Face token, if you add one, is stored in the settings file of this device and sent only to Hugging Face.",
+ "search": "Search",
+ "set_about_sub": "Version, engine and links",
+ "set_language_sub": "App language"
 }

@@ -741,5 +741,13 @@
  "cloud_err_network": "Der Dienst ist nicht erreichbar ({detail}). Prüfen Sie Ihre Internetverbindung und die Serveradresse.",
  "cloud_err_blocked": "Der Anbieter hat diese Antwort blockiert ({detail}).",
  "cloud_err_empty": "Das Modell hat keinen Text geliefert. Das Nachdenken hat vielleicht das ganze Limit verbraucht: erhöhen Sie „Max. Tokens“ in Einstellungen > Chat.",
- "cloud_err_other": "Cloud-KI-Fehler: {detail}"
+ "cloud_err_other": "Cloud-KI-Fehler: {detail}",
+ "chat_tps": "{n} Tokens/s",
+ "lang_follow_system": "Systemsprache verwenden",
+ "priv_local": "Deine Chats, dein Gedächtnis und deine Einstellungen bleiben in diesem Ordner auf deinem Gerät:",
+ "priv_net": "Der einzige Netzwerkverkehr geht an Hugging Face, wenn du Modelle suchst oder herunterlädst.",
+ "priv_token": "Dein Hugging-Face-Token, falls du einen hinzufügst, wird in der Einstellungsdatei dieses Geräts gespeichert und nur an Hugging Face gesendet.",
+ "search": "Suchen",
+ "set_about_sub": "Version, Engine und Links",
+ "set_language_sub": "App-Sprache"
 }

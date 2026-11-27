@@ -741,5 +741,13 @@
  "cloud_err_network": "Impossible de joindre le service ({detail}). Vérifiez votre connexion internet et l’adresse du serveur.",
  "cloud_err_blocked": "Le fournisseur a bloqué cette réponse ({detail}).",
  "cloud_err_empty": "Le modèle n’a renvoyé aucun texte. Son raisonnement a peut-être épuisé toute la limite : augmentez « Tokens max » dans Paramètres > Chat.",
- "cloud_err_other": "Erreur de l’IA cloud : {detail}"
+ "cloud_err_other": "Erreur de l’IA cloud : {detail}",
+ "chat_tps": "{n} tokens/s",
+ "lang_follow_system": "Suivre la langue du système",
+ "priv_local": "Vos discussions, votre mémoire et vos réglages restent dans ce dossier de votre appareil :",
+ "priv_net": "Le seul trafic réseau va vers Hugging Face, quand vous cherchez ou téléchargez des modèles.",
+ "priv_token": "Votre jeton Hugging Face, si vous en ajoutez un, est stocké dans le fichier de réglages de cet appareil et envoyé uniquement à Hugging Face.",
+ "search": "Rechercher",
+ "set_about_sub": "Version, moteur et liens",
+ "set_language_sub": "Langue de l'application"
 }
