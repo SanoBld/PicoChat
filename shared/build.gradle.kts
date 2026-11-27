@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.compose.multiplatform)
@@ -9,7 +11,19 @@ plugins {
 val androidEnabled = gradle.extra["picoAndroid"] as Boolean
 if (androidEnabled) apply(plugin = "com.android.library")
 
+@OptIn(ExperimentalKotlinGradlePluginApi::class)
 kotlin {
+    // Default hierarchy (common > native > ios ...) plus our own group shared by Android and desktop:
+    // it becomes the "jvmCommonMain" source set (JNI bridge to llama.cpp).
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jvmCommon") {
+                withJvm()
+                withAndroidTarget()
+            }
+        }
+    }
+
     if (androidEnabled) {
         androidTarget {
             compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
@@ -24,12 +38,8 @@ kotlin {
     }
 
     sourceSets {
-        // Code shared by Android and desktop (JVM): the JNI bridge to llama.cpp.
-        val jvmCommonMain by creating { dependsOn(commonMain.get()) }
-        val desktopMain by getting { dependsOn(jvmCommonMain) }
         if (androidEnabled) {
             named("androidMain") {
-                dependsOn(jvmCommonMain)
                 dependencies {
                     implementation(libs.androidx.activity.compose)
                     implementation(libs.androidx.core.ktx)
@@ -55,10 +65,12 @@ kotlin {
             implementation(libs.coil.svg)
             implementation(libs.coil.network)
         }
-        desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
-            implementation(libs.coroutines.swing)
-            implementation(libs.ktor.okhttp)
+        named("desktopMain") {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation(libs.coroutines.swing)
+                implementation(libs.ktor.okhttp)
+            }
         }
         iosMain.dependencies { implementation(libs.ktor.darwin) }
         commonTest.dependencies {

@@ -161,7 +161,7 @@ object ModelManager {
                 when {
                     code in listOf(301, 302, 303, 307, 308) -> {
                         val loc = resp.headers[HttpHeaders.Location] ?: throw HfException("other", code)
-                        next = if (loc.startsWith("http")) loc else Url(url).let { u -> "${u.protocol.name}://${u.hostWithPort}$loc" }
+                        next = if (loc.startsWith("http")) loc else originOf(url) + loc
                     }
                     code == 416 -> total = start // already complete
                     code == 200 || code == 206 -> {
@@ -186,6 +186,13 @@ object ModelManager {
             if (++redirects > 8) throw HfException("other", 310)
             url = n
         }
+    }
+
+    /** "https://host[:port]" of a URL, used to resolve relative redirects. */
+    private fun originOf(url: String): String {
+        val u = Url(url)
+        val port = if (u.port == u.protocol.defaultPort) "" else ":${u.port}"
+        return "${u.protocol.name}://${u.host}$port"
     }
 
     private suspend fun writeBody(k: String, ch: io.ktor.utils.io.ByteReadChannel, part: String, start: Long, total: Long) {
